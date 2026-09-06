@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { Deck, Lesson, Quiz, Word } from "./schema";
 import { parseDeckSafe } from "./schema";
 
@@ -28,9 +29,7 @@ export async function loadBundledDecks(base = ""): Promise<{
 
   await Promise.all(
     BUNDLED_DECK_FILES.map(async (file) => {
-      const url = baseUrl
-      ? `${baseUrl}/content/${file}`
-      : `/content/${file}`;
+      const url = baseUrl ? `${baseUrl}/content/${file}` : `/content/${file}`;
       try {
         const res = await fetch(url);
         if (!res.ok) {
@@ -38,12 +37,16 @@ export async function loadBundledDecks(base = ""): Promise<{
           return;
         }
         const json = await res.json();
+
+        // 層1 — Zod 検証
         const parsed = parseDeckSafe(json);
         if (parsed.ok === false) {
           const reason = parsed.issues.map(formatZodIssue).join("; ");
           errors.push({ url, reason });
           return;
         }
+
+        // 層2 — 整合性検証
         const consistency = validateDeckConsistency(parsed.deck);
         if (consistency.length > 0) {
           errors.push({ url, reason: consistency.join("; ") });
@@ -63,7 +66,10 @@ export async function loadBundledDecks(base = ""): Promise<{
   return { decks, errors };
 }
 
-function formatZodIssue(issue: { message: string; path: (string | number)[] }): string {
+function formatZodIssue(issue: {
+  message: string;
+  path: (string | number)[];
+}): string {
   const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
   return `${path}: ${issue.message}`;
 }
@@ -117,7 +123,9 @@ export function validateDeckConsistency(deck: Deck): string[] {
 
     for (const quiz of lesson.quizzes ?? []) {
       if (quizIds.has(quiz.quizId)) {
-        issues.push(`lesson ${lesson.lessonId}: duplicate quizId ${quiz.quizId}`);
+        issues.push(
+          `lesson ${lesson.lessonId}: duplicate quizId ${quiz.quizId}`,
+        );
       }
       quizIds.add(quiz.quizId);
 
@@ -127,7 +135,9 @@ export function validateDeckConsistency(deck: Deck): string[] {
         );
       }
 
-      const answer = quiz.choices.find((c) => c.choiceId === quiz.answerChoiceId);
+      const answer = quiz.choices.find(
+        (c) => c.choiceId === quiz.answerChoiceId,
+      );
       if (!answer) {
         issues.push(
           `lesson ${lesson.lessonId}: quiz ${quiz.quizId} answerChoiceId ${quiz.answerChoiceId} not found in choices`,
@@ -176,7 +186,9 @@ export function validateDeckConsistency(deck: Deck): string[] {
             );
           }
           const escaped = escapeRegExp(target.term);
-          const occurrences = (quiz.prompt.match(new RegExp(escaped, "gi")) ?? []).length;
+          const occurrences = (
+            quiz.prompt.match(new RegExp(escaped, "gi")) ?? []
+          ).length;
           if (occurrences > 0) {
             issues.push(
               `lesson ${lesson.lessonId}: quiz ${quiz.quizId} fill-blank prompt still contains the answer term`,
@@ -322,6 +334,109 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-function escapeRegExp(s: string): string {
+export function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// ---------------------------------------------------------------------------
+// HIGH-LEVEL LOADING API
+// ---------------------------------------------------------------------------
+
+/**
+ * Read a deck JSON file from the local filesystem, validate against
+ * Zod → consistency, and return a `LoadedDeck`.
+ *
+ * @param filePath  absolute or relative path to a deck JSON file
+ * @param source    optional label for the source (defaults to the file name)
+ * @throws          `ContentLoadError` on any validation failure
+ */
+export async function loadDeckFromFile(
+  filePath: string,
+  source?: string,
+): Promise<LoadedDeck> {
+  const label = source ?? filePath;
+
+  let text: string;
+  try {
+    text = await readFile(filePath, "utf-8");
+  } catch (e) {
+    throw new ContentLoadError(
+      `cannot read file "${filePath}": ${e instanceof Error ? e.message : String(e)}`,
+      0,
+      [],
+    );
+  }
+
+  return parseDeckJson(text, label);
+}
+
+/**
+ * Parse a deck JSON string through all validation layers.
+ *
+ * @param jsonString    raw JSON text
+ * @param source        human-readable source label (file path, URL, etc.)
+ * @throws              `ContentLoadError` on any validation failure
+ */
+export async function parseDeckJson(
+  jsonString: string,
+  source: string,
+): Promise<LoadedDeck> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch (e) {
+    const msg = e instanceof SyntaxError ? e.message : String(e);
+    throw new ContentLoadError(
+      `invalid JSON in "${source}": ${msg}`,
+      0,
+      [],
+    );
+  }
+
+  // 層1 — Zod
+  const zod = parseDeckSafe(parsed);
+  if (!zod.ok) {
+    const fields = zod.issues.map(formatZodIssue);
+    throw new ContentLoadError(
+      `Zod validation failed in "${source}":\n  ${fields.join("\n  ")}`,
+      1,
+      fields,
+    );
+  }
+
+  // 層2 — 整合性
+  const consistencyIssues = validateDeckConsistency(zod.deck);
+  if (consistencyIssues.length > 0) {
+    throw new ContentLoadError(
+      `consistency check failed in "${source}":\n  ${consistencyIssues.join("\n  ")}`,
+      2,
+      consistencyIssues,
+    );
+  }
+
+  return {
+    deck: zod.deck,
+    source: "bundled",
+    url: source,
+  };
+}
+
+/**
+ * Structured error that carries the layer where validation failed and
+ * individual issue messages for programmatic inspection.
+ */
+export class ContentLoadError extends Error {
+  /**
+   * @param message human-readable summary
+   * @param layer   0 = I/O / JSON parse, 1 = Zod, 2 = consistency
+   * @param issues  individual issue messages
+   */
+  constructor(
+    message: string,
+    public readonly layer: number,
+    public readonly issues: string[],
+  ) {
+    super(message);
+    this.name = "ContentLoadError";
+  }
 }
