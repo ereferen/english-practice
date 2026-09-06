@@ -1,0 +1,80 @@
+{
+  "$schema": "https://english-practice.local/schemas/deck.schema.json",
+  "schemaVersion": "1.0",
+  "deckId": "fixture-invalid-sample",
+  "level": "unknown",
+  "title": "テスト用インバリッドサンプル",
+  "lessons": [
+    {
+      "lessonId": "l01-invalid",
+      "title": "意図的な違反データ",
+      "words": [
+        {
+          "wordId": "empty-term",
+          "term": "",
+          "reading": "テスト",
+          "meaning": "空の見出し語",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "This is an invalid example.", "ja": "これは不正な例文です。" }
+          ]
+        },
+        {
+          "wordId": "no-examples",
+          "term": "test",
+          "reading": "テスト",
+          "meaning": "例文なし"
+        },
+        {
+          "wordId": "nonexistent",
+          "term": "nonexistent",
+          "reading": "ノーネクシズィステント",
+          "meaning": "存在しないもの",
+          "examples": [
+            { "en": "This word does not exist." }
+          ]
+        }
+      ],
+      "quizzes": [
+        {
+          "quizId": "q-invalid-size",
+          "type": "choose-meaning",
+          "wordId": "empty-term",
+          "prompt": "hello",
+          "choices": [
+            { "choiceId": "c1", "text": "選択肢A" },
+            { "choiceId": "c2", "text": "選択肢B" },
+            { "choiceId": "c3", "text": "選択肢C" }
+          ],
+          "answerChoiceId": "c1"
+        },
+        {
+          "quizId": "q-invalid-choice-id",
+          "type": "choose-meaning",
+          "wordId": "no-examples",
+          "prompt": "test",
+          "choices": [
+            { "choiceId": "c1", "text": "選択肢A" },
+            { "choiceId": "c2", "text": "選択肢B" },
+            { "choiceId": "c3", "text": "選択肢C" },
+            { "choiceId": "c4", "text": "選択肢D" }
+          ],
+          "answerChoiceId": "c-nonexistent"
+        },
+        {
+          "quizId": "q-invalid-word-ref",
+          "type": "choose-meaning",
+          "wordId": "ghost-word",
+          "prompt": "ghost",
+          "choices": [
+            { "choiceId": "c1", "text": "選択肢A" },
+            { "choiceId": "c2", "text": "選択肢B" },
+            { "choiceId": "c3", "text": "選択肢C" },
+            { "choiceId": "c4", "text": "選択肢D" }
+          ],
+          "answerChoiceId": "c1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://english-practice.local/schemas/deck.schema.json",
+  "schemaVersion": "1.0",
+  "deckId": "fixture-valid-sample",
+  "level": "beginner",
+  "title": "テスト用バリッドサンプル",
+  "description": "スキーマ検証用の有効なサンプルデータ。全てのクイズ種別を含む。",
+  "lessons": [
+    {
+      "lessonId": "l01-greetings",
+      "title": "挨拶と基本動詞",
+      "theme": "日常会話",
+      "words": [
+        {
+          "wordId": "hello",
+          "term": "hello",
+          "reading": "ハロー",
+          "meaning": "こんにちは",
+          "partOfSpeech": "exclamation",
+          "examples": [
+            { "en": "Hello, how are you?", "ja": "こんにちは、お元気ですか？" },
+            { "en": "She said hello to me.", "ja": "彼女は私に挨拶しました。" }
+          ],
+          "tags": ["greeting", "basic"]
+        },
+        {
+          "wordId": "study",
+          "term": "study",
+          "reading": "スタディ",
+          "meaning": "勉強する",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "I study English every day.", "ja": "私は毎日英語を勉強します。" }
+          ]
+        },
+        {
+          "wordId": "book",
+          "term": "book",
+          "reading": "ブック",
+          "meaning": "本",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "This book is interesting.", "ja": "この本は面白いです。" }
+          ]
+        },
+        {
+          "wordId": "friend",
+          "term": "friend",
+          "reading": "フレンド",
+          "meaning": "友達",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "She is my best friend.", "ja": "彼女は私の親友です。" }
+          ]
+        },
+        {
+          "wordId": "speak",
+          "term": "speak",
+          "reading": "スピーク",
+          "meaning": "話す",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "I can speak a little English.", "ja": "英語を少し話せます。" }
+          ],
+          "note": "talk と似ているが、speak はより正式。言語を話す の意で使う。",
+          "audio": "audio/speak.mp3"
+        }
+      ],
+      "quizzes": [
+        {
+          "quizId": "q-v01",
+          "type": "choose-meaning",
+          "wordId": "hello",
+          "prompt": "hello",
+          "choices": [
+            { "choiceId": "c1", "text": "こんにちは" },
+            { "choiceId": "c2", "text": "さようなら" },
+            { "choiceId": "c3", "text": "ありがとう" },
+            { "choiceId": "c4", "text": "おやすみ" }
+          ],
+          "answerChoiceId": "c1",
+          "explanation": "hello は「こんにちは」。挨拶の基本表現。"
+        },
+        {
+          "quizId": "q-v02",
+          "type": "choose-term",
+          "wordId": "book",
+          "prompt": "本",
+          "choices": [
+            { "choiceId": "c1", "text": "desk" },
+            { "choiceId": "c2", "text": "book" },
+            { "choiceId": "c3", "text": "pen" },
+            { "choiceId": "c4", "text": "bag" }
+          ],
+          "answerChoiceId": "c2"
+        },
+        {
+          "quizId": "q-v03",
+          "type": "fill-blank",
+          "wordId": "study",
+          "prompt": "I ___ English every day.",
+          "choices": [
+            { "choiceId": "c1", "text": "play" },
+            { "choiceId": "c2", "text": "study" },
+            { "choiceId": "c3", "text": "cook" },
+            { "choiceId": "c4", "text": "read" }
+          ],
+          "answerChoiceId": "c2"
+        }
+      ]
+    }
+  ]
+}
