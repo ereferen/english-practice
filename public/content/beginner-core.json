@@ -1,0 +1,240 @@
+{
+  "$schema": "https://english-practice.local/schemas/deck.schema.json",
+  "schemaVersion": "1.0",
+  "deckId": "beginner-core",
+  "level": "beginner",
+  "title": "中学基本語彙 (サンプル)",
+  "description": "スキーマ検証用の初級サンプルデッキ。中学basic英語 (850語帯相当) の易しい語を3レッスン15語収録。",
+  "source": "サンプルcontent (自作のプレースホルダ。本番は公開単語リストをF6のCSV取り込みで生成する。独自コンテンツ制作は行わない=前提A4)",
+  "lessons": [
+    {
+      "lessonId": "l01-daily-life",
+      "title": "日常生活",
+      "theme": "学校・暮らし",
+      "words": [
+        {
+          "wordId": "breakfast",
+          "term": "breakfast",
+          "reading": "ブレックファスト",
+          "meaning": "朝食",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "I eat breakfast at seven every morning.", "ja": "毎朝7時に朝食を食べます。" }
+          ]
+        },
+        {
+          "wordId": "library",
+          "term": "library",
+          "reading": "ライブラリー",
+          "meaning": "図書館",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "She studies at the library after school.", "ja": "彼女は放課後、図書館で勉強します。" }
+          ]
+        },
+        {
+          "wordId": "weather",
+          "term": "weather",
+          "reading": "ウェザー",
+          "meaning": "天気",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "The weather is nice today.", "ja": "今日はいい天気ですね。" }
+          ],
+          "tags": ["nature"]
+        },
+        {
+          "wordId": "friendly",
+          "term": "friendly",
+          "reading": "フレンドリー",
+          "meaning": "親しみやすい",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "My new classmate is very friendly.", "ja": "新しいクラスメイトはとても親しみやすいです。" }
+          ]
+        },
+        {
+          "wordId": "travel",
+          "term": "travel",
+          "reading": "トラベル",
+          "meaning": "旅行する; 旅行",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "We travel to Osaka by train.", "ja": "私たちは電車で大阪へ旅行します。" }
+          ],
+          "note": "名詞で短く「1回の旅行」なら a trip の方が自然な場面が多い。"
+        }
+      ],
+      "quizzes": [
+        {
+          "quizId": "q-b01",
+          "type": "choose-meaning",
+          "wordId": "breakfast",
+          "prompt": "breakfast",
+          "choices": [
+            { "choiceId": "c1", "text": "図書館" },
+            { "choiceId": "c2", "text": "朝食" },
+            { "choiceId": "c3", "text": "天気" },
+            { "choiceId": "c4", "text": "医者" }
+          ],
+          "answerChoiceId": "c2"
+        },
+        {
+          "quizId": "q-b02",
+          "type": "choose-term",
+          "wordId": "library",
+          "prompt": "図書館",
+          "choices": [
+            { "choiceId": "c1", "text": "weather" },
+            { "choiceId": "c2", "text": "travel" },
+            { "choiceId": "c3", "text": "library" },
+            { "choiceId": "c4", "text": "water" }
+          ],
+          "answerChoiceId": "c3",
+          "explanation": "library は「図書館」。water (水) と綴りが似ていて混同しやすい。"
+        },
+        {
+          "quizId": "q-b03",
+          "type": "fill-blank",
+          "wordId": "weather",
+          "prompt": "The ___ is nice today.",
+          "choices": [
+            { "choiceId": "c1", "text": "bridge" },
+            { "choiceId": "c2", "text": "weather" },
+            { "choiceId": "c3", "text": "water" },
+            { "choiceId": "c4", "text": "exercise" }
+          ],
+          "answerChoiceId": "c2"
+        },
+        {
+          "quizId": "q-b04",
+          "type": "choose-meaning",
+          "wordId": "friendly",
+          "prompt": "friendly",
+          "choices": [
+            { "choiceId": "c1", "text": "高価な" },
+            { "choiceId": "c2", "text": "静かな" },
+            { "choiceId": "c3", "text": "疲れた" },
+            { "choiceId": "c4", "text": "親しみやすい" }
+          ],
+          "answerChoiceId": "c4"
+        }
+      ]
+    },
+    {
+      "lessonId": "l02-city-life",
+      "title": "街で",
+      "theme": "場所・移動",
+      "words": [
+        {
+          "wordId": "bridge",
+          "term": "bridge",
+          "reading": "ブリッジ",
+          "meaning": "橋",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "The new bridge connects the two islands.", "ja": "新しい橋が2つの島を結んでいます。" }
+          ]
+        },
+        {
+          "wordId": "station",
+          "term": "station",
+          "reading": "ステーション",
+          "meaning": "駅",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "We get off at the next station.", "ja": "私たちは次の駅で降ります。" }
+          ]
+        },
+        {
+          "wordId": "quiet",
+          "term": "quiet",
+          "reading": "クワイエット",
+          "meaning": "静かな",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "The library is very quiet.", "ja": "図書館はとても静かです。" }
+          ]
+        },
+        {
+          "wordId": "expensive",
+          "term": "expensive",
+          "reading": "エキスパンシブ",
+          "meaning": "高価な",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "This watch is too expensive for me.", "ja": "この時計は私には高すぎます。" }
+          ],
+          "note": "反対語は cheap (安い)。"
+        },
+        {
+          "wordId": "help",
+          "term": "help",
+          "reading": "ヘルプ",
+          "meaning": "助ける; 手伝い",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "Can you help me with this box?", "ja": "この箱を運ぶのを手伝ってくれますか。" }
+          ]
+        }
+      ]
+    },
+    {
+      "lessonId": "l03-health",
+      "title": "体と健康",
+      "theme": "健康",
+      "words": [
+        {
+          "wordId": "tired",
+          "term": "tired",
+          "reading": "タイアド",
+          "meaning": "疲れた",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "I feel tired after work.", "ja": "仕事が終わったあと疲れを感じます。" }
+          ]
+        },
+        {
+          "wordId": "water",
+          "term": "water",
+          "reading": "ウォーター",
+          "meaning": "水",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "Please give me a glass of water.", "ja": "水をコップ1杯ください。" }
+          ]
+        },
+        {
+          "wordId": "exercise",
+          "term": "exercise",
+          "reading": "エクササイズ",
+          "meaning": "運動する; 運動",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "She exercises every morning.", "ja": "彼女は毎朝運動します。" }
+          ]
+        },
+        {
+          "wordId": "doctor",
+          "term": "doctor",
+          "reading": "ドクター",
+          "meaning": "医者",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "You should see a doctor about your cough.", "ja": "咳については医者に見てもらうべきです。" }
+          ]
+        },
+        {
+          "wordId": "head",
+          "term": "head",
+          "reading": "ヘッド",
+          "meaning": "頭",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "I have a pain in my head.", "ja": "頭が痛いです。" }
+          ]
+        }
+      ]
+    }
+  ]
+}

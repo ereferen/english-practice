@@ -1,0 +1,121 @@
+{
+  "$schema": "https://english-practice.local/schemas/deck.schema.json",
+  "schemaVersion": "1.0",
+  "deckId": "advanced-academic",
+  "level": "advanced",
+  "title": "学術・論説語彙 (サンプル)",
+  "description": "スキーマ検証用上級サンプルデッキ。新聞・論文で頻出する語を10語。quizzes なし=自動生成のみで構成できることの検証対象。",
+  "source": "サンプルcontent (自作のプレースホルダ。本番は公開単語リストをF6のCSV取り込みで生成する。独自コンテンツ制作は行わない=前提A4)",
+  "lessons": [
+    {
+      "lessonId": "l01-academic",
+      "title": "論文頻出語",
+      "theme": "学術",
+      "words": [
+        {
+          "wordId": "hypothesis",
+          "term": "hypothesis",
+          "reading": "ハイポセシス",
+          "meaning": "仮説",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "The experiment was designed to test the hypothesis.", "ja": "実験はその仮説を検証するために設計された。" }
+          ],
+          "note": "複数形 hypotheses (/siːz/)。"
+        },
+        {
+          "wordId": "significant",
+          "term": "significant",
+          "reading": "シグニフィカント",
+          "meaning": "重要な; (統計的に) 有意な",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "There was a significant difference between the two groups.", "ja": "2群間に有意な差があった。" }
+          ]
+        },
+        {
+          "wordId": "acknowledge",
+          "term": "acknowledge",
+          "reading": "アクノリッジ",
+          "meaning": "認める; 謝意を示す",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "The report acknowledges the limitations of the study.", "ja": "その報告は研究の限界を認めている。" }
+          ]
+        },
+        {
+          "wordId": "subsequent",
+          "term": "subsequent",
+          "reading": "サブシークエント",
+          "meaning": "その後の, 続く",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "Subsequent research confirmed the initial finding.", "ja": "その後の研究が当初の知見を裏付けた。" }
+          ]
+        },
+        {
+          "wordId": "implication",
+          "term": "implication",
+          "reading": "インプリケーション",
+          "meaning": "含意; (複数で) 影響・帰結",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "The policy has serious economic implications.", "ja": "その政策には深刻な経済的帰結がある。" }
+          ]
+        },
+        {
+          "wordId": "explicitly",
+          "term": "explicitly",
+          "reading": "エクスプリシットリー",
+          "meaning": "明確に, はっきりと",
+          "partOfSpeech": "adverb",
+          "examples": [
+            { "en": "The instructions explicitly prohibit copying.", "ja": "その指示はコピーを明確に禁止している。" }
+          ],
+          "note": "対義語は implicitly (暗黙に)。"
+        },
+        {
+          "wordId": "bias",
+          "term": "bias",
+          "reading": "バイアス",
+          "meaning": "偏り; 先入観",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "Selection bias can distort the results.", "ja": "選択バイアスは結果を歪めうる。" }
+          ]
+        },
+        {
+          "wordId": "comprehensive",
+          "term": "comprehensive",
+          "reading": "コンプリヘンシブ",
+          "meaning": "包括的な",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "The book offers a comprehensive overview of the field.", "ja": "その本はその分野の包括的な概観を提供している。" }
+          ]
+        },
+        {
+          "wordId": "derive",
+          "term": "derive",
+          "reading": "デライヴ",
+          "meaning": "導く; 得る",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "Many English words derive from Latin.", "ja": "多くの英語の語はラテン語に由来する。" }
+          ],
+          "note": "「〜に由来する」は derive from。"
+        },
+        {
+          "wordId": "feasible",
+          "term": "feasible",
+          "reading": "フィージブル",
+          "meaning": "実行可能な",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "Is it feasible to finish the prototype this week?", "ja": "今週中にプロトタイプを完成させることは実行可能か。" }
+          ]
+        }
+      ]
+    }
+  ]
+}

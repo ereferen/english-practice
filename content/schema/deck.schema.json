@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://english-practice.local/schemas/deck.schema.json",
+  "title": "VocabularyDeck",
+  "description": "英語学習アプリMVPの学習コンテンツ(デッキ)スキーマ。要件定義レポート t_25e9889b の F1(フラッシュカード)/F2(4択クイズ)/F3(簡易間隔反復)/F6(CSV取り込み) を支えるデータ形式。関連整合性制約(ID一意性・参照解決・正解選択肢の一致)はJSON Schemaでは表現できないため docs/design/content-design.md §5 と scripts/validate_content.py で強制する。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "deckId", "level", "title", "lessons"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "エディタ補完向けのスキーマポインタ (任意)。内容検証時は無視してよい"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "スキーマ版数 (例: 1.0)。後方互換でないフィールド追加時はマイナー/メジャーを更新"
+    },
+    "deckId": {
+      "$ref": "#/$defs/slug",
+      "description": "デッキの永続識別子。進捗データからの参照キーになるためリネーム禁止"
+    },
+    "level": {
+      "enum": ["beginner", "intermediate", "advanced"],
+      "description": "レベル分け (初級/中級/上級)"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "source": {
+      "type": "string",
+      "description": "単語リストの出典 (前提A4: 公開リスト取り込み)。サンプルデータには自作プレースホルダである旨を明記"
+    },
+    "lessons": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/lesson" }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+      "description": "英小文字・数字・ハイフンのID。先頭は英数字"
+    },
+    "lesson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lessonId", "title", "words"],
+      "properties": {
+        "lessonId": { "$ref": "#/$defs/slug" },
+        "title": { "type": "string", "minLength": 1 },
+        "theme": {
+          "type": "string",
+          "description": "レッスンの主題 (例: 日常生活, 職場)。出題の絞り込みやUI表示に利用可"
+        },
+        "words": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/word" }
+        },
+        "quizzes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/quiz" },
+          "description": "手作りクイズ (任意)。空/省略時はアプリ側で words から自動生成する (F2, 生成規則は content-design.md §6)"
+        }
+      }
+    },
+    "word": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wordId", "term", "reading", "meaning", "examples"],
+      "properties": {
+        "wordId": {
+          "$ref": "#/$defs/slug",
+          "description": "デッキ内で一意・安定なID。SRS(F3)・誤答ノート(F8)のキー。CSV再インポート時も term 由来で不変を保つ (content-design.md §7)"
+        },
+        "term": {
+          "type": "string",
+          "minLength": 1,
+          "description": "見出し語 (フラッシュカード表側, F1)"
+        },
+        "reading": {
+          "type": "string",
+          "minLength": 1,
+          "description": "日本語話者向け読み (カタカナ表記)。発音補助のない語は term をローマ字のまま"
+        },
+        "meaning": {
+          "type": "string",
+          "minLength": 1,
+          "description": "日本語_meaning (カード裏側)。多義は ; で区切る (例: 旅行する; 旅行)"
+        },
+        "partOfSpeech": {
+          "enum": [
+            "noun",
+            "verb",
+            "adjective",
+            "adverb",
+            "preposition",
+            "conjunction",
+            "pronoun",
+            "determiner",
+            "exclamation",
+            "other"
+          ]
+        },
+        "examples": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/example" },
+          "description": "例文 (カード裏側, F1)。1件目は fill-blank クイズ生成の元になるので原則必須"
+        },
+        "note": {
+          "type": "string",
+          "description": "補足・語法・記憶のヒント (カード裏に任意表示)"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "任意タグ (F8 のフィルタ拡張フック)"
+        },
+        "audio": {
+          "type": "string",
+          "description": "音声ファイル相対パス (任意)。省略時は Web Speech API で term をTTS読み上げ (F7/P1)"
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en"],
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "ja": {
+          "type": "string",
+          "description": "例文の日本語訳。mikanへの不満『英日一対一訳で語義が潰れる』への対策として、単語meaningとは別に文レベルの訳を持たせる"
+        }
+      }
+    },
+    "quiz": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quizId",
+        "type",
+        "wordId",
+        "prompt",
+        "choices",
+        "answerChoiceId"
+      ],
+      "properties": {
+        "quizId": { "$ref": "#/$defs/slug" },
+        "type": {
+          "enum": ["choose-meaning", "choose-term", "fill-blank"],
+          "description": "choose-meaning=termを見てmeaningを4択 / choose-term=meaningを見てtermを4択 / fill-blank=例文の語空所補充 (選択肢はterm)"
+        },
+        "wordId": {
+          "$ref": "#/$defs/slug",
+          "description": "出題対象の単語。採点結果はF3のSRS状態でこのwordIdをキーに記録される"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "問題文。fill-blankでは空所を ___ (アンダースコア3つ) で表す"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["choiceId", "text"],
+            "properties": {
+              "choiceId": { "$ref": "#/$defs/slug" },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          },
+          "description": "必ず4肢 (F2)。ダミーは同一デッキ内から自動生成するのが基本規則"
+        },
+        "answerChoiceId": {
+          "$ref": "#/$defs/slug",
+          "description": "正解のchoiceId。choices内に存在すること (整合性チェック対象)"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "正誤フィードバック時に表示する解説 (任意)。色以外の判別補助というアクセシビリティ要求に対応するため、正誤はUI側でアイコン+テキスト+音でも通知する"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "$schema": "https://english-practice.local/schemas/deck.schema.json",
+  "schemaVersion": "1.0",
+  "deckId": "intermediate-workplace",
+  "level": "intermediate",
+  "title": "職場・日常中級語彙 (サンプル)",
+  "description": "スキーマ検証用の中級サンプルデッキ。日常会話で頻出するやや抽象的な語を2レッスン10語収録。quizzes は l01 のみ手作り (l02 は自動生成の検証対象)。",
+  "source": "サンプルcontent (自作のプレースホルダ。本番は公開単語リストをF6のCSV取り込みで生成する。独自コンテンツ制作は行わない=前提A4)",
+  "lessons": [
+    {
+      "lessonId": "l01-workplace",
+      "title": "職場で",
+      "theme": "仕事",
+      "words": [
+        {
+          "wordId": "schedule",
+          "term": "schedule",
+          "reading": "スキジュール",
+          "meaning": "予定; 計画を立てる",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "Let's reschedule the meeting for Friday.", "ja": "会議を金曜日に組み直しましょう。" }
+          ],
+          "note": "米発音 /skedʒuːl/、英発音 /ʃedjuːl/。"
+        },
+        {
+          "wordId": "colleague",
+          "term": "colleague",
+          "reading": "カリーグ",
+          "meaning": "同僚",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "A colleague of mine recommended this app.", "ja": "同僚がこのアプリを教えてくれました。" }
+          ],
+          "tags": ["people"]
+        },
+        {
+          "wordId": "deadline",
+          "term": "deadline",
+          "reading": "デッドライン",
+          "meaning": "締切",
+          "partOfSpeech": "noun",
+          "examples": [
+            { "en": "We need to meet the deadline by Monday.", "ja": "月曜日までに締切に間に合わせる必要があります。" }
+          ]
+        },
+        {
+          "wordId": "improve",
+          "term": "improve",
+          "reading": "インプルーブ",
+          "meaning": "改善する",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "I want to improve my English vocabulary.", "ja": "英語の語彙を改善したいです。" }
+          ]
+        },
+        {
+          "wordId": "careful",
+          "term": "careful",
+          "reading": "ケアフル",
+          "meaning": "注意深い; 慎重な",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "Be careful when you cross the street.", "ja": "道路を渡るときは注意してください。" }
+          ]
+        }
+      ],
+      "quizzes": [
+        {
+          "quizId": "q-i01",
+          "type": "choose-meaning",
+          "wordId": "deadline",
+          "prompt": "deadline",
+          "choices": [
+            { "choiceId": "c1", "text": "締切" },
+            { "choiceId": "c2", "text": "降誕祭" },
+            { "choiceId": "c3", "text": "死線 (比喩)" },
+            { "choiceId": "c4", "text": "定期試験" }
+          ],
+          "answerChoiceId": "c1"
+        },
+        {
+          "quizId": "q-i02",
+          "type": "fill-blank",
+          "wordId": "colleague",
+          "prompt": "A ___ of mine recommended this app.",
+          "choices": [
+            { "choiceId": "c1", "text": "colleague" },
+            { "choiceId": "c2", "text": "college" },
+            { "choiceId": "c3", "text": "community" },
+            { "choiceId": "c4", "text": "company" }
+          ],
+          "answerChoiceId": "c1",
+          "explanation": "colleague=同僚。college (大学)・company (会社) と綴りが近く紛らわしい。"
+        },
+        {
+          "quizId": "q-i03",
+          "type": "choose-term",
+          "wordId": "improve",
+          "prompt": "改善する",
+          "choices": [
+            { "choiceId": "c1", "text": "imagine" },
+            { "choiceId": "c2", "text": "improve" },
+            { "choiceId": "c3", "text": "include" },
+            { "choiceId": "c4", "text": "introduce" }
+          ],
+          "answerChoiceId": "c2"
+        }
+      ]
+    },
+    {
+      "lessonId": "l02-opinions",
+      "title": "意見を知る",
+      "theme": "思考・表現",
+      "words": [
+        {
+          "wordId": "probably",
+          "term": "probably",
+          "reading": "プロバブリィ",
+          "meaning": "おそらく",
+          "partOfSpeech": "adverb",
+          "examples": [
+            { "en": "It will probably rain this afternoon.", "ja": "午後はたぶん雨が降るでしょう。" }
+          ]
+        },
+        {
+          "wordId": "agree",
+          "term": "agree",
+          "reading": "アグリー",
+          "meaning": "同意する",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "I agree with your idea.", "ja": "あなたの考えに同意します。" }
+          ],
+          "note": "「〜に同意する」は agree with + 人/意見。"
+        },
+        {
+          "wordId": "different",
+          "term": "different",
+          "reading": "ディファレント",
+          "meaning": "異なる",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "This result is different from the previous one.", "ja": "この結果は以前のものとは異なります。" }
+          ]
+        },
+        {
+          "wordId": "decide",
+          "term": "decide",
+          "reading": "デサイド",
+          "meaning": "決める; 決定する",
+          "partOfSpeech": "verb",
+          "examples": [
+            { "en": "We decided to launch the feature next month.", "ja": "私たちは来月その機能を公開することに決めました。" }
+          ]
+        },
+        {
+          "wordId": "enough",
+          "term": "enough",
+          "reading": "イナフ",
+          "meaning": "十分な; 十分に",
+          "partOfSpeech": "adjective",
+          "examples": [
+            { "en": "Do we have enough time before the meeting?", "ja": "会議までに十分な時間はありますか。" }
+          ]
+        }
+      ]
+    }
+  ]
+}
