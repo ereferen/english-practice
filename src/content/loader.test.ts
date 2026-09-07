@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import { readFileSync } from "fs";
+import { describe, expect, it } from "vitest";
 import {
   allQuizzes,
   allWords,
@@ -59,60 +58,25 @@ const baseDeck: Deck = {
 };
 
 describe("loadBundledDecks", () => {
-  it("loads bundled decks from /content", async () => {
-    const originalFetch = globalThis.fetch;
-    try {
-      globalThis.fetch = vi.fn(async (url: string | Request | URL) => {
-        const file = String(url).split("/").pop() ?? "";
-        const text = readFileSync(
-          `/home/tenki/project/english-practice/public/content/${file}`,
-          "utf8",
-        );
-        return new Response(text, {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }) as unknown as typeof fetch;
-
-      const { decks, errors } = await loadBundledDecks("");
-      expect(errors.length).toBe(0);
-      expect(decks.length).toBe(3);
-      const ids = decks.map((d) => d.deck.deckId).sort();
-      expect(ids).toEqual([
-        "advanced-academic",
-        "beginner-core",
-        "intermediate-workplace",
-      ]);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+  it("loads 3 bundled decks from static imports", async () => {
+    const { decks, errors } = await loadBundledDecks();
+    expect(errors.length).toBe(0);
+    expect(decks.length).toBe(3);
+    const ids = decks.map((d) => d.deck.deckId).sort();
+    expect(ids).toEqual([
+      "advanced-academic",
+      "beginner-core",
+      "intermediate-workplace",
+    ]);
   });
 
-  it("reports errors for unreachable decks", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-    } as Response);
-
-    const { decks, errors } = await loadBundledDecks("");
-    expect(decks.length).toBe(0);
-    expect(errors.length).toBe(3);
-    for (const err of errors) {
-      expect(err.reason).toContain("HTTP 404");
-    }
-  });
-
-  it("reports validation errors for malformed json", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ invalid: true }),
-    } as Response);
-
-    const { decks, errors } = await loadBundledDecks("");
-    expect(decks.length).toBe(0);
-    expect(errors.length).toBe(3);
-    for (const err of errors) {
-      expect(err.reason.length).toBeGreaterThan(0);
+  it("all bundled decks pass Zod validation and consistency checks", async () => {
+    const { decks, errors } = await loadBundledDecks();
+    expect(errors.length).toBe(0);
+    for (const d of decks) {
+      expect(d.source).toBe("bundled");
+      // Each deck should have at least one lesson with words
+      expect(d.deck.lessons.length).toBeGreaterThan(0);
     }
   });
 });
@@ -359,7 +323,7 @@ describe("generateQuizzesForLesson", () => {
 describe("loadDeckFromFile", () => {
   it("loads a valid sample deck file", async () => {
     const result = await loadDeckFromFile(
-      "/home/tenki/project/english-practice/public/content/beginner-core.json",
+      "/home/tenki/project/english-practice/src/content/data/beginner-core.json",
     );
     expect(result.deck.deckId).toBe("beginner-core");
     expect(result.deck.title).toBe("中学基本語彙 (サンプル)");

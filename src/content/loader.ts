@@ -1,10 +1,14 @@
 import { parseDeckSafe } from "./schema";
 import type { Deck, Lesson, Quiz, Word } from "./schema";
 
+import beginnerCore from "./data/beginner-core.json";
+import intermediateWorkplace from "./data/intermediate-workplace.json";
+import advancedAcademic from "./data/advanced-academic.json";
+
 const BUNDLED_DECK_FILES = [
-  "beginner-core.json",
-  "intermediate-workplace.json",
-  "advanced-academic.json",
+  { name: "beginner-core.json", data: beginnerCore },
+  { name: "intermediate-workplace.json", data: intermediateWorkplace },
+  { name: "advanced-academic.json", data: advancedAcademic },
 ];
 
 export interface LoadedDeck {
@@ -18,48 +22,42 @@ export interface LoadError {
   reason: string;
 }
 
-export async function loadBundledDecks(base = ""): Promise<{
+/**
+ * Load bundled decks from statically imported JSON.
+ * No network fetch — works identically in dev, build, and production.
+ */
+export async function loadBundledDecks(): Promise<{
   decks: LoadedDeck[];
   errors: LoadError[];
 }> {
-  const baseUrl = base.replace(/\/$/, "");
   const decks: LoadedDeck[] = [];
   const errors: LoadError[] = [];
 
-  await Promise.all(
-    BUNDLED_DECK_FILES.map(async (file) => {
-      const url = baseUrl ? `${baseUrl}/content/${file}` : `/content/${file}`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          errors.push({ url, reason: `HTTP ${res.status}` });
-          return;
-        }
-        const json = await res.json();
-
-        // 層1 — Zod 検証
-        const parsed = parseDeckSafe(json);
-        if (parsed.ok === false) {
-          const reason = parsed.issues.map(formatZodIssue).join("; ");
-          errors.push({ url, reason });
-          return;
-        }
-
-        // 層2 — 整合性検証
-        const consistency = validateDeckConsistency(parsed.deck);
-        if (consistency.length > 0) {
-          errors.push({ url, reason: consistency.join("; ") });
-          return;
-        }
-        decks.push({ deck: parsed.deck, source: "bundled", url });
-      } catch (e) {
-        errors.push({
-          url,
-          reason: e instanceof Error ? e.message : String(e),
-        });
+  for (const { name, data } of BUNDLED_DECK_FILES) {
+    const url = name;
+    try {
+      // 層1 — Zod 検証
+      const parsed = parseDeckSafe(data);
+      if (parsed.ok === false) {
+        const reason = parsed.issues.map(formatZodIssue).join("; ");
+        errors.push({ url, reason });
+        continue;
       }
-    }),
-  );
+
+      // 層2 — 整合性検証
+      const consistency = validateDeckConsistency(parsed.deck);
+      if (consistency.length > 0) {
+        errors.push({ url, reason: consistency.join("; ") });
+        continue;
+      }
+      decks.push({ deck: parsed.deck, source: "bundled", url });
+    } catch (e) {
+      errors.push({
+        url,
+        reason: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
 
   decks.sort((a, b) => a.deck.title.localeCompare(b.deck.title, "ja"));
   return { decks, errors };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Action, ProgressSnapshot } from "../app/types";
 import type { LocalProgressStore } from "../storage/localProgress";
 
@@ -11,17 +11,12 @@ export default function ProgressScreen({
   dispatch,
   localProgress,
 }: Props) {
-  const [snapshot, setSnapshot] = useState<ProgressSnapshot | null>(null);
-
-  useEffect(() => {
-    setSnapshot(localProgress.load());
-  }, [localProgress]);
+  const [snapshot] = useState<ProgressSnapshot>(() => localProgress.load());
 
   const isEmpty =
-    snapshot === null ||
-    (snapshot.learnedWords.length === 0 && snapshot.sessions.length === 0);
+    snapshot.learnedWords.length === 0 && snapshot.sessions.length === 0;
 
-  const learnedWordCount = snapshot?.learnedWords.length ?? 0;
+  const learnedWordCount = snapshot.learnedWords.length;
 
   return (
     <div className="container">
@@ -48,10 +43,10 @@ export default function ProgressScreen({
             </div>
           </div>
 
-          {snapshot!.sessions.length > 0 && (
+          {snapshot.sessions.length > 0 && (
             <>
               <h3>クイズ履歴</h3>
-              {snapshot!.sessions.map((s, i) => {
+              {snapshot.sessions.map((s, i) => {
                 const dateStr = s.answeredAt.slice(0, 10);
                 const score =
                   s.askedCount > 0
