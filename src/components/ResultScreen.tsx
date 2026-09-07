@@ -91,34 +91,41 @@ export default function ResultScreen({
   }
 
   const rate = scoreRate(answers);
+  const elapsedSec = Math.round(
+    answers.reduce((sum, a) => sum + a.latencyMs, 0) / 1000,
+  );
+  const minutes = Math.floor(elapsedSec / 60);
+  const seconds = elapsedSec % 60;
+  const sessionTime =
+    minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
   const wrongIds = wrongWordIds(answers);
   const wrongWords = wrongIds
     .map((id) => wordById(deck, id))
     .filter((w): w is NonNullable<typeof w> => Boolean(w));
 
   return (
-    <div className="container">
-      <div className="card" style={{ textAlign: "center" }}>
+    <div className="container wide">
+      <div className="card result-summary" style={{ textAlign: "center" }}>
         <h2>セッション完了</h2>
-        <div style={{ fontSize: "3rem", fontWeight: 700 }}>
-          {Math.round(rate * 100)}%
-        </div>
+        <div className="result-rate">{Math.round(rate * 100)}%</div>
         <p>
           正解 {answers.filter((a) => a.correct).length} / {answers.length} 問
         </p>
+        <p className="result-time">セッション時間 {sessionTime}</p>
       </div>
 
       {wrongWords.length > 0 && (
         <div className="card">
           <h3>誤答した語</h3>
-          <ul style={{ paddingLeft: "1.25rem" }}>
+          <ul className="wrong-words-grid">
             {wrongWords.map((w) => (
-              <li key={w.wordId} style={{ marginBottom: "0.5rem" }}>
-                <strong>{w.term}</strong> — {w.meaning}
+              <li key={w.wordId} className="wrong-word">
+                <strong>{w.term}</strong>
+                <span className="wrong-word-meaning">{w.meaning}</span>
                 <button
                   className="ghost"
+                  aria-label={`${w.term} の発音を再生`}
                   onClick={() => speak(w.term)}
-                  style={{ marginLeft: "0.5rem" }}
                 >
                   ▶
                 </button>
@@ -128,7 +135,7 @@ export default function ResultScreen({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="result-actions">
         <button
           onClick={() => dispatch({ type: "go", screen: { name: "home" } })}
           style={{ flex: 1 }}
