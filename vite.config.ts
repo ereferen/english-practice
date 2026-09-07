@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react-swc';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: '/english/',
   plugins: [react()],
   resolve: {
     alias: {

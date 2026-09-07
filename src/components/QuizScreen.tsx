@@ -103,7 +103,7 @@ export default function QuizScreen({
         type: "finishQuiz",
         deckId,
         lessonId,
-        answers: [...answers, { ...answers[answers.length - 1] }],
+        answers,
       });
     } else {
       setIndex((i) => i + 1);
@@ -125,6 +125,14 @@ export default function QuizScreen({
           }
         >
           中断
+        </button>
+        <button
+          className="ghost"
+          onClick={() =>
+            dispatch({ type: "go", screen: { name: "progress" } })
+          }
+        >
+          進捗
         </button>
       </div>
 

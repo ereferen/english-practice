@@ -172,7 +172,7 @@ Dexie スキーマ (テーブルキー + 索引):
 db.version(1).stores({
   review:  'wordId, deckId, dueAt, level',       // dueAt で今日キュー索引検索
   sessions:'id, deckId, startedAt',
-  answers: 'id, sessionId, wordId, [sessionId+wordId]',
+  answers: 'id, sessionId, wordId, askedAt, [sessionId+wordId]',
   decks:   'id, source',                          // source: 'bundled' | 'import'
 });
 ```

@@ -6,6 +6,7 @@ import { scoreRate, wrongWordIds } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
+import { localProgress } from "../storage/localProgress";
 
 interface Props {
   state: AppState;
@@ -42,6 +43,22 @@ export default function ResultScreen({
       })
       .catch(() => {});
 
+    // Persist to localStorage progress store (survives page reload)
+    localProgress.recordSession({
+      askedCount: answers.length,
+      correctCount: answers.filter((a) => a.correct).length,
+      answeredAt: endedAt,
+    });
+    localProgress.saveQuizResults(
+      deckId,
+      lessonId,
+      answers.map((a) => ({
+        quizId: a.quizId,
+        wordId: a.wordId,
+        correct: a.correct,
+      })),
+    );
+
     (async () => {
       for (const a of answers) {
         const existing = await storage.loadReview(deckId, a.wordId);
@@ -57,7 +74,7 @@ export default function ResultScreen({
           wrongTotal: updated.wrongTotal,
         });
       }
-    })();
+    })().catch(() => {});
   }, [deck, deckId, lessonId, answers, storage]);
 
   if (!deck) {
@@ -120,6 +137,14 @@ export default function ResultScreen({
         </button>
         <button
           className="primary"
+          onClick={() =>
+            dispatch({ type: "go", screen: { name: "progress" } })
+          }
+          style={{ flex: 1 }}
+        >
+          進捗を見る
+        </button>
+        <button
           onClick={() =>
             dispatch({ type: "go", screen: { name: "deckHome", deckId } })
           }

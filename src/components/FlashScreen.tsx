@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import { pickLesson } from "../content/loader";
 import { speak } from "../domain/speech";
+import type { LocalProgressStore } from "../storage/localProgress";
 
 interface Props {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  localProgress: LocalProgressStore;
   deckId: string;
   lessonId: string;
 }
@@ -13,6 +15,7 @@ interface Props {
 export default function FlashScreen({
   state,
   dispatch,
+  localProgress,
   deckId,
   lessonId,
 }: Props) {
@@ -20,10 +23,12 @@ export default function FlashScreen({
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const learnedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setIndex(0);
     setFlipped(false);
+    learnedRef.current = new Set();
   }, [deckId, lessonId]);
 
   if (!deck || !lessonWithDeck) {
@@ -45,7 +50,20 @@ export default function FlashScreen({
   const word = lesson.words[index];
   const isLast = index === lesson.words.length - 1;
 
+  /** Mark the current word as learned (idempotent per render cycle). */
+  const markCurrentLearned = () => {
+    const id = word.wordId;
+    if (learnedRef.current.has(id)) return;
+    learnedRef.current.add(id);
+    localProgress.markLearned({
+      deckId,
+      wordId: id,
+      learnedAt: new Date().toISOString(),
+    });
+  };
+
   const handleNext = () => {
+    markCurrentLearned();
     if (isLast) {
       dispatch({ type: "go", screen: { name: "quiz", deckId, lessonId } });
     } else {
@@ -67,6 +85,14 @@ export default function FlashScreen({
           }
         >
           中断
+        </button>
+        <button
+          className="ghost"
+          onClick={() =>
+            dispatch({ type: "go", screen: { name: "progress" } })
+          }
+        >
+          進捗
         </button>
       </div>
 

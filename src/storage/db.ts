@@ -19,5 +19,5 @@ db.version(1).stores({
   settings: "++id",
   review: "[deckId+wordId], deckId, dueAt, level",
   sessions: "id, deckId, startedAt",
-  answers: "id, sessionId, wordId, [sessionId+wordId]",
+  answers: "id, sessionId, wordId, askedAt, [sessionId+wordId]",
 });

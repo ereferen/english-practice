@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import type { Deck, Lesson, Quiz, Word } from "./schema";
 import { parseDeckSafe } from "./schema";
+import type { Deck, Lesson, Quiz, Word } from "./schema";
 
 const BUNDLED_DECK_FILES = [
   "beginner-core.json",
@@ -358,6 +357,7 @@ export async function loadDeckFromFile(
 
   let text: string;
   try {
+    const { readFile } = await import("node:fs/promises");
     text = await readFile(filePath, "utf-8");
   } catch (e) {
     throw new ContentLoadError(

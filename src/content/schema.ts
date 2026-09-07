@@ -97,8 +97,7 @@ export type Lesson = z.infer<typeof lessonSchema>;
 export type Deck = z.infer<typeof deckSchema>;
 
 export type ParseDeckResult =
-  | { ok: true; deck: Deck }
-  | { ok: false; issues: z.ZodIssue[] };
+  { ok: true; deck: Deck } | { ok: false; issues: z.ZodIssue[] };
 
 export function parseDeck(json: unknown): Deck {
   return deckSchema.parse(json);
