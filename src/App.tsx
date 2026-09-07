@@ -23,9 +23,7 @@ export default function App() {
     let mounted = true;
     (async () => {
       try {
-        const { decks, errors } = await loadBundledDecks(
-          import.meta.env.BASE_URL ?? "",
-        );
+        const { decks, errors } = await loadBundledDecks();
         if (!mounted) return;
         if (errors.length > 0) {
           setError(errors.map((e) => `${e.url}: ${e.reason}`).join("\n"));
