@@ -107,6 +107,15 @@ export default function Home({ state, dispatch, storage }: Props) {
           進捗ダッシュボード
         </button>
         <button
+          className="primary"
+          style={{ width: "100%", marginBottom: "0.75rem" }}
+          onClick={() =>
+            dispatch({ type: "go", screen: { name: "conversation" } })
+          }
+        >
+          英会話
+        </button>
+        <button
           style={{ width: "100%" }}
           onClick={() => dispatch({ type: "go", screen: { name: "settings" } })}
         >

@@ -132,3 +132,9 @@ p {
   white-space: nowrap;
   border: 0;
 }
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}

@@ -150,6 +150,43 @@ export default function Settings({ dispatch, storage }: Props) {
           すべてのデータを削除
         </button>
       </div>
+
+      <div className="card">
+        <h3>英会話 AI 設定</h3>
+        <label>
+          API エンドポイント
+          <input
+            type="text"
+            value={settings.llmApiEndpoint}
+            onChange={(e) => save({ llmApiEndpoint: e.target.value })}
+            placeholder="http://192.168.1.100:11434/v1"
+            style={{ width: "100%", marginTop: "0.5rem", marginBottom: "0.75rem", padding: "0.5rem" }}
+          />
+        </label>
+        <label>
+          モデル名
+          <input
+            type="text"
+            value={settings.llmModel}
+            onChange={(e) => save({ llmModel: e.target.value })}
+            placeholder="deepseek-v4-flash"
+            style={{ width: "100%", marginTop: "0.5rem", marginBottom: "0.75rem", padding: "0.5rem" }}
+          />
+        </label>
+        <label>
+          API キー（必要な場合）
+          <input
+            type="password"
+            value={settings.llmApiKey}
+            onChange={(e) => save({ llmApiKey: e.target.value })}
+            placeholder="sk-..."
+            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+          />
+        </label>
+        <p style={{ fontSize: "0.8rem", color: "var(--color-muted)", marginTop: "0.75rem" }}>
+          OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp など）を指定できます。
+        </p>
+      </div>
     </div>
   );
 }

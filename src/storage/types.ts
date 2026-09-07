@@ -32,6 +32,9 @@ export interface Settings {
   dailyGoalWords: number;
   soundEnabled: boolean;
   dataVersion: number;
+  llmApiEndpoint: string;
+  llmModel: string;
+  llmApiKey: string;
 }
 
 export interface StorageProvider {
@@ -70,6 +73,9 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyGoalWords: 10,
   soundEnabled: true,
   dataVersion: 1,
+  llmApiEndpoint: "http://localhost:11434/v1",
+  llmModel: "deepseek-v4-flash",
+  llmApiKey: "",
 };
 
 export function progressKey(deckId: string, wordId: string): string {

@@ -1,6 +1,30 @@
 import type { Deck } from "../content/schema";
 import type { AnswerRecord } from "../domain/session";
 
+export interface QuizResult {
+  quizId: string;
+  wordId: string;
+  correct: boolean;
+}
+
+export interface SessionSummary {
+  askedCount: number;
+  correctCount: number;
+  answeredAt: string;
+}
+
+export interface LearnedWordEntry {
+  deckId: string;
+  wordId: string;
+  learnedAt: string;
+}
+
+export interface ProgressSnapshot {
+  learnedWords: LearnedWordEntry[];
+  sessions: SessionSummary[];
+  version: number;
+}
+
 export type Screen =
   | { name: "home" }
   | { name: "deckList" }
@@ -13,8 +37,10 @@ export type Screen =
       lessonId: string;
       answers: AnswerRecord[];
     }
+  | { name: "progress" }
   | { name: "dashboard" }
-  | { name: "settings" };
+  | { name: "settings" }
+  | { name: "conversation" };
 
 export interface AppState {
   screen: Screen;

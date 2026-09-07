@@ -2,13 +2,16 @@ import { useEffect, useReducer, useState } from "react";
 import { reducer, initialState } from "./app/types";
 import { loadBundledDecks } from "./content/loader";
 import { storage } from "./storage/dexieProvider";
+import { localProgress } from "./storage/localProgress";
 import Home from "./components/Home";
 import DeckList from "./components/DeckList";
 import DeckHome from "./components/DeckHome";
 import FlashScreen from "./components/FlashScreen";
 import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
+import ProgressScreen from "./components/ProgressScreen";
 import Dashboard from "./components/Dashboard";
+import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
 
 export default function App() {
@@ -77,6 +80,7 @@ export default function App() {
         <FlashScreen
           state={state}
           dispatch={dispatch}
+          localProgress={localProgress}
           deckId={state.screen.deckId}
           lessonId={state.screen.lessonId}
         />
@@ -102,10 +106,25 @@ export default function App() {
           answers={state.screen.answers}
         />
       );
+    case "progress":
+      return (
+        <ProgressScreen
+          dispatch={dispatch}
+          localProgress={localProgress}
+        />
+      );
     case "dashboard":
       return <Dashboard state={state} dispatch={dispatch} storage={storage} />;
     case "settings":
       return <Settings state={state} dispatch={dispatch} storage={storage} />;
+    case "conversation":
+      return (
+        <ConversationScreen
+          state={state}
+          dispatch={dispatch}
+          storage={storage}
+        />
+      );
     default:
       return <Home state={state} dispatch={dispatch} storage={storage} />;
   }
