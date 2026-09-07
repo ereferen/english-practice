@@ -11,7 +11,11 @@ import { DEFAULT_SETTINGS } from "./types";
 export class DexieStorageProvider implements StorageProvider {
   async loadSettings(): Promise<Settings> {
     const row = await db.settings.get(1);
-    return row ? (row as Settings) : DEFAULT_SETTINGS;
+    // 既存行に後から追加したキー（フォールバック設定など）が無い場合は
+    // デフォルトで補完する
+    return row
+      ? { ...DEFAULT_SETTINGS, ...(row as Settings) }
+      : DEFAULT_SETTINGS;
   }
 
   async saveSettings(settings: Partial<Settings>): Promise<void> {

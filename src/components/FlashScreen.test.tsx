@@ -23,7 +23,9 @@ function makeMockProgress(): LocalProgressStore {
     markLearned: vi.fn(function (entry) {
       // Real implementation returns the updated snapshot
       return {
-        learnedWords: [{ ...entry, learnedAt: entry.learnedAt ?? new Date().toISOString() }],
+        learnedWords: [
+          { ...entry, learnedAt: entry.learnedAt ?? new Date().toISOString() },
+        ],
         sessions: [],
         version: 1,
       };
@@ -31,7 +33,12 @@ function makeMockProgress(): LocalProgressStore {
     recordSession: vi.fn(function (summary) {
       return {
         learnedWords: [],
-        sessions: [{ ...summary, answeredAt: summary.answeredAt ?? new Date().toISOString() }],
+        sessions: [
+          {
+            ...summary,
+            answeredAt: summary.answeredAt ?? new Date().toISOString(),
+          },
+        ],
         version: 1,
       };
     }),
@@ -62,7 +69,11 @@ function makeTestDeck(): Deck {
 
 function makeState(deck: Deck, overrides?: Partial<AppState>): AppState {
   return {
-    screen: { name: "flash", deckId: deck.deckId, lessonId: deck.lessons[0].lessonId },
+    screen: {
+      name: "flash",
+      deckId: deck.deckId,
+      lessonId: deck.lessons[0].lessonId,
+    },
     decks: [deck],
     selectedDeckId: null,
     ...overrides,

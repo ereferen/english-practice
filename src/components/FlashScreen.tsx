@@ -88,9 +88,7 @@ export default function FlashScreen({
         </button>
         <button
           className="ghost"
-          onClick={() =>
-            dispatch({ type: "go", screen: { name: "progress" } })
-          }
+          onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
         >
           進捗
         </button>

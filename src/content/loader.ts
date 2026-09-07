@@ -384,11 +384,7 @@ export async function parseDeckJson(
     parsed = JSON.parse(jsonString);
   } catch (e) {
     const msg = e instanceof SyntaxError ? e.message : String(e);
-    throw new ContentLoadError(
-      `invalid JSON in "${source}": ${msg}`,
-      0,
-      [],
-    );
+    throw new ContentLoadError(`invalid JSON in "${source}": ${msg}`, 0, []);
   }
 
   // 層1 — Zod

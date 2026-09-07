@@ -106,10 +106,7 @@ export default function App() {
       );
     case "progress":
       return (
-        <ProgressScreen
-          dispatch={dispatch}
-          localProgress={localProgress}
-        />
+        <ProgressScreen dispatch={dispatch} localProgress={localProgress} />
       );
     case "dashboard":
       return <Dashboard state={state} dispatch={dispatch} storage={storage} />;

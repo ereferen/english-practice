@@ -5,6 +5,7 @@ import type {
   Settings as SettingsType,
 } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
+import { providersFromSettings, testLlmConnection } from "../domain/llm";
 
 interface Props {
   state: AppState;
@@ -16,6 +17,7 @@ export default function Settings({ dispatch, storage }: Props) {
   const [settings, setSettings] = useState<SettingsType>(DEFAULT_SETTINGS);
   const [exported, setExported] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [testing, setTesting] = useState<"primary" | "fallback" | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +71,25 @@ export default function Settings({ dispatch, storage }: Props) {
     await storage.clearAll();
     setSettings(DEFAULT_SETTINGS);
     setMessage("データを削除しました");
+  };
+
+  const handleTest = async (which: "primary" | "fallback") => {
+    const chain = providersFromSettings(settings);
+    const provider = which === "primary" ? chain[0] : chain[1];
+    if (!provider) {
+      setMessage("接続テスト失敗: エンドポイントが未設定です");
+      return;
+    }
+    setTesting(which);
+    setMessage(null);
+    const result = await testLlmConnection(provider);
+    setTesting(null);
+    if (result.ok) {
+      setMessage(`接続OK（${provider.label}: ${result.latencyMs}ms）`);
+    } else {
+      setMessage(`接続テスト失敗（${provider.label}）: ${result.error}`);
+    }
+    setTimeout(() => setMessage(null), 6000);
   };
 
   return (
@@ -160,7 +181,12 @@ export default function Settings({ dispatch, storage }: Props) {
             value={settings.llmApiEndpoint}
             onChange={(e) => save({ llmApiEndpoint: e.target.value })}
             placeholder="http://192.168.1.100:11434/v1"
-            style={{ width: "100%", marginTop: "0.5rem", marginBottom: "0.75rem", padding: "0.5rem" }}
+            style={{
+              width: "100%",
+              marginTop: "0.5rem",
+              marginBottom: "0.75rem",
+              padding: "0.5rem",
+            }}
           />
         </label>
         <label>
@@ -170,7 +196,12 @@ export default function Settings({ dispatch, storage }: Props) {
             value={settings.llmModel}
             onChange={(e) => save({ llmModel: e.target.value })}
             placeholder="deepseek-v4-flash"
-            style={{ width: "100%", marginTop: "0.5rem", marginBottom: "0.75rem", padding: "0.5rem" }}
+            style={{
+              width: "100%",
+              marginTop: "0.5rem",
+              marginBottom: "0.75rem",
+              padding: "0.5rem",
+            }}
           />
         </label>
         <label>
@@ -183,8 +214,85 @@ export default function Settings({ dispatch, storage }: Props) {
             style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
           />
         </label>
-        <p style={{ fontSize: "0.8rem", color: "var(--color-muted)", marginTop: "0.75rem" }}>
-          OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp など）を指定できます。
+        <button
+          onClick={() => handleTest("primary")}
+          disabled={testing !== null}
+          style={{ width: "100%", marginTop: "0.75rem" }}
+        >
+          {testing === "primary" ? "テスト中..." : "接続テスト（プライマリ）"}
+        </button>
+      </div>
+
+      <div className="card">
+        <h3>フォールバックプロバイダ（任意）</h3>
+        <p
+          style={{
+            fontSize: "0.8rem",
+            color: "var(--color-muted)",
+            marginBottom: "0.75rem",
+          }}
+        >
+          プライマリが失敗したときのみ使用します。未設定なら無効。 （例:
+          プライマリ=OpenCode Go / フォールバック=OpenRouter）
+        </p>
+        <label>
+          API エンドポイント
+          <input
+            type="text"
+            value={settings.llmFallbackApiEndpoint}
+            onChange={(e) => save({ llmFallbackApiEndpoint: e.target.value })}
+            placeholder="https://opencode.ai/zen/go/v1"
+            style={{
+              width: "100%",
+              marginTop: "0.5rem",
+              marginBottom: "0.75rem",
+              padding: "0.5rem",
+            }}
+          />
+        </label>
+        <label>
+          モデル名
+          <input
+            type="text"
+            value={settings.llmFallbackModel}
+            onChange={(e) => save({ llmFallbackModel: e.target.value })}
+            placeholder="deepseek-v4-flash"
+            style={{
+              width: "100%",
+              marginTop: "0.5rem",
+              marginBottom: "0.75rem",
+              padding: "0.5rem",
+            }}
+          />
+        </label>
+        <label>
+          API キー（必要な場合）
+          <input
+            type="password"
+            value={settings.llmFallbackApiKey}
+            onChange={(e) => save({ llmFallbackApiKey: e.target.value })}
+            placeholder="sk-..."
+            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+          />
+        </label>
+        <button
+          onClick={() => handleTest("fallback")}
+          disabled={testing !== null || !settings.llmFallbackApiEndpoint.trim()}
+          style={{ width: "100%", marginTop: "0.75rem" }}
+        >
+          {testing === "fallback"
+            ? "テスト中..."
+            : "接続テスト（フォールバック）"}
+        </button>
+        <p
+          style={{
+            fontSize: "0.8rem",
+            color: "var(--color-muted)",
+            marginTop: "0.75rem",
+          }}
+        >
+          OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp
+          など）を指定できます。
         </p>
       </div>
     </div>

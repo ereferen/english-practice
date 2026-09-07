@@ -332,9 +332,9 @@ describe("loadDeckFromFile", () => {
   });
 
   it("throws ContentLoadError for a non-existent file", async () => {
-    await expect(loadDeckFromFile("/tmp/nonexistent-deck.json")).rejects.toThrow(
-      ContentLoadError,
-    );
+    await expect(
+      loadDeckFromFile("/tmp/nonexistent-deck.json"),
+    ).rejects.toThrow(ContentLoadError);
     await expect(
       loadDeckFromFile("/tmp/nonexistent-deck.json"),
     ).rejects.toThrow(/cannot read file/);
@@ -342,14 +342,10 @@ describe("loadDeckFromFile", () => {
 
   it("throws ContentLoadError for an invalid JSON file", async () => {
     await expect(
-      loadDeckFromFile(
-        "/home/tenki/project/english-practice/package.json",
-      ),
+      loadDeckFromFile("/home/tenki/project/english-practice/package.json"),
     ).rejects.toThrow(ContentLoadError);
     await expect(
-      loadDeckFromFile(
-        "/home/tenki/project/english-practice/package.json",
-      ),
+      loadDeckFromFile("/home/tenki/project/english-practice/package.json"),
     ).rejects.toThrow(/Zod validation failed/);
   });
 });
@@ -579,9 +575,7 @@ const FIXTURE_DIR = "/home/tenki/project/english-practice/tests/fixtures";
 
 describe("load sample fixtures", () => {
   it("loads valid-sample.json without errors", async () => {
-    const result = await loadDeckFromFile(
-      `${FIXTURE_DIR}/valid-sample.json`,
-    );
+    const result = await loadDeckFromFile(`${FIXTURE_DIR}/valid-sample.json`);
     expect(result.deck.deckId).toBe("fixture-valid-sample");
     expect(result.deck.title).toBe("テスト用バリッドサンプル");
     expect(result.deck.lessons).toHaveLength(1);

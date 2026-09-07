@@ -19,7 +19,10 @@
           "meaning": "予定; 計画を立てる",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "Let's reschedule the meeting for Friday.", "ja": "会議を金曜日に組み直しましょう。" }
+            {
+              "en": "Let's reschedule the meeting for Friday.",
+              "ja": "会議を金曜日に組み直しましょう。"
+            }
           ],
           "note": "米発音 /skedʒuːl/、英発音 /ʃedjuːl/。"
         },
@@ -30,7 +33,10 @@
           "meaning": "同僚",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "A colleague of mine recommended this app.", "ja": "同僚がこのアプリを教えてくれました。" }
+            {
+              "en": "A colleague of mine recommended this app.",
+              "ja": "同僚がこのアプリを教えてくれました。"
+            }
           ],
           "tags": ["people"]
         },
@@ -41,7 +47,10 @@
           "meaning": "締切",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "We need to meet the deadline by Monday.", "ja": "月曜日までに締切に間に合わせる必要があります。" }
+            {
+              "en": "We need to meet the deadline by Monday.",
+              "ja": "月曜日までに締切に間に合わせる必要があります。"
+            }
           ]
         },
         {
@@ -51,7 +60,10 @@
           "meaning": "改善する",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "I want to improve my English vocabulary.", "ja": "英語の語彙を改善したいです。" }
+            {
+              "en": "I want to improve my English vocabulary.",
+              "ja": "英語の語彙を改善したいです。"
+            }
           ]
         },
         {
@@ -61,7 +73,10 @@
           "meaning": "注意深い; 慎重な",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "Be careful when you cross the street.", "ja": "道路を渡るときは注意してください。" }
+            {
+              "en": "Be careful when you cross the street.",
+              "ja": "道路を渡るときは注意してください。"
+            }
           ]
         }
       ],
@@ -120,7 +135,10 @@
           "meaning": "おそらく",
           "partOfSpeech": "adverb",
           "examples": [
-            { "en": "It will probably rain this afternoon.", "ja": "午後はたぶん雨が降るでしょう。" }
+            {
+              "en": "It will probably rain this afternoon.",
+              "ja": "午後はたぶん雨が降るでしょう。"
+            }
           ]
         },
         {
@@ -130,7 +148,10 @@
           "meaning": "同意する",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "I agree with your idea.", "ja": "あなたの考えに同意します。" }
+            {
+              "en": "I agree with your idea.",
+              "ja": "あなたの考えに同意します。"
+            }
           ],
           "note": "「〜に同意する」は agree with + 人/意見。"
         },
@@ -141,7 +162,10 @@
           "meaning": "異なる",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "This result is different from the previous one.", "ja": "この結果は以前のものとは異なります。" }
+            {
+              "en": "This result is different from the previous one.",
+              "ja": "この結果は以前のものとは異なります。"
+            }
           ]
         },
         {
@@ -151,7 +175,10 @@
           "meaning": "決める; 決定する",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "We decided to launch the feature next month.", "ja": "私たちは来月その機能を公開することに決めました。" }
+            {
+              "en": "We decided to launch the feature next month.",
+              "ja": "私たちは来月その機能を公開することに決めました。"
+            }
           ]
         },
         {
@@ -161,7 +188,10 @@
           "meaning": "十分な; 十分に",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "Do we have enough time before the meeting?", "ja": "会議までに十分な時間はありますか。" }
+            {
+              "en": "Do we have enough time before the meeting?",
+              "ja": "会議までに十分な時間はありますか。"
+            }
           ]
         }
       ]

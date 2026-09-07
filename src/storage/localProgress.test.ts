@@ -210,15 +210,11 @@ describe("saveQuizResults / loadQuizResults", () => {
   it("stores under the correct localStorage key", () => {
     const storage = makeMemoryStorage();
     const store = createLocalProgressStore(storage);
-    const results = [
-      { quizId: "q1", wordId: "w1", correct: true },
-    ];
+    const results = [{ quizId: "q1", wordId: "w1", correct: true }];
 
     store.saveQuizResults("deck-a", "lesson-1", results);
 
-    const raw = storage.getItem(
-      `${LOCAL_QUIZ_RESULTS_KEY}:deck-a:lesson-1`,
-    );
+    const raw = storage.getItem(`${LOCAL_QUIZ_RESULTS_KEY}:deck-a:lesson-1`);
     expect(raw).toBeTruthy();
     expect(JSON.parse(raw!)).toEqual(results);
   });
@@ -230,10 +226,7 @@ describe("saveQuizResults / loadQuizResults", () => {
 
   it("loadQuizResults returns null for corrupted data", () => {
     const storage = makeMemoryStorage();
-    storage.setItem(
-      `${LOCAL_QUIZ_RESULTS_KEY}:deck-a:lesson-1`,
-      "{bad json",
-    );
+    storage.setItem(`${LOCAL_QUIZ_RESULTS_KEY}:deck-a:lesson-1`, "{bad json");
     const store = createLocalProgressStore(storage);
     expect(store.loadQuizResults("deck-a", "lesson-1")).toBeNull();
   });
