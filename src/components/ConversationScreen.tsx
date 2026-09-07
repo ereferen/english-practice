@@ -3,11 +3,15 @@ import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import {
   type ChatMessage,
-  type ConversationConfig,
+  SYSTEM_PROMPT,
   createUserMessage,
   createAssistantMessage,
-  sendChatMessageStream,
 } from "../domain/conversation";
+import {
+  type LlmProviderConfig,
+  providersFromSettings,
+  requestLlmChat,
+} from "../domain/llm";
 import { speak } from "../domain/speech";
 
 interface Props {
@@ -16,14 +20,11 @@ interface Props {
   storage: StorageProvider;
 }
 
-export default function ConversationScreen({
-  dispatch,
-  storage,
-}: Props) {
+export default function ConversationScreen({ dispatch, storage }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<ConversationConfig | null>(null);
+  const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
   const [configError, setConfigError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -36,19 +37,18 @@ export default function ConversationScreen({
     (async () => {
       const settings = await storage.loadSettings();
       if (!mounted) return;
-      const cfg: ConversationConfig = {
-        apiEndpoint: settings.llmApiEndpoint,
-        model: settings.llmModel,
-        apiKey: settings.llmApiKey,
-      };
-      if (!cfg.apiEndpoint || cfg.apiEndpoint === "http://localhost:11434/v1") {
+      const chain = providersFromSettings(settings);
+      if (
+        chain.length === 0 ||
+        chain[0].apiEndpoint === "http://localhost:11434/v1"
+      ) {
         setConfigError(
           "⚠ APIエンドポイントが未設定です。設定画面からLLMのエンドポイントを指定してください。",
         );
       } else {
         setConfigError(null);
       }
-      setConfig(cfg);
+      setProviders(chain);
     })();
     return () => {
       mounted = false;
@@ -69,7 +69,7 @@ export default function ConversationScreen({
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || !config) return;
+    if (!text || providers.length === 0) return;
 
     const userMsg = createUserMessage(text);
     const updated = [...messages, userMsg];
@@ -82,20 +82,23 @@ export default function ConversationScreen({
     controllerRef.current = controller;
 
     try {
-      const fullContent = await sendChatMessageStream(
-        updated,
-        config,
-        (chunk) => {
+      const result = await requestLlmChat({
+        providers,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...updated.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        onChunk: (chunk) => {
           setStreamingContent((prev) => prev + chunk);
         },
-        controller.signal,
-      );
-      const assistantMsg = createAssistantMessage(fullContent);
+        signal: controller.signal,
+      });
+      const assistantMsg = createAssistantMessage(result.content);
       setMessages((prev) => [...prev, assistantMsg]);
       setStreamingContent("");
 
       // Auto-speak the response
-      speak(fullContent);
+      speak(result.content);
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
       const errMsg = e instanceof Error ? e.message : String(e);
@@ -109,7 +112,7 @@ export default function ConversationScreen({
       controllerRef.current = null;
       inputRef.current?.focus();
     }
-  }, [input, config, messages]);
+  }, [input, providers, messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -136,7 +139,15 @@ export default function ConversationScreen({
   };
 
   return (
-    <div className="container" style={{ display: "flex", flexDirection: "column", height: "100vh", padding: "0.5rem" }}>
+    <div
+      className="container"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        padding: "0.5rem",
+      }}
+    >
       {/* Header */}
       <div className="nav-header" style={{ padding: "0.5rem 1rem" }}>
         <h2 style={{ margin: 0 }}>英会話</h2>
@@ -217,8 +228,7 @@ export default function ConversationScreen({
                   msg.role === "user"
                     ? "var(--color-primary-dark)"
                     : "var(--color-surface)",
-                color:
-                  msg.role === "user" ? "#fff" : "var(--color-text)",
+                color: msg.role === "user" ? "#fff" : "var(--color-text)",
                 borderRadius: "var(--radius)",
                 wordBreak: "break-word",
                 whiteSpace: "pre-wrap",
@@ -263,7 +273,12 @@ export default function ConversationScreen({
               }}
             >
               {streamingContent}
-              <span className="cursor-blink" style={{ animation: "blink 1s step-end infinite" }}>▍</span>
+              <span
+                className="cursor-blink"
+                style={{ animation: "blink 1s step-end infinite" }}
+              >
+                ▍
+              </span>
             </div>
           </div>
         )}
@@ -310,7 +325,7 @@ export default function ConversationScreen({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="英語でメッセージを入力..."
-          disabled={loading || !config}
+          disabled={loading || providers.length === 0}
           style={{
             flex: 1,
             padding: "0.75rem 1rem",
@@ -334,7 +349,7 @@ export default function ConversationScreen({
           <button
             className="primary"
             onClick={sendMessage}
-            disabled={!input.trim() || !config}
+            disabled={!input.trim() || providers.length === 0}
             style={{ whiteSpace: "nowrap" }}
           >
             送信

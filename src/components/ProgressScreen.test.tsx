@@ -38,10 +38,7 @@ function renderProgressScreen(
     dispatch: dispatchFn,
     progress: progressStore,
     ...render(
-      <ProgressScreen
-        dispatch={dispatchFn}
-        localProgress={progressStore}
-      />,
+      <ProgressScreen dispatch={dispatchFn} localProgress={progressStore} />,
     ),
   };
 }
@@ -54,7 +51,9 @@ describe("ProgressScreen", () => {
   it("shows empty state when no data exists", () => {
     renderProgressScreen();
     expect(
-      screen.getByText("まだ学習データがありません。デッキから学習を始めてください。"),
+      screen.getByText(
+        "まだ学習データがありません。デッキから学習を始めてください。",
+      ),
     ).toBeTruthy();
   });
 
@@ -62,7 +61,9 @@ describe("ProgressScreen", () => {
     const progress = makeMockProgress();
     renderProgressScreen(undefined, progress);
     expect(
-      screen.getByText("まだ学習データがありません。デッキから学習を始めてください。"),
+      screen.getByText(
+        "まだ学習データがありません。デッキから学習を始めてください。",
+      ),
     ).toBeTruthy();
   });
 

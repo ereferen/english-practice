@@ -19,7 +19,10 @@
           "meaning": "朝食",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "I eat breakfast at seven every morning.", "ja": "毎朝7時に朝食を食べます。" }
+            {
+              "en": "I eat breakfast at seven every morning.",
+              "ja": "毎朝7時に朝食を食べます。"
+            }
           ]
         },
         {
@@ -29,7 +32,10 @@
           "meaning": "図書館",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "She studies at the library after school.", "ja": "彼女は放課後、図書館で勉強します。" }
+            {
+              "en": "She studies at the library after school.",
+              "ja": "彼女は放課後、図書館で勉強します。"
+            }
           ]
         },
         {
@@ -39,7 +45,10 @@
           "meaning": "天気",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "The weather is nice today.", "ja": "今日はいい天気ですね。" }
+            {
+              "en": "The weather is nice today.",
+              "ja": "今日はいい天気ですね。"
+            }
           ],
           "tags": ["nature"]
         },
@@ -50,7 +59,10 @@
           "meaning": "親しみやすい",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "My new classmate is very friendly.", "ja": "新しいクラスメイトはとても親しみやすいです。" }
+            {
+              "en": "My new classmate is very friendly.",
+              "ja": "新しいクラスメイトはとても親しみやすいです。"
+            }
           ]
         },
         {
@@ -60,7 +72,10 @@
           "meaning": "旅行する; 旅行",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "We travel to Osaka by train.", "ja": "私たちは電車で大阪へ旅行します。" }
+            {
+              "en": "We travel to Osaka by train.",
+              "ja": "私たちは電車で大阪へ旅行します。"
+            }
           ],
           "note": "名詞で短く「1回の旅行」なら a trip の方が自然な場面が多い。"
         }
@@ -133,7 +148,10 @@
           "meaning": "橋",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "The new bridge connects the two islands.", "ja": "新しい橋が2つの島を結んでいます。" }
+            {
+              "en": "The new bridge connects the two islands.",
+              "ja": "新しい橋が2つの島を結んでいます。"
+            }
           ]
         },
         {
@@ -143,7 +161,10 @@
           "meaning": "駅",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "We get off at the next station.", "ja": "私たちは次の駅で降ります。" }
+            {
+              "en": "We get off at the next station.",
+              "ja": "私たちは次の駅で降ります。"
+            }
           ]
         },
         {
@@ -153,7 +174,10 @@
           "meaning": "静かな",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "The library is very quiet.", "ja": "図書館はとても静かです。" }
+            {
+              "en": "The library is very quiet.",
+              "ja": "図書館はとても静かです。"
+            }
           ]
         },
         {
@@ -163,7 +187,10 @@
           "meaning": "高価な",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "This watch is too expensive for me.", "ja": "この時計は私には高すぎます。" }
+            {
+              "en": "This watch is too expensive for me.",
+              "ja": "この時計は私には高すぎます。"
+            }
           ],
           "note": "反対語は cheap (安い)。"
         },
@@ -174,7 +201,10 @@
           "meaning": "助ける; 手伝い",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "Can you help me with this box?", "ja": "この箱を運ぶのを手伝ってくれますか。" }
+            {
+              "en": "Can you help me with this box?",
+              "ja": "この箱を運ぶのを手伝ってくれますか。"
+            }
           ]
         }
       ]
@@ -191,7 +221,10 @@
           "meaning": "疲れた",
           "partOfSpeech": "adjective",
           "examples": [
-            { "en": "I feel tired after work.", "ja": "仕事が終わったあと疲れを感じます。" }
+            {
+              "en": "I feel tired after work.",
+              "ja": "仕事が終わったあと疲れを感じます。"
+            }
           ]
         },
         {
@@ -201,7 +234,10 @@
           "meaning": "水",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "Please give me a glass of water.", "ja": "水をコップ1杯ください。" }
+            {
+              "en": "Please give me a glass of water.",
+              "ja": "水をコップ1杯ください。"
+            }
           ]
         },
         {
@@ -211,7 +247,10 @@
           "meaning": "運動する; 運動",
           "partOfSpeech": "verb",
           "examples": [
-            { "en": "She exercises every morning.", "ja": "彼女は毎朝運動します。" }
+            {
+              "en": "She exercises every morning.",
+              "ja": "彼女は毎朝運動します。"
+            }
           ]
         },
         {
@@ -221,7 +260,10 @@
           "meaning": "医者",
           "partOfSpeech": "noun",
           "examples": [
-            { "en": "You should see a doctor about your cough.", "ja": "咳については医者に見てもらうべきです。" }
+            {
+              "en": "You should see a doctor about your cough.",
+              "ja": "咳については医者に見てもらうべきです。"
+            }
           ]
         },
         {

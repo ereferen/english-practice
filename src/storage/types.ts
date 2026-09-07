@@ -35,6 +35,10 @@ export interface Settings {
   llmApiEndpoint: string;
   llmModel: string;
   llmApiKey: string;
+  // フォールバックプロバイダ（issue #18/#21: プライマリ失敗時のみ使用）。空なら無効
+  llmFallbackApiEndpoint: string;
+  llmFallbackModel: string;
+  llmFallbackApiKey: string;
 }
 
 export interface StorageProvider {
@@ -76,6 +80,9 @@ export const DEFAULT_SETTINGS: Settings = {
   llmApiEndpoint: "http://localhost:11434/v1",
   llmModel: "deepseek-v4-flash",
   llmApiKey: "",
+  llmFallbackApiEndpoint: "",
+  llmFallbackModel: "",
+  llmFallbackApiKey: "",
 };
 
 export function progressKey(deckId: string, wordId: string): string {

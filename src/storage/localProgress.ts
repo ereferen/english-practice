@@ -19,10 +19,7 @@ export interface LocalProgressStore {
     lessonId: string,
     results: QuizResult[],
   ): void;
-  loadQuizResults(
-    deckId: string,
-    lessonId: string,
-  ): QuizResult[] | null;
+  loadQuizResults(deckId: string, lessonId: string): QuizResult[] | null;
 }
 
 function nowIso(): string {

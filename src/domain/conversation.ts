@@ -7,8 +7,8 @@ export interface ChatMessage {
 
 export interface ConversationConfig {
   apiEndpoint: string; // e.g. "http://192.168.1.100:11434/v1"
-  model: string;       // e.g. "deepseek-v4-flash"
-  apiKey: string;      // may be empty for local LLMs
+  model: string; // e.g. "deepseek-v4-flash"
+  apiKey: string; // may be empty for local LLMs
 }
 
 export interface StreamChunk {
@@ -17,7 +17,7 @@ export interface StreamChunk {
   error: string | null;
 }
 
-const SYSTEM_PROMPT = `You are an English conversation partner for a Japanese learner. Follow these rules:
+export const SYSTEM_PROMPT = `You are an English conversation partner for a Japanese learner. Follow these rules:
 
 1. Always respond in English.
 2. Keep replies natural and conversational, suitable for a CEFR B1-B2 learner.

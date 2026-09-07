@@ -96,8 +96,7 @@ export default function ResultScreen({
   );
   const minutes = Math.floor(elapsedSec / 60);
   const seconds = elapsedSec % 60;
-  const sessionTime =
-    minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+  const sessionTime = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
   const wrongIds = wrongWordIds(answers);
   const wrongWords = wrongIds
     .map((id) => wordById(deck, id))
@@ -144,9 +143,7 @@ export default function ResultScreen({
         </button>
         <button
           className="primary"
-          onClick={() =>
-            dispatch({ type: "go", screen: { name: "progress" } })
-          }
+          onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
           style={{ flex: 1 }}
         >
           進捗を見る

@@ -7,10 +7,7 @@ interface Props {
   localProgress: LocalProgressStore;
 }
 
-export default function ProgressScreen({
-  dispatch,
-  localProgress,
-}: Props) {
+export default function ProgressScreen({ dispatch, localProgress }: Props) {
   const [snapshot] = useState<ProgressSnapshot>(() => localProgress.load());
 
   const isEmpty =
