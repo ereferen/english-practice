@@ -61,6 +61,15 @@ export interface StorageProvider {
   recordAnswer(event: AnswerEvent): Promise<void>;
   countAnswersSince(date: string): Promise<number>;
 
+  // LLM生成クイズ (issue #15)
+  saveGeneratedQuiz(set: GeneratedQuizSet): Promise<void>;
+  listGeneratedQuizzes(
+    deckId: string,
+    lessonId: string,
+    limit?: number,
+  ): Promise<GeneratedQuizSet[]>;
+  deleteGeneratedQuiz(id: string): Promise<void>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
@@ -71,6 +80,25 @@ export interface UserDeckMeta {
   source: "bundled" | "import";
   title: string;
   level: string;
+}
+
+/** LLM生成クイズの保存単位 (issue #15) */
+export type GeneratedQuizSource = "llm-supplement" | "llm-wrong-focus";
+
+export interface GeneratedQuizSet {
+  /** batchId（quizId のプレフィックスにもなる一意ID） */
+  id: string;
+  deckId: string;
+  lessonId: string;
+  source: GeneratedQuizSource;
+  /** 対象となった wordId のリスト */
+  words: string[];
+  /** deck.quizSchema 検証済みの Quiz（4択・choiceId は c0..c3） */
+  quizzes: import("../content/schema").Quiz[];
+  /** 検証ですてられた問題数 */
+  rejected: number;
+  generatedAt: string;
+  model: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
   AnswerEvent,
+  GeneratedQuizSet,
   ReviewState,
   SessionRecord,
   Settings,
@@ -11,6 +12,7 @@ export interface DexieSchema {
   review: EntityTable<ReviewState, "wordId">;
   sessions: EntityTable<SessionRecord, "id">;
   answers: EntityTable<AnswerEvent, "id">;
+  generatedQuizzes: EntityTable<GeneratedQuizSet, "id">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -20,4 +22,9 @@ db.version(1).stores({
   review: "[deckId+wordId], deckId, dueAt, level",
   sessions: "id, deckId, startedAt",
   answers: "id, sessionId, wordId, askedAt, [sessionId+wordId]",
+});
+
+// issue #15: LLM生成クイズの一時保存（追加テーブルのみ、既存データの移行は不要）
+db.version(2).stores({
+  generatedQuizzes: "id, deckId, lessonId, generatedAt, [deckId+lessonId]",
 });
