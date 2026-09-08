@@ -214,10 +214,9 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            style={{
-              alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-              maxWidth: "85%",
-            }}
+            className={
+              "chat-bubble-wrap" + (msg.role === "user" ? " user" : "")
+            }
           >
             <div
               className="card"
@@ -255,12 +254,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
 
         {/* Streaming indicator */}
         {streamingContent && (
-          <div
-            style={{
-              alignSelf: "flex-start",
-              maxWidth: "85%",
-            }}
-          >
+          <div className="chat-bubble-wrap">
             <div
               className="card"
               style={{
@@ -285,12 +279,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
 
         {/* Loading dots when no streaming content yet */}
         {loading && !streamingContent && (
-          <div
-            style={{
-              alignSelf: "flex-start",
-              maxWidth: "85%",
-            }}
-          >
+          <div className="chat-bubble-wrap">
             <div
               className="card"
               style={{
