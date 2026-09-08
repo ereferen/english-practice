@@ -1,0 +1,8 @@
+/* Issue #8: error banner (was inline styles) */
+.errorCard {
+  color: var(--color-danger);
+}
+
+.errorPre {
+  white-space: pre-wrap;
+}

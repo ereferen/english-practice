@@ -1,0 +1,23 @@
+/* Issue #8: quiz screen (was inline styles) */
+
+.prompt {
+  margin-bottom: 1rem;
+}
+
+/* Feedback state classes: applied conditionally on choice buttons.
+   The button.type compound keeps these winning over the global
+   `.choice-grid button` rules (the old inline styles beat classes;
+   these beat classes by specificity). */
+:global(.choice-grid) button.choiceCorrect {
+  background: var(--color-success);
+  color: #0f172a;
+}
+
+:global(.choice-grid) button.choiceWrong {
+  background: var(--color-danger);
+  color: #0f172a;
+}
+
+.nextButton {
+  width: 100%;
+}

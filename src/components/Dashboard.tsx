@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider, SessionRecord } from "../storage/types";
 import { allWords } from "../content/loader";
+import styles from "./Dashboard.module.css";
 
 interface Props {
   state: AppState;
@@ -55,21 +56,15 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         <div className="card-grid stats-grid">
           <div>
             <div className="badge">登録語数</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-              {totalWords} 語
-            </div>
+            <div className={styles.statValue}>{totalWords} 語</div>
           </div>
           <div>
             <div className="badge">セッション数</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-              {totalSessions} 回
-            </div>
+            <div className={styles.statValue}>{totalSessions} 回</div>
           </div>
           <div>
             <div className="badge">平均正答率</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-              {avgScore}%
-            </div>
+            <div className={styles.statValue}>{avgScore}%</div>
           </div>
         </div>
       </div>
@@ -80,13 +75,13 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       )}
       {sessions.slice(0, 10).map((s) => (
         <div key={s.id} className="card">
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div className={styles.sessionRow}>
             <span>{s.startedAt.slice(0, 10)}</span>
             <span>
               {s.scoreRate !== null ? `${Math.round(s.scoreRate * 100)}%` : "-"}
             </span>
           </div>
-          <div style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
+          <div className={styles.sessionMeta}>
             {state.decks.find((d) => d.deckId === s.deckId)?.title ?? s.deckId}{" "}
             · {s.lessonId}
           </div>

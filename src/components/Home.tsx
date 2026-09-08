@@ -4,6 +4,7 @@ import type { StorageProvider } from "../storage/types";
 import { systemClock } from "../domain/srs";
 import { computeProgress, dailyGoalRate } from "../domain/progress";
 import { allWords } from "../content/loader";
+import styles from "./Home.module.css";
 
 interface Props {
   state: AppState;
@@ -73,19 +74,17 @@ export default function Home({ state, dispatch, storage }: Props) {
         <div className="card-grid stats-grid">
           <div>
             <div className="badge">今日の復習</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{due} 語</div>
+            <div className={styles.statValue}>{due} 語</div>
           </div>
           <div>
             <div className="badge">目標達成率</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
+            <div className={styles.statValue}>
               {Math.round(dailyGoalRate(summary) * 100)}%
             </div>
           </div>
           <div>
             <div className="badge">連続学習日</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-              {streak} 日
-            </div>
+            <div className={styles.statValue}>{streak} 日</div>
           </div>
         </div>
       </div>
@@ -93,8 +92,7 @@ export default function Home({ state, dispatch, storage }: Props) {
       <div className="card">
         <div className="menu-grid">
           <button
-            className="primary"
-            style={{ width: "100%" }}
+            className={`primary ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "deckList" } })
             }
@@ -102,7 +100,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             デッキを選ぶ
           </button>
           <button
-            style={{ width: "100%" }}
+            className={styles.menuButton}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "dashboard" } })
             }
@@ -110,8 +108,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             進捗ダッシュボード
           </button>
           <button
-            className="primary"
-            style={{ width: "100%" }}
+            className={`primary ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "conversation" } })
             }
@@ -119,7 +116,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             英会話
           </button>
           <button
-            style={{ width: "100%" }}
+            className={styles.menuButton}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "settings" } })
             }

@@ -4,6 +4,7 @@ import { pickLesson } from "../content/loader";
 import { speak } from "../domain/speech";
 import type { LocalProgressStore } from "../storage/localProgress";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
+import styles from "./FlashScreen.module.css";
 
 interface Props {
   state: AppState;
@@ -116,75 +117,39 @@ export default function FlashScreen({
         role="button"
         tabIndex={0}
         aria-label="カードをめくる"
-        className="card flash-card"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          cursor: "pointer",
-        }}
+        className={`card flash-card ${styles.flipCard}`}
       >
         {!flipped ? (
           <>
-            <div
-              className="flash-term"
-              style={{ fontWeight: 700, marginBottom: "0.5rem" }}
-            >
-              {word.term}
-            </div>
-            <div style={{ color: "var(--color-muted)" }}>{word.reading}</div>
+            <div className={`flash-term ${styles.term}`}>{word.term}</div>
+            <div className={styles.reading}>{word.reading}</div>
           </>
         ) : (
           <>
-            <div
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: 700,
-                marginBottom: "0.5rem",
-              }}
-            >
-              {word.meaning}
-            </div>
+            <div className={styles.meaning}>{word.meaning}</div>
             {word.partOfSpeech && (
-              <div className="badge" style={{ marginBottom: "0.75rem" }}>
+              <div className={`badge ${styles.partOfSpeech}`}>
                 {word.partOfSpeech}
               </div>
             )}
-            <div style={{ width: "100%", textAlign: "left" }}>
+            <div className={styles.examples}>
               {word.examples.map((ex, i) => (
-                <div key={i} style={{ marginBottom: "0.5rem" }}>
+                <div key={i} className={styles.example}>
                   <div>{ex.en}</div>
-                  {ex.ja && (
-                    <div
-                      style={{
-                        color: "var(--color-muted)",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      {ex.ja}
-                    </div>
-                  )}
+                  {ex.ja && <div className={styles.exampleJa}>{ex.ja}</div>}
                 </div>
               ))}
             </div>
-            {word.note && (
-              <p style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-                ノート: {word.note}
-              </p>
-            )}
+            {word.note && <p className={styles.note}>ノート: {word.note}</p>}
           </>
         )}
       </div>
 
-      <div
-        className="flash-actions"
-        style={{ display: "flex", gap: "0.75rem" }}
-      >
-        <button onClick={() => speak(word.term)} style={{ flex: 1 }}>
+      <div className={`flash-actions ${styles.actions}`}>
+        <button className={styles.audioButton} onClick={() => speak(word.term)}>
           音声再生
         </button>
-        <button className="primary" onClick={handleNext} style={{ flex: 2 }}>
+        <button className={`primary ${styles.nextButton}`} onClick={handleNext}>
           {isLast ? "クイズへ" : "次の語"}
         </button>
       </div>

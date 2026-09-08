@@ -1,0 +1,19 @@
+/* Issue #8: deck home (was inline styles) */
+
+.metaRow {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.lessonRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lessonCount {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  margin: 0;
+}

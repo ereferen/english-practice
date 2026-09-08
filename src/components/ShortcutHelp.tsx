@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { setShortcutsSuppressed } from "../app/useKeyboardShortcuts";
+import styles from "./ShortcutHelp.module.css";
 
 interface Props {
   onClose: () => void;
@@ -61,72 +62,32 @@ export default function ShortcutHelp({ onClose }: Props) {
       aria-modal="true"
       aria-label="キーボードショートカット一覧"
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.55)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100,
-        padding: "1rem",
-      }}
+      className={styles.overlay}
     >
       <div
-        className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: "32rem",
-          width: "100%",
-          maxHeight: "80vh",
-          overflowY: "auto",
-          margin: 0,
-        }}
+        className={`card ${styles.modal}`}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "0.75rem",
-          }}
-        >
-          <h2 style={{ margin: 0 }}>キーボードショートカット</h2>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>キーボードショートカット</h2>
           <button className="ghost" onClick={onClose} aria-label="閉じる">
             ✕
           </button>
         </div>
         {SHORTCUTS.map((sec) => (
-          <div key={sec.section} style={{ marginBottom: "0.75rem" }}>
-            <h3 style={{ fontSize: "0.95rem", marginBottom: "0.25rem" }}>
-              {sec.section}
-            </h3>
-            <dl style={{ margin: 0 }}>
+          <div key={sec.section} className={styles.section}>
+            <h3 className={styles.sectionTitle}>{sec.section}</h3>
+            <dl className={styles.list}>
               {sec.items.map(([key, desc]) => (
-                <div
-                  key={key + desc}
-                  style={{
-                    display: "flex",
-                    gap: "0.75rem",
-                    padding: "0.15rem 0",
-                  }}
-                >
-                  <dt
-                    style={{
-                      minWidth: "7.5rem",
-                      fontFamily: "monospace",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    {key}
-                  </dt>
-                  <dd style={{ margin: 0, fontSize: "0.9rem" }}>{desc}</dd>
+                <div key={key + desc} className={styles.item}>
+                  <dt className={styles.key}>{key}</dt>
+                  <dd className={styles.desc}>{desc}</dd>
                 </div>
               ))}
             </dl>
           </div>
         ))}
-        <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+        <p className={styles.footnote}>
           入力フィールドにフォーカス中はショートカットは無効になります。
         </p>
       </div>
