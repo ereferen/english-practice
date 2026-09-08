@@ -10,12 +10,12 @@
    these beat classes by specificity). */
 :global(.choice-grid) button.choiceCorrect {
   background: var(--color-success);
-  color: #0f172a;
+  color: var(--color-bg-scene);
 }
 
 :global(.choice-grid) button.choiceWrong {
   background: var(--color-danger);
-  color: #0f172a;
+  color: var(--color-bg-scene);
 }
 
 .nextButton {

@@ -1,14 +1,50 @@
+/* Issue #38: NIGHTFALL LEDGER tokens (DESIGN.md / tokens.json).
+   Existing variable names are kept for compatibility; values swapped to
+   the night-scene palette. New semantic names added alongside. */
 :root {
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-2: #334155;
-  --color-text: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-primary: #38bdf8;
-  --color-primary-dark: #0284c7;
-  --color-success: #4ade80;
-  --color-danger: #f87171;
-  --radius: 0.75rem;
+  /* legacy names -> Nightfall values */
+  --color-bg: #070b14; /* bg-night */
+  --color-surface: #131c30; /* surface-panel */
+  --color-surface-2: #1b2740; /* surface-raised */
+  --color-text: #d7deeb; /* text-body */
+  --color-muted: #9aa7bf; /* text-muted */
+  --color-primary: #e8c56b; /* accent-gold */
+  --color-primary-dark: #c9a227; /* border-gold */
+  --color-success: #6fdd9a; /* status-success */
+  --color-danger: #ff8f8f; /* status-danger */
+  --radius: 8px; /* rounded.md */
+
+  /* semantic layer */
+  --color-bg-night: #070b14;
+  --color-bg-scene: #0b1120;
+  --color-surface-panel: #131c30;
+  --color-surface-raised: #1b2740;
+  --color-surface-inset: #0e1626;
+  --color-accent-gold: #e8c56b;
+  --color-border-gold: #c9a227;
+  --color-border-gold-dim: #8a7233;
+  --color-border-hairline: #31415f;
+  --color-text-parchment: #f5ead1;
+  --color-text-body: #d7deeb;
+  --color-text-muted: #9aa7bf;
+  --color-accent-amber: #d9963f;
+  --color-caret-blue: #7cc7ff;
+  --color-scrim: #03060eb8;
+
+  /* spacing scale (4/8/16/24/32, gutter 20) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-gutter: 20px;
+
+  /* radius scale (0/4/8/12) */
+  --rounded-none: 0px;
+  --rounded-sm: 4px;
+  --rounded-md: 8px;
+  --rounded-lg: 12px;
+
   --max-width: 640px;
 }
 
@@ -48,9 +84,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* DESIGN.md: gold surface carries bg-scene dark text (Issue #38 item 2) */
 button.primary {
   background: var(--color-primary);
-  color: #0f172a;
+  color: var(--color-bg-scene);
   font-weight: 700;
 }
 
@@ -274,7 +311,7 @@ p {
   top: 0;
   z-index: 100;
   background: var(--color-primary);
-  color: #0f172a;
+  color: var(--color-bg-scene);
   padding: 0.5rem 1rem;
   border-radius: 0 0 var(--radius) 0;
   font-weight: 700;
@@ -370,7 +407,8 @@ p {
    desktop monitors. Also honored for prefers-contrast: more. */
 @media (min-width: 1024px), (prefers-contrast: more) {
   :root {
-    --color-muted: #b0c4de;
+    /* Issue #12 contrast bump, re-tuned for Nightfall text-muted */
+    --color-muted: #b6c2d9;
   }
 
   html {

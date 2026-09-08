@@ -68,7 +68,8 @@
 
 :global(.card).bubbleUser {
   background: var(--color-primary-dark);
-  color: #fff;
+  /* DESIGN.md: gold surface carries bg-scene dark text (#38) */
+  color: var(--color-bg-scene);
 }
 
 .speakButton {
