@@ -122,6 +122,11 @@ p {
     grid-template-columns: 1fr 1fr;
   }
 
+  /* Issue #6: settings categories in 2 columns on desktop */
+  .settings-grid {
+    align-items: start;
+  }
+
   .menu-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
