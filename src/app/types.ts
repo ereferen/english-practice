@@ -30,7 +30,13 @@ export type Screen =
   | { name: "deckList" }
   | { name: "deckHome"; deckId: string }
   | { name: "flash"; deckId: string; lessonId: string }
-  | { name: "quiz"; deckId: string; lessonId: string }
+  | {
+      name: "quiz";
+      deckId: string;
+      lessonId: string;
+      /** LLM生成クイズモード (issue #15)。未指定なら静的クイズ */
+      gen?: "llm-supplement" | "llm-wrong-focus";
+    }
   | {
       name: "result";
       deckId: string;
@@ -52,6 +58,12 @@ export type Action =
   | { type: "go"; screen: Screen }
   | { type: "setDecks"; decks: Deck[] }
   | { type: "startLesson"; deckId: string; lessonId: string }
+  | {
+      type: "startGeneratedQuiz";
+      deckId: string;
+      lessonId: string;
+      gen: "llm-supplement" | "llm-wrong-focus";
+    }
   | {
       type: "finishQuiz";
       deckId: string;
@@ -79,6 +91,17 @@ export function reducer(state: AppState, action: Action): AppState {
           name: "flash",
           deckId: action.deckId,
           lessonId: action.lessonId,
+        },
+      };
+    case "startGeneratedQuiz":
+      return {
+        ...state,
+        selectedDeckId: action.deckId,
+        screen: {
+          name: "quiz",
+          deckId: action.deckId,
+          lessonId: action.lessonId,
+          gen: action.gen,
         },
       };
     case "finishQuiz":

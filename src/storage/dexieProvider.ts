@@ -1,6 +1,7 @@
 import { db } from "./db";
 import type {
   AnswerEvent,
+  GeneratedQuizSet,
   ReviewState,
   SessionRecord,
   Settings,
@@ -76,12 +77,34 @@ export class DexieStorageProvider implements StorageProvider {
     return db.answers.where("askedAt").aboveOrEqual(date).count();
   }
 
+  async saveGeneratedQuiz(set: GeneratedQuizSet): Promise<void> {
+    await db.generatedQuizzes.put(set);
+  }
+
+  async listGeneratedQuizzes(
+    deckId: string,
+    lessonId: string,
+    limit = 20,
+  ): Promise<GeneratedQuizSet[]> {
+    return db.generatedQuizzes
+      .where("[deckId+lessonId]")
+      .equals([deckId, lessonId])
+      .reverse()
+      .sortBy("generatedAt")
+      .then((rows) => rows.slice(0, limit));
+  }
+
+  async deleteGeneratedQuiz(id: string): Promise<void> {
+    await db.generatedQuizzes.delete(id);
+  }
+
   async exportAll(): Promise<unknown> {
     return {
       settings: await db.settings.toArray(),
       review: await db.review.toArray(),
       sessions: await db.sessions.toArray(),
       answers: await db.answers.toArray(),
+      generatedQuizzes: await db.generatedQuizzes.toArray(),
     };
   }
 
@@ -91,6 +114,7 @@ export class DexieStorageProvider implements StorageProvider {
       review?: ReviewState[];
       sessions?: SessionRecord[];
       answers?: AnswerEvent[];
+      generatedQuizzes?: GeneratedQuizSet[];
     };
     await db.transaction(
       "rw",
@@ -98,17 +122,21 @@ export class DexieStorageProvider implements StorageProvider {
       db.review,
       db.sessions,
       db.answers,
+      db.generatedQuizzes,
       async () => {
         await db.settings.clear();
         await db.review.clear();
         await db.sessions.clear();
         await db.answers.clear();
+        await db.generatedQuizzes.clear();
         if (payload.settings?.length)
           await db.settings.bulkAdd(payload.settings);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
         if (payload.sessions?.length)
           await db.sessions.bulkAdd(payload.sessions);
         if (payload.answers?.length) await db.answers.bulkAdd(payload.answers);
+        if (payload.generatedQuizzes?.length)
+          await db.generatedQuizzes.bulkAdd(payload.generatedQuizzes);
       },
     );
   }

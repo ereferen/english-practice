@@ -17,3 +17,15 @@
   font-size: 0.875rem;
   margin: 0;
 }
+
+/* Issue #15: LLM生成クイズの入口 */
+.genRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.genRow button {
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.75rem;
+}

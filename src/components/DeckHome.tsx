@@ -107,6 +107,34 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
               >
                 学習・クイズ
               </button>
+              <div className={styles.genRow}>
+                <button
+                  className="ghost"
+                  onClick={() =>
+                    dispatch({
+                      type: "startGeneratedQuiz",
+                      deckId,
+                      lessonId: lesson.lessonId,
+                      gen: "llm-supplement",
+                    })
+                  }
+                >
+                  ✨ LLMで補充問題を生成
+                </button>
+                <button
+                  className="ghost"
+                  onClick={() =>
+                    dispatch({
+                      type: "startGeneratedQuiz",
+                      deckId,
+                      lessonId: lesson.lessonId,
+                      gen: "llm-wrong-focus",
+                    })
+                  }
+                >
+                  🎯 苦手語集中トレーニング
+                </button>
+              </div>
             </div>
           </div>
         ))}

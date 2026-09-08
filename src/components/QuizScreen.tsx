@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
-import type { StorageProvider } from "../storage/types";
+import type { GeneratedQuizSource, StorageProvider } from "../storage/types";
 import { generateQuizzesForLesson, pickLesson } from "../content/loader";
 import { buildSessionQuizItems, isCorrect } from "../domain/session";
 import type { AnswerRecord } from "../domain/session";
+import {
+  canGenerateToday,
+  generateQuizzesWithLlm,
+} from "../domain/quizGeneration";
+import { providersFromSettings } from "../domain/llm";
+import { systemClock } from "../domain/srs";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 import styles from "./QuizScreen.module.css";
 
@@ -13,6 +19,8 @@ interface Props {
   storage: StorageProvider;
   deckId: string;
   lessonId: string;
+  /** LLM生成クイズモード（issue #15）。未指定なら静的デッキ内クイズ */
+  gen?: GeneratedQuizSource;
 }
 
 export default function QuizScreen({
@@ -21,6 +29,7 @@ export default function QuizScreen({
   storage,
   deckId,
   lessonId,
+  gen,
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
@@ -31,18 +40,98 @@ export default function QuizScreen({
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const askedAtRef = useRef<number>(Date.now());
 
+  // LLM生成モード用の状態
+  const [genPhase, setGenPhase] = useState<"idle" | "loading" | "ready">(
+    gen ? "loading" : "ready",
+  );
+  const [genError, setGenError] = useState<string | null>(null);
+  const [genQuizzes, setGenQuizzes] = useState<
+    ReturnType<typeof buildSessionQuizItems>
+  >([]);
+
   const items = useMemo(() => {
-    if (!deck) return [];
+    if (!deck || gen) return []; // 生成モードは genQuizzes を使う
     const quizzes = generateQuizzesForLesson(deck, lessonId);
     return buildSessionQuizItems(quizzes, { shuffle: true });
-  }, [deck, lessonId]);
+  }, [deck, lessonId, gen]);
 
   useEffect(() => {
     askedAtRef.current = Date.now();
   }, [index]);
 
-  const current = items[index];
-  const isLast = index === items.length - 1;
+  useEffect(() => {
+    if (!gen || !deck) return;
+    let cancelled = false;
+    setGenPhase("loading");
+    setGenError(null);
+    (async () => {
+      const settings = await storage.loadSettings();
+      const providers = providersFromSettings(settings);
+      if (providers.length === 0) {
+        if (!cancelled)
+          setGenError(
+            "LLMが設定されていません。設定画面からAPIエンドポイントとモデルを登録してください。",
+          );
+        if (!cancelled) setGenPhase("idle");
+        return;
+      }
+      // 頻度制御: 同一レッスンの当日生成が上限を超えたら警告
+      const history = await storage.listGeneratedQuizzes(deckId, lessonId);
+      if (!canGenerateToday(history, deckId, lessonId, systemClock.today())) {
+        if (!cancelled)
+          setGenError(
+            "本日の生成回数の上限に達しました。時間をおいてから再試行してください。",
+          );
+        if (!cancelled) setGenPhase("idle");
+        return;
+      }
+      let focusWordIds: string[] | undefined;
+      if (gen === "llm-wrong-focus") {
+        const weak = await storage.loadWeakWords(200);
+        const lessonWordIds = new Set(
+          deck.lessons
+            .find((l) => l.lessonId === lessonId)
+            ?.words.map((w) => w.wordId) ?? [],
+        );
+        focusWordIds = weak
+          .filter((r) => r.deckId === deckId && lessonWordIds.has(r.wordId))
+          .map((r) => r.wordId);
+        if (focusWordIds.length === 0) {
+          if (!cancelled)
+            setGenError(
+              "このレッスンに苦手語（誤答2回以上）はまだありません。先に学習・クイズをこなしましょう。",
+            );
+          if (!cancelled) setGenPhase("idle");
+          return;
+        }
+      }
+      try {
+        const set = await generateQuizzesWithLlm({
+          providers,
+          deck,
+          lessonId,
+          source: gen,
+          focusWordIds,
+          model: providers[0].model,
+        });
+        await storage.saveGeneratedQuiz(set);
+        if (!cancelled) {
+          setGenQuizzes(buildSessionQuizItems(set.quizzes, { shuffle: true }));
+          setGenPhase("ready");
+        }
+      } catch (e) {
+        if (!cancelled) setGenError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setGenPhase("idle");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gen, deck, deckId, lessonId, storage]);
+
+  const activeItems = gen ? genQuizzes : items;
+  const current = activeItems[index];
+  const isLast = index === activeItems.length - 1;
 
   const handleChooseById = (choiceId: string | undefined) => {
     if (!current || !choiceId || showFeedback) return;
@@ -112,7 +201,45 @@ export default function QuizScreen({
     );
   }
 
-  if (items.length === 0) {
+  if (gen && genPhase === "loading") {
+    return (
+      <div className="container">
+        <div className="card">
+          <p aria-live="polite">
+            LLMが問題を生成中です…（数十秒かかることがあります）
+          </p>
+          <button
+            className="ghost"
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+            }
+          >
+            キャンセル
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (gen && genPhase === "idle") {
+    return (
+      <div className="container">
+        <div className="card">
+          <h3>生成に失敗しました</h3>
+          <p aria-live="polite">{genError ?? "不明なエラー"}</p>
+          <button
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+            }
+          >
+            戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeItems.length === 0) {
     return (
       <div className="container">
         <p>クイズがありません。デッキに4語以上必要です。</p>
@@ -131,7 +258,7 @@ export default function QuizScreen({
     <div className="container">
       <div className="nav-header">
         <h2>
-          クイズ ({index + 1}/{items.length})
+          クイズ ({index + 1}/{activeItems.length})
         </h2>
         <button
           className="ghost"

@@ -103,6 +103,7 @@ export default function App() {
             storage={storage}
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
+            gen={state.screen.gen}
           />
         );
       case "result":
