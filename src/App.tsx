@@ -13,11 +13,21 @@ import ProgressScreen from "./components/ProgressScreen";
 import Dashboard from "./components/Dashboard";
 import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
+import ShortcutHelp from "./components/ShortcutHelp";
+import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Global shortcuts (issue #9): h = home, ? = shortcut help.
+  useKeyboardShortcuts({
+    h: () => dispatch({ type: "go", screen: { name: "home" } }),
+    H: () => dispatch({ type: "go", screen: { name: "home" } }),
+    "?": () => setShowHelp((v) => !v),
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -134,6 +144,7 @@ export default function App() {
         メインコンテンツへスキップ
       </a>
       <main id="main-content">{screen}</main>
+      {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
     </>
   );
 }

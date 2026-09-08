@@ -118,6 +118,8 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    } else if (e.key === "Escape") {
+      setInput("");
     }
   };
 
