@@ -311,6 +311,35 @@ p {
   margin-bottom: 1rem;
 }
 
+/* Issue #12: stronger contrast on large / bright displays.
+   Cards get a visible border and muted text is lightened so the
+   surface vs. background boundary stays readable on high-brightness
+   desktop monitors. Also honored for prefers-contrast: more. */
+@media (min-width: 1024px), (prefers-contrast: more) {
+  :root {
+    --color-muted: #b0c4de;
+  }
+
+  html {
+    font-size: clamp(16px, 1.2vw, 18px);
+  }
+
+  .card,
+  .badge {
+    border: 1px solid var(--color-surface-2);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-text: #ffffff;
+  }
+
+  body {
+    line-height: 1.65;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
