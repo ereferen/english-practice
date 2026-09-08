@@ -13,6 +13,7 @@ import {
   requestLlmChat,
 } from "../domain/llm";
 import { speak } from "../domain/speech";
+import styles from "./ConversationScreen.module.css";
 
 interface Props {
   state: AppState;
@@ -141,24 +142,15 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
   };
 
   return (
-    <div
-      className="container"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        padding: "0.5rem",
-      }}
-    >
+    <div className={`container ${styles.root}`}>
       {/* Header */}
-      <div className="nav-header" style={{ padding: "0.5rem 1rem" }}>
-        <h2 style={{ margin: 0 }}>英会話</h2>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div className={`nav-header ${styles.navHeader}`}>
+        <h2 className={styles.title}>英会話</h2>
+        <div className={styles.headerActions}>
           <button
-            className="ghost"
+            className={`ghost ${styles.clearButton}`}
             onClick={handleClear}
             disabled={messages.length === 0}
-            style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
           >
             クリア
           </button>
@@ -173,41 +165,15 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
 
       {/* Config warning */}
       {configError && (
-        <div
-          className="card"
-          style={{
-            color: "var(--color-danger)",
-            fontSize: "0.875rem",
-            margin: "0 0.5rem 0.5rem",
-            padding: "0.75rem",
-          }}
-        >
-          {configError}
-        </div>
+        <div className={`card ${styles.configWarning}`}>{configError}</div>
       )}
 
       {/* Messages */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "0.5rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-        }}
-      >
+      <div className={styles.messagesArea}>
         {messages.length === 0 && !streamingContent && (
-          <div
-            className="card"
-            style={{
-              textAlign: "center",
-              color: "var(--color-muted)",
-              marginTop: "2rem",
-            }}
-          >
+          <div className={`card ${styles.emptyState}`}>
             <p>英語でメッセージを送って会話を始めましょう！</p>
-            <p style={{ fontSize: "0.875rem" }}>
+            <p className={styles.emptyHint}>
               例: "Hi! How are you?", "What did you do today?"
             </p>
           </div>
@@ -221,31 +187,16 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
             }
           >
             <div
-              className="card"
-              style={{
-                margin: 0,
-                padding: "0.75rem 1rem",
-                background:
-                  msg.role === "user"
-                    ? "var(--color-primary-dark)"
-                    : "var(--color-surface)",
-                color: msg.role === "user" ? "#fff" : "var(--color-text)",
-                borderRadius: "var(--radius)",
-                wordBreak: "break-word",
-                whiteSpace: "pre-wrap",
-              }}
+              className={`card ${styles.bubble} ${
+                msg.role === "user" ? styles.bubbleUser : ""
+              }`}
             >
               {msg.content}
             </div>
             {msg.role === "assistant" && (
               <button
-                className="ghost"
+                className={`ghost ${styles.speakButton}`}
                 onClick={() => handleSpeak(msg.content)}
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "0.2rem 0.5rem",
-                  marginTop: "0.25rem",
-                }}
                 title="音声再生"
               >
                 🔊 読み上げ
@@ -257,24 +208,9 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         {/* Streaming indicator */}
         {streamingContent && (
           <div className="chat-bubble-wrap">
-            <div
-              className="card"
-              style={{
-                margin: 0,
-                padding: "0.75rem 1rem",
-                background: "var(--color-surface)",
-                borderRadius: "var(--radius)",
-                wordBreak: "break-word",
-                whiteSpace: "pre-wrap",
-              }}
-            >
+            <div className={`card ${styles.bubble}`}>
               {streamingContent}
-              <span
-                className="cursor-blink"
-                style={{ animation: "blink 1s step-end infinite" }}
-              >
-                ▍
-              </span>
+              <span className={`cursor-blink ${styles.cursorBlink}`}>▍</span>
             </div>
           </div>
         )}
@@ -282,15 +218,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         {/* Loading dots when no streaming content yet */}
         {loading && !streamingContent && (
           <div className="chat-bubble-wrap">
-            <div
-              className="card"
-              style={{
-                margin: 0,
-                padding: "0.75rem 1rem",
-                background: "var(--color-surface)",
-                borderRadius: "var(--radius)",
-              }}
-            >
+            <div className={`card ${styles.loadingBubble}`}>
               <span className="loading-dots">考え中...</span>
             </div>
           </div>
@@ -300,15 +228,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
       </div>
 
       {/* Input */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          padding: "0.75rem 0.5rem",
-          borderTop: "1px solid var(--color-surface-2)",
-          background: "var(--color-bg)",
-        }}
-      >
+      <div className={styles.inputBar}>
         <input
           ref={inputRef}
           type="text"
@@ -317,31 +237,20 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
           onKeyDown={handleKeyDown}
           placeholder="英語でメッセージを入力..."
           disabled={loading || providers.length === 0}
-          style={{
-            flex: 1,
-            padding: "0.75rem 1rem",
-            borderRadius: "var(--radius)",
-            border: "1px solid var(--color-surface-2)",
-            background: "var(--color-surface)",
-            color: "var(--color-text)",
-            fontSize: "1rem",
-            outline: "none",
-          }}
+          className={styles.chatInput}
         />
         {loading ? (
           <button
-            className="danger"
+            className={`danger ${styles.sendButton}`}
             onClick={handleStop}
-            style={{ whiteSpace: "nowrap" }}
           >
             停止
           </button>
         ) : (
           <button
-            className="primary"
+            className={`primary ${styles.sendButton}`}
             onClick={sendMessage}
             disabled={!input.trim() || providers.length === 0}
-            style={{ whiteSpace: "nowrap" }}
           >
             送信
           </button>

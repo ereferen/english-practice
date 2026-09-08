@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Action, ProgressSnapshot } from "../app/types";
 import type { LocalProgressStore } from "../storage/localProgress";
+import styles from "./ProgressScreen.module.css";
 
 interface Props {
   dispatch: React.Dispatch<Action>;
@@ -35,9 +36,7 @@ export default function ProgressScreen({ dispatch, localProgress }: Props) {
         <>
           <div className="card">
             <div className="badge">学習済み単語数</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-              {learnedWordCount} 語
-            </div>
+            <div className={styles.statValue}>{learnedWordCount} 語</div>
           </div>
 
           {snapshot.sessions.length > 0 && (
@@ -51,12 +50,7 @@ export default function ProgressScreen({ dispatch, localProgress }: Props) {
                     : 0;
                 return (
                   <div key={i} className="card">
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                      }}
-                    >
+                    <div className={styles.sessionRow}>
                       <span>{dateStr}</span>
                       <span>
                         {s.correctCount}/{s.askedCount} 問 ({score}%)
@@ -71,9 +65,9 @@ export default function ProgressScreen({ dispatch, localProgress }: Props) {
       )}
 
       {!isEmpty && (
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
+        <div className={styles.actions}>
           <button
-            style={{ flex: 1 }}
+            className={styles.actionButton}
             onClick={() => dispatch({ type: "go", screen: { name: "home" } })}
           >
             ホームへ

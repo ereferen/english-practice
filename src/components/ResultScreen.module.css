@@ -1,0 +1,9 @@
+/* Issue #8: result screen (was inline styles) */
+
+.summaryCard {
+  text-align: center;
+}
+
+.actionButton {
+  flex: 1;
+}

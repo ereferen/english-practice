@@ -15,6 +15,7 @@ import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
 import ShortcutHelp from "./components/ShortcutHelp";
 import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
+import styles from "./App.module.css";
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -61,9 +62,9 @@ export default function App() {
   if (error) {
     return (
       <div className="container">
-        <div className="card" style={{ color: "var(--color-danger)" }}>
+        <div className={`card ${styles.errorCard}`}>
           <h2>エラー</h2>
-          <pre style={{ whiteSpace: "pre-wrap" }}>{error}</pre>
+          <pre className={styles.errorPre}>{error}</pre>
         </div>
       </div>
     );

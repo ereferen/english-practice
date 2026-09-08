@@ -1,4 +1,5 @@
 import type { AppState, Action } from "../app/types";
+import styles from "./DeckList.module.css";
 
 interface Props {
   state: AppState;
@@ -20,18 +21,10 @@ export default function DeckList({ state, dispatch }: Props) {
       <div className="card-grid">
         {state.decks.map((deck) => (
           <div key={deck.deckId} className="card">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
+            <div className={styles.deckRow}>
               <div>
                 <h3>{deck.title}</h3>
-                <p
-                  style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}
-                >
+                <p className={styles.deckMeta}>
                   {deck.level} · {deck.lessons.length} レッスン
                 </p>
               </div>

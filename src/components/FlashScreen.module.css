@@ -1,0 +1,60 @@
+/* Issue #8: flashcard layout (was inline styles) */
+
+.flipCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.term {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.reading {
+  color: var(--color-muted);
+}
+
+.meaning {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.partOfSpeech {
+  margin-bottom: 0.75rem;
+}
+
+.examples {
+  width: 100%;
+  text-align: left;
+}
+
+.example {
+  margin-bottom: 0.5rem;
+}
+
+.exampleJa {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.note {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.audioButton {
+  flex: 1;
+}
+
+.nextButton {
+  flex: 2;
+}

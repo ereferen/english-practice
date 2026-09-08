@@ -4,6 +4,7 @@ import type { StorageProvider, ReviewState } from "../storage/types";
 import { allWords } from "../content/loader";
 import { systemClock } from "../domain/srs";
 import { computeProgress } from "../domain/progress";
+import styles from "./DeckHome.module.css";
 
 interface Props {
   state: AppState;
@@ -79,7 +80,7 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
 
       <div className="card">
         <p>{deck.description}</p>
-        <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+        <div className={styles.metaRow}>
           <span className="badge">{deck.level}</span>
           <span className="badge">学習率 {completion}%</span>
         </div>
@@ -89,24 +90,10 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       <div className="card-grid">
         {deck.lessons.map((lesson) => (
           <div key={lesson.lessonId} className="card">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
+            <div className={styles.lessonRow}>
               <div>
                 <strong>{lesson.title}</strong>
-                <p
-                  style={{
-                    color: "var(--color-muted)",
-                    fontSize: "0.875rem",
-                    margin: 0,
-                  }}
-                >
-                  {lesson.words.length} 語
-                </p>
+                <p className={styles.lessonCount}>{lesson.words.length} 語</p>
               </div>
               <button
                 className="primary"

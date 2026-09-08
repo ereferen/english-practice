@@ -6,6 +6,7 @@ import type {
 } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import { providersFromSettings, testLlmConnection } from "../domain/llm";
+import styles from "./Settings.module.css";
 
 interface Props {
   state: AppState;
@@ -106,12 +107,7 @@ export default function Settings({ dispatch, storage }: Props) {
 
       {message && (
         <div
-          className="card"
-          style={{
-            color: message.includes("失敗")
-              ? "var(--color-danger)"
-              : "var(--color-success)",
-          }}
+          className={`card ${message.includes("失敗") ? styles.messageFail : styles.messageOk}`}
         >
           {message}
         </div>
@@ -127,15 +123,13 @@ export default function Settings({ dispatch, storage }: Props) {
               max={100}
               value={settings.dailyGoalWords}
               onChange={(e) => save({ dailyGoalWords: Number(e.target.value) })}
-              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+              className={styles.field}
             />
           </label>
         </div>
 
         <div className="card">
-          <label
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-          >
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               checked={settings.soundEnabled}
@@ -147,10 +141,7 @@ export default function Settings({ dispatch, storage }: Props) {
 
         <div className="card">
           <h3>データのバックアップ / 復元</h3>
-          <button
-            onClick={handleExport}
-            style={{ width: "100%", marginBottom: "0.75rem" }}
-          >
+          <button onClick={handleExport} className={styles.blockButton}>
             バックアップをダウンロード
           </button>
           <textarea
@@ -158,22 +149,14 @@ export default function Settings({ dispatch, storage }: Props) {
             onChange={(e) => setExported(e.target.value)}
             placeholder="JSONをここに貼り付けてインポート"
             rows={5}
-            style={{
-              width: "100%",
-              marginBottom: "0.75rem",
-              padding: "0.5rem",
-            }}
+            className={styles.exportArea}
           />
-          <button
-            onClick={handleImport}
-            style={{ width: "100%", marginBottom: "0.75rem" }}
-          >
+          <button onClick={handleImport} className={styles.blockButton}>
             インポート
           </button>
           <button
-            className="danger"
+            className={`danger ${styles.fullWidth}`}
             onClick={handleClear}
-            style={{ width: "100%" }}
           >
             すべてのデータを削除
           </button>
@@ -188,12 +171,7 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmApiEndpoint}
               onChange={(e) => save({ llmApiEndpoint: e.target.value })}
               placeholder="http://192.168.1.100:11434/v1"
-              style={{
-                width: "100%",
-                marginTop: "0.5rem",
-                marginBottom: "0.75rem",
-                padding: "0.5rem",
-              }}
+              className={styles.fieldSpaced}
             />
           </label>
           <label>
@@ -203,12 +181,7 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmModel}
               onChange={(e) => save({ llmModel: e.target.value })}
               placeholder="deepseek-v4-flash"
-              style={{
-                width: "100%",
-                marginTop: "0.5rem",
-                marginBottom: "0.75rem",
-                padding: "0.5rem",
-              }}
+              className={styles.fieldSpaced}
             />
           </label>
           <label>
@@ -218,13 +191,13 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmApiKey}
               onChange={(e) => save({ llmApiKey: e.target.value })}
               placeholder="sk-..."
-              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+              className={styles.field}
             />
           </label>
           <button
             onClick={() => handleTest("primary")}
             disabled={testing !== null}
-            style={{ width: "100%", marginTop: "0.75rem" }}
+            className={styles.testButton}
           >
             {testing === "primary" ? "テスト中..." : "接続テスト（プライマリ）"}
           </button>
@@ -232,13 +205,7 @@ export default function Settings({ dispatch, storage }: Props) {
 
         <div className="card">
           <h3>フォールバックプロバイダ（任意）</h3>
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--color-muted)",
-              marginBottom: "0.75rem",
-            }}
-          >
+          <p className={styles.hint}>
             プライマリが失敗したときのみ使用します。未設定なら無効。 （例:
             プライマリ=OpenCode Go / フォールバック=OpenRouter）
           </p>
@@ -249,12 +216,7 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmFallbackApiEndpoint}
               onChange={(e) => save({ llmFallbackApiEndpoint: e.target.value })}
               placeholder="https://opencode.ai/zen/go/v1"
-              style={{
-                width: "100%",
-                marginTop: "0.5rem",
-                marginBottom: "0.75rem",
-                padding: "0.5rem",
-              }}
+              className={styles.fieldSpaced}
             />
           </label>
           <label>
@@ -264,12 +226,7 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmFallbackModel}
               onChange={(e) => save({ llmFallbackModel: e.target.value })}
               placeholder="deepseek-v4-flash"
-              style={{
-                width: "100%",
-                marginTop: "0.5rem",
-                marginBottom: "0.75rem",
-                padding: "0.5rem",
-              }}
+              className={styles.fieldSpaced}
             />
           </label>
           <label>
@@ -279,7 +236,7 @@ export default function Settings({ dispatch, storage }: Props) {
               value={settings.llmFallbackApiKey}
               onChange={(e) => save({ llmFallbackApiKey: e.target.value })}
               placeholder="sk-..."
-              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+              className={styles.field}
             />
           </label>
           <button
@@ -287,19 +244,13 @@ export default function Settings({ dispatch, storage }: Props) {
             disabled={
               testing !== null || !settings.llmFallbackApiEndpoint.trim()
             }
-            style={{ width: "100%", marginTop: "0.75rem" }}
+            className={styles.testButton}
           >
             {testing === "fallback"
               ? "テスト中..."
               : "接続テスト（フォールバック）"}
           </button>
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--color-muted)",
-              marginTop: "0.75rem",
-            }}
-          >
+          <p className={styles.hintFooter}>
             OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp
             など）を指定できます。
           </p>

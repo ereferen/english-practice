@@ -1,0 +1,12 @@
+/* Issue #8: home screen (was inline styles) */
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Kept explicit: below 768px .menu-grid is not a grid, so buttons
+   would otherwise shrink to content width (mobile stacked layout). */
+.menuButton {
+  width: 100%;
+}

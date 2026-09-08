@@ -1,0 +1,12 @@
+/* Issue #8: deck list (was inline styles) */
+
+.deckRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.deckMeta {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,16 @@
+/* Issue #8: dashboard (was inline styles) */
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.sessionRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sessionMeta {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}

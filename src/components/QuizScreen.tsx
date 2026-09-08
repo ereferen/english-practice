@@ -5,6 +5,7 @@ import { generateQuizzesForLesson, pickLesson } from "../content/loader";
 import { buildSessionQuizItems, isCorrect } from "../domain/session";
 import type { AnswerRecord } from "../domain/session";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
+import styles from "./QuizScreen.module.css";
 
 interface Props {
   state: AppState;
@@ -149,9 +150,7 @@ export default function QuizScreen({
       </div>
 
       <div className="card">
-        <p className="quiz-prompt" style={{ marginBottom: "1rem" }}>
-          {current.prompt}
-        </p>
+        <p className={`quiz-prompt ${styles.prompt}`}>{current.prompt}</p>
         <div className="choice-grid">
           {current.choices.map((choice, idx) => {
             const isAnswer =
@@ -169,17 +168,11 @@ export default function QuizScreen({
                 className={[
                   isAnswer ? "choice-correct" : "",
                   isWrongPick ? "choice-wrong" : "",
+                  isAnswer ? styles.choiceCorrect : "",
+                  isWrongPick ? styles.choiceWrong : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                style={{
-                  background: isAnswer
-                    ? "var(--color-success)"
-                    : isWrongPick
-                      ? "var(--color-danger)"
-                      : undefined,
-                  color: isAnswer || isWrongPick ? "#0f172a" : undefined,
-                }}
               >
                 <span className="choice-marker" aria-hidden="true">
                   {isAnswer ? "✓" : isWrongPick ? "✗" : idx + 1}
@@ -198,9 +191,8 @@ export default function QuizScreen({
           </p>
           {current.explanation && !lastCorrect && <p>{current.explanation}</p>}
           <button
-            className="primary"
+            className={`primary ${styles.nextButton}`}
             onClick={handleNext}
-            style={{ width: "100%" }}
           >
             {isLast ? "結果を見る" : "次へ"}
           </button>

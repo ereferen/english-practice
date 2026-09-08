@@ -7,6 +7,7 @@ import { nextReviewState, systemClock } from "../domain/srs";
 import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
 import { localProgress } from "../storage/localProgress";
+import styles from "./ResultScreen.module.css";
 
 interface Props {
   state: AppState;
@@ -104,7 +105,7 @@ export default function ResultScreen({
 
   return (
     <div className="container wide">
-      <div className="card result-summary" style={{ textAlign: "center" }}>
+      <div className={`card result-summary ${styles.summaryCard}`}>
         <h2>セッション完了</h2>
         <div className="result-rate">{Math.round(rate * 100)}%</div>
         <p>
@@ -137,14 +138,13 @@ export default function ResultScreen({
       <div className="result-actions">
         <button
           onClick={() => dispatch({ type: "go", screen: { name: "home" } })}
-          style={{ flex: 1 }}
+          className={styles.actionButton}
         >
           ホームへ
         </button>
         <button
-          className="primary"
+          className={`primary ${styles.actionButton}`}
           onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
-          style={{ flex: 1 }}
         >
           進捗を見る
         </button>
@@ -152,7 +152,7 @@ export default function ResultScreen({
           onClick={() =>
             dispatch({ type: "go", screen: { name: "deckHome", deckId } })
           }
-          style={{ flex: 1 }}
+          className={styles.actionButton}
         >
           デッキへ
         </button>

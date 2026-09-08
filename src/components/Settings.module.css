@@ -1,0 +1,60 @@
+/* Issue #8: settings form (was inline styles) */
+
+.messageOk {
+  color: var(--color-success);
+}
+
+.messageFail {
+  color: var(--color-danger);
+}
+
+.field {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+}
+
+/* standalone: same as .field plus bottom spacing */
+.fieldSpaced {
+  width: 100%;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.5rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.blockButton {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.testButton {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.exportArea {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin-bottom: 0.75rem;
+}
+
+.hintFooter {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin-top: 0.75rem;
+}

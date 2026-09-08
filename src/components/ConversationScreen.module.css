@@ -1,0 +1,120 @@
+/* Issue #8: chat layout (was inline styles) */
+
+/* Full-height flex column replaces .container's padding, so the override
+   keeps the compound selector to win over the global .container class. */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+:global(.container).root {
+  padding: 0.5rem;
+}
+
+.navHeader {
+  padding: 0.5rem 1rem;
+}
+
+.title {
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.clearButton {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+}
+
+:global(.card).configWarning {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  margin: 0 0.5rem 0.5rem;
+  padding: 0.75rem;
+}
+
+.messagesArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--color-muted);
+  margin-top: 2rem;
+}
+
+.emptyHint {
+  font-size: 0.875rem;
+}
+
+:global(.card).bubble {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+:global(.card).bubbleUser {
+  background: var(--color-primary-dark);
+  color: #fff;
+}
+
+.speakButton {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  margin-top: 0.25rem;
+}
+
+:global(.card).loadingBubble {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+}
+
+.cursorBlink {
+  animation: blinkCursor 1s step-end infinite;
+}
+
+/* Defined locally: Vite's CSS-modules transform scopes animation names,
+   so a reference to the global `blink` keyframes would not resolve. */
+@keyframes blinkCursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+.inputBar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--color-surface-2);
+  background: var(--color-bg);
+}
+
+.chatInput {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-surface-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+  outline: none;
+}
+
+.sendButton {
+  white-space: nowrap;
+}
