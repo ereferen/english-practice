@@ -139,34 +139,41 @@ export default function QuizScreen({
           {current.prompt}
         </p>
         <div className="choice-grid">
-          {current.choices.map((choice) => (
-            <button
-              key={choice.choiceId}
-              disabled={showFeedback}
-              onClick={() => handleChoose(choice.choiceId)}
-              style={{
-                background:
-                  showFeedback && choice.choiceId === current.answerChoiceId
+          {current.choices.map((choice, idx) => {
+            const isAnswer =
+              showFeedback && choice.choiceId === current.answerChoiceId;
+            const isWrongPick =
+              showFeedback &&
+              lastCorrect === false &&
+              choice.choiceId === answers[answers.length - 1]?.choiceId;
+            return (
+              <button
+                key={choice.choiceId}
+                disabled={showFeedback}
+                onClick={() => handleChoose(choice.choiceId)}
+                aria-label={`選択肢 ${idx + 1}: ${choice.text}`}
+                className={[
+                  isAnswer ? "choice-correct" : "",
+                  isWrongPick ? "choice-wrong" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{
+                  background: isAnswer
                     ? "var(--color-success)"
-                    : showFeedback &&
-                        lastCorrect === false &&
-                        choice.choiceId ===
-                          answers[answers.length - 1]?.choiceId
+                    : isWrongPick
                       ? "var(--color-danger)"
                       : undefined,
-                color:
-                  showFeedback &&
-                  (choice.choiceId === current.answerChoiceId ||
-                    (lastCorrect === false &&
-                      choice.choiceId ===
-                        answers[answers.length - 1]?.choiceId))
-                    ? "#0f172a"
-                    : undefined,
-              }}
-            >
-              {choice.text}
-            </button>
-          ))}
+                  color: isAnswer || isWrongPick ? "#0f172a" : undefined,
+                }}
+              >
+                <span className="choice-marker" aria-hidden="true">
+                  {isAnswer ? "✓" : isWrongPick ? "✗" : idx + 1}
+                </span>
+                {choice.text}
+              </button>
+            );
+          })}
         </div>
       </div>
 
