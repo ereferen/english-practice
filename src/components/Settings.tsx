@@ -117,183 +117,193 @@ export default function Settings({ dispatch, storage }: Props) {
         </div>
       )}
 
-      <div className="card">
-        <label>
-          1日の目標語数
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={settings.dailyGoalWords}
-            onChange={(e) => save({ dailyGoalWords: Number(e.target.value) })}
-            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
-          />
-        </label>
-      </div>
+      <div className="card-grid settings-grid">
+        <div className="card">
+          <label>
+            1日の目標語数
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={settings.dailyGoalWords}
+              onChange={(e) => save({ dailyGoalWords: Number(e.target.value) })}
+              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+            />
+          </label>
+        </div>
 
-      <div className="card">
-        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <input
-            type="checkbox"
-            checked={settings.soundEnabled}
-            onChange={(e) => save({ soundEnabled: e.target.checked })}
-          />
-          音声フィードバックを有効にする
-        </label>
-      </div>
+        <div className="card">
+          <label
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <input
+              type="checkbox"
+              checked={settings.soundEnabled}
+              onChange={(e) => save({ soundEnabled: e.target.checked })}
+            />
+            音声フィードバックを有効にする
+          </label>
+        </div>
 
-      <div className="card">
-        <h3>データのバックアップ / 復元</h3>
-        <button
-          onClick={handleExport}
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-        >
-          バックアップをダウンロード
-        </button>
-        <textarea
-          value={exported}
-          onChange={(e) => setExported(e.target.value)}
-          placeholder="JSONをここに貼り付けてインポート"
-          rows={5}
-          style={{ width: "100%", marginBottom: "0.75rem", padding: "0.5rem" }}
-        />
-        <button
-          onClick={handleImport}
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-        >
-          インポート
-        </button>
-        <button
-          className="danger"
-          onClick={handleClear}
-          style={{ width: "100%" }}
-        >
-          すべてのデータを削除
-        </button>
-      </div>
-
-      <div className="card">
-        <h3>英会話 AI 設定</h3>
-        <label>
-          API エンドポイント
-          <input
-            type="text"
-            value={settings.llmApiEndpoint}
-            onChange={(e) => save({ llmApiEndpoint: e.target.value })}
-            placeholder="http://192.168.1.100:11434/v1"
+        <div className="card">
+          <h3>データのバックアップ / 復元</h3>
+          <button
+            onClick={handleExport}
+            style={{ width: "100%", marginBottom: "0.75rem" }}
+          >
+            バックアップをダウンロード
+          </button>
+          <textarea
+            value={exported}
+            onChange={(e) => setExported(e.target.value)}
+            placeholder="JSONをここに貼り付けてインポート"
+            rows={5}
             style={{
               width: "100%",
-              marginTop: "0.5rem",
               marginBottom: "0.75rem",
               padding: "0.5rem",
             }}
           />
-        </label>
-        <label>
-          モデル名
-          <input
-            type="text"
-            value={settings.llmModel}
-            onChange={(e) => save({ llmModel: e.target.value })}
-            placeholder="deepseek-v4-flash"
-            style={{
-              width: "100%",
-              marginTop: "0.5rem",
-              marginBottom: "0.75rem",
-              padding: "0.5rem",
-            }}
-          />
-        </label>
-        <label>
-          API キー（必要な場合）
-          <input
-            type="password"
-            value={settings.llmApiKey}
-            onChange={(e) => save({ llmApiKey: e.target.value })}
-            placeholder="sk-..."
-            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
-          />
-        </label>
-        <button
-          onClick={() => handleTest("primary")}
-          disabled={testing !== null}
-          style={{ width: "100%", marginTop: "0.75rem" }}
-        >
-          {testing === "primary" ? "テスト中..." : "接続テスト（プライマリ）"}
-        </button>
-      </div>
+          <button
+            onClick={handleImport}
+            style={{ width: "100%", marginBottom: "0.75rem" }}
+          >
+            インポート
+          </button>
+          <button
+            className="danger"
+            onClick={handleClear}
+            style={{ width: "100%" }}
+          >
+            すべてのデータを削除
+          </button>
+        </div>
 
-      <div className="card">
-        <h3>フォールバックプロバイダ（任意）</h3>
-        <p
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--color-muted)",
-            marginBottom: "0.75rem",
-          }}
-        >
-          プライマリが失敗したときのみ使用します。未設定なら無効。 （例:
-          プライマリ=OpenCode Go / フォールバック=OpenRouter）
-        </p>
-        <label>
-          API エンドポイント
-          <input
-            type="text"
-            value={settings.llmFallbackApiEndpoint}
-            onChange={(e) => save({ llmFallbackApiEndpoint: e.target.value })}
-            placeholder="https://opencode.ai/zen/go/v1"
+        <div className="card">
+          <h3>英会話 AI 設定</h3>
+          <label>
+            API エンドポイント
+            <input
+              type="text"
+              value={settings.llmApiEndpoint}
+              onChange={(e) => save({ llmApiEndpoint: e.target.value })}
+              placeholder="http://192.168.1.100:11434/v1"
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                marginBottom: "0.75rem",
+                padding: "0.5rem",
+              }}
+            />
+          </label>
+          <label>
+            モデル名
+            <input
+              type="text"
+              value={settings.llmModel}
+              onChange={(e) => save({ llmModel: e.target.value })}
+              placeholder="deepseek-v4-flash"
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                marginBottom: "0.75rem",
+                padding: "0.5rem",
+              }}
+            />
+          </label>
+          <label>
+            API キー（必要な場合）
+            <input
+              type="password"
+              value={settings.llmApiKey}
+              onChange={(e) => save({ llmApiKey: e.target.value })}
+              placeholder="sk-..."
+              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+            />
+          </label>
+          <button
+            onClick={() => handleTest("primary")}
+            disabled={testing !== null}
+            style={{ width: "100%", marginTop: "0.75rem" }}
+          >
+            {testing === "primary" ? "テスト中..." : "接続テスト（プライマリ）"}
+          </button>
+        </div>
+
+        <div className="card">
+          <h3>フォールバックプロバイダ（任意）</h3>
+          <p
             style={{
-              width: "100%",
-              marginTop: "0.5rem",
+              fontSize: "0.8rem",
+              color: "var(--color-muted)",
               marginBottom: "0.75rem",
-              padding: "0.5rem",
             }}
-          />
-        </label>
-        <label>
-          モデル名
-          <input
-            type="text"
-            value={settings.llmFallbackModel}
-            onChange={(e) => save({ llmFallbackModel: e.target.value })}
-            placeholder="deepseek-v4-flash"
+          >
+            プライマリが失敗したときのみ使用します。未設定なら無効。 （例:
+            プライマリ=OpenCode Go / フォールバック=OpenRouter）
+          </p>
+          <label>
+            API エンドポイント
+            <input
+              type="text"
+              value={settings.llmFallbackApiEndpoint}
+              onChange={(e) => save({ llmFallbackApiEndpoint: e.target.value })}
+              placeholder="https://opencode.ai/zen/go/v1"
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                marginBottom: "0.75rem",
+                padding: "0.5rem",
+              }}
+            />
+          </label>
+          <label>
+            モデル名
+            <input
+              type="text"
+              value={settings.llmFallbackModel}
+              onChange={(e) => save({ llmFallbackModel: e.target.value })}
+              placeholder="deepseek-v4-flash"
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                marginBottom: "0.75rem",
+                padding: "0.5rem",
+              }}
+            />
+          </label>
+          <label>
+            API キー（必要な場合）
+            <input
+              type="password"
+              value={settings.llmFallbackApiKey}
+              onChange={(e) => save({ llmFallbackApiKey: e.target.value })}
+              placeholder="sk-..."
+              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
+            />
+          </label>
+          <button
+            onClick={() => handleTest("fallback")}
+            disabled={
+              testing !== null || !settings.llmFallbackApiEndpoint.trim()
+            }
+            style={{ width: "100%", marginTop: "0.75rem" }}
+          >
+            {testing === "fallback"
+              ? "テスト中..."
+              : "接続テスト（フォールバック）"}
+          </button>
+          <p
             style={{
-              width: "100%",
-              marginTop: "0.5rem",
-              marginBottom: "0.75rem",
-              padding: "0.5rem",
+              fontSize: "0.8rem",
+              color: "var(--color-muted)",
+              marginTop: "0.75rem",
             }}
-          />
-        </label>
-        <label>
-          API キー（必要な場合）
-          <input
-            type="password"
-            value={settings.llmFallbackApiKey}
-            onChange={(e) => save({ llmFallbackApiKey: e.target.value })}
-            placeholder="sk-..."
-            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem" }}
-          />
-        </label>
-        <button
-          onClick={() => handleTest("fallback")}
-          disabled={testing !== null || !settings.llmFallbackApiEndpoint.trim()}
-          style={{ width: "100%", marginTop: "0.75rem" }}
-        >
-          {testing === "fallback"
-            ? "テスト中..."
-            : "接続テスト（フォールバック）"}
-        </button>
-        <p
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--color-muted)",
-            marginTop: "0.75rem",
-          }}
-        >
-          OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp
-          など）を指定できます。
-        </p>
+          >
+            OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp
+            など）を指定できます。
+          </p>
+        </div>
       </div>
     </div>
   );

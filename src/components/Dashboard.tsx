@@ -51,25 +51,26 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         </button>
       </div>
 
-      <div
-        className="card"
-        style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}
-      >
-        <div>
-          <div className="badge">登録語数</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-            {totalWords} 語
+      <div className="card">
+        <div className="card-grid stats-grid">
+          <div>
+            <div className="badge">登録語数</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
+              {totalWords} 語
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="badge">セッション数</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-            {totalSessions} 回
+          <div>
+            <div className="badge">セッション数</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
+              {totalSessions} 回
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="badge">平均正答率</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{avgScore}%</div>
+          <div>
+            <div className="badge">平均正答率</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
+              {avgScore}%
+            </div>
+          </div>
         </div>
       </div>
 
