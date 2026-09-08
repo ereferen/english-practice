@@ -333,6 +333,50 @@ describe("FlashScreen", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Keyboard shortcuts (issue #9)
+  // -------------------------------------------------------------------------
+
+  it("window-level Space flips the card without focusing it", async () => {
+    renderFlashScreen(makeState(deck));
+    await userEvent.keyboard(" ");
+    expect(screen.getByText(word0.meaning)).toBeTruthy();
+  });
+
+  it("window-level ArrowRight advances to the next word", async () => {
+    renderFlashScreen(makeState(deck));
+    await userEvent.keyboard("{ArrowRight}");
+    const word1 = deck.lessons[0].words[1];
+    expect(screen.getByText(word1.term)).toBeTruthy();
+    expect(screen.getByText(/2\/3/)).toBeTruthy();
+  });
+
+  it("window-level n key advances to the next word", async () => {
+    renderFlashScreen(makeState(deck));
+    await userEvent.keyboard("n");
+    expect(screen.getByText(/2\/3/)).toBeTruthy();
+  });
+
+  it("Escape dispatches navigation back to deck home", async () => {
+    const { dispatch } = renderFlashScreen(makeState(deck));
+    await userEvent.keyboard("{Escape}");
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "deckHome", deckId: "test-deck" },
+    });
+  });
+
+  it("shortcuts are ignored while typing in an input", async () => {
+    renderFlashScreen(makeState(deck));
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
+    await userEvent.keyboard("n n");
+    // Still on word 1 — shortcut must not fire while the input has focus
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+    input.remove();
+  });
+
   it("shows part of speech badge on card back if present", async () => {
     const deckWithPos = makeTestDeck();
     // The fixture words do have partOfSpeech

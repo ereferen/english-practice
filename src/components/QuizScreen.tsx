@@ -4,6 +4,7 @@ import type { StorageProvider } from "../storage/types";
 import { generateQuizzesForLesson, pickLesson } from "../content/loader";
 import { buildSessionQuizItems, isCorrect } from "../domain/session";
 import type { AnswerRecord } from "../domain/session";
+import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 
 interface Props {
   state: AppState;
@@ -39,6 +40,62 @@ export default function QuizScreen({
     askedAtRef.current = Date.now();
   }, [index]);
 
+  const current = items[index];
+  const isLast = index === items.length - 1;
+
+  const handleChooseById = (choiceId: string | undefined) => {
+    if (!current || !choiceId || showFeedback) return;
+    const correct = isCorrect(current, choiceId);
+    const latencyMs = Date.now() - askedAtRef.current;
+    const record: AnswerRecord = {
+      quizId: current.quizId,
+      wordId: current.wordId,
+      choiceId,
+      correct,
+      latencyMs,
+    };
+    setAnswers((prev) => [...prev, record]);
+    setLastCorrect(correct);
+    setShowFeedback(true);
+
+    void storage.recordAnswer({
+      id: crypto.randomUUID(),
+      sessionId: `${deckId}-${lessonId}-${startedAt}`,
+      wordId: current.wordId,
+      askedAt: new Date().toISOString(),
+      correct,
+      latencyMs,
+    });
+  };
+
+  const handleNext = () => {
+    if (!current) return;
+    if (isLast) {
+      dispatch({
+        type: "finishQuiz",
+        deckId,
+        lessonId,
+        answers,
+      });
+    } else {
+      setIndex((i) => i + 1);
+      setShowFeedback(false);
+      setLastCorrect(null);
+    }
+  };
+
+  // Keyboard shortcuts (issue #9): 1-4 to answer, Enter/→ to advance, Esc to abort.
+  useKeyboardShortcuts({
+    "1": () => handleChooseById(current?.choices[0]?.choiceId),
+    "2": () => handleChooseById(current?.choices[1]?.choiceId),
+    "3": () => handleChooseById(current?.choices[2]?.choiceId),
+    "4": () => handleChooseById(current?.choices[3]?.choiceId),
+    Enter: () => (showFeedback ? handleNext() : undefined),
+    ArrowRight: () => (showFeedback ? handleNext() : undefined),
+    Escape: () =>
+      dispatch({ type: "go", screen: { name: "deckHome", deckId } }),
+  });
+
   if (!deck || !lessonWithDeck) {
     return (
       <div className="container">
@@ -68,49 +125,6 @@ export default function QuizScreen({
       </div>
     );
   }
-
-  const current = items[index];
-  const isLast = index === items.length - 1;
-
-  const handleChoose = async (choiceId: string) => {
-    if (showFeedback) return;
-    const correct = isCorrect(current, choiceId);
-    const latencyMs = Date.now() - askedAtRef.current;
-    const record: AnswerRecord = {
-      quizId: current.quizId,
-      wordId: current.wordId,
-      choiceId,
-      correct,
-      latencyMs,
-    };
-    setAnswers((prev) => [...prev, record]);
-    setLastCorrect(correct);
-    setShowFeedback(true);
-
-    await storage.recordAnswer({
-      id: crypto.randomUUID(),
-      sessionId: `${deckId}-${lessonId}-${startedAt}`,
-      wordId: current.wordId,
-      askedAt: new Date().toISOString(),
-      correct,
-      latencyMs,
-    });
-  };
-
-  const handleNext = () => {
-    if (isLast) {
-      dispatch({
-        type: "finishQuiz",
-        deckId,
-        lessonId,
-        answers,
-      });
-    } else {
-      setIndex((i) => i + 1);
-      setShowFeedback(false);
-      setLastCorrect(null);
-    }
-  };
 
   return (
     <div className="container">
@@ -150,7 +164,7 @@ export default function QuizScreen({
               <button
                 key={choice.choiceId}
                 disabled={showFeedback}
-                onClick={() => handleChoose(choice.choiceId)}
+                onClick={() => handleChooseById(choice.choiceId)}
                 aria-label={`選択肢 ${idx + 1}: ${choice.text}`}
                 className={[
                   isAnswer ? "choice-correct" : "",

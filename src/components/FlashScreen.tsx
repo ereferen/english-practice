@@ -3,6 +3,7 @@ import type { AppState, Action } from "../app/types";
 import { pickLesson } from "../content/loader";
 import { speak } from "../domain/speech";
 import type { LocalProgressStore } from "../storage/localProgress";
+import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 
 interface Props {
   state: AppState;
@@ -31,7 +32,49 @@ export default function FlashScreen({
     learnedRef.current = new Set();
   }, [deckId, lessonId]);
 
-  if (!deck || !lessonWithDeck) {
+  const lesson = lessonWithDeck?.lesson;
+  const words = lesson?.words ?? [];
+  const word = words[Math.min(index, Math.max(words.length - 1, 0))];
+  const isLast = lesson ? index === lesson.words.length - 1 : false;
+
+  /** Mark the current word as learned (idempotent per render cycle). */
+  const markCurrentLearned = () => {
+    if (!word) return;
+    const id = word.wordId;
+    if (learnedRef.current.has(id)) return;
+    learnedRef.current.add(id);
+    localProgress.markLearned({
+      deckId,
+      wordId: id,
+      learnedAt: new Date().toISOString(),
+    });
+  };
+
+  const handleNext = () => {
+    if (!lesson) return;
+    markCurrentLearned();
+    if (isLast) {
+      dispatch({ type: "go", screen: { name: "quiz", deckId, lessonId } });
+    } else {
+      setIndex((i) => i + 1);
+      setFlipped(false);
+    }
+  };
+
+  // Keyboard shortcuts (issue #9): flip, next, audio, abort.
+  useKeyboardShortcuts({
+    " ": () => lesson && setFlipped((f) => !f),
+    Enter: () => lesson && setFlipped((f) => !f),
+    ArrowRight: handleNext,
+    n: handleNext,
+    N: handleNext,
+    s: () => word && speak(word.term),
+    S: () => word && speak(word.term),
+    Escape: () =>
+      dispatch({ type: "go", screen: { name: "deckHome", deckId } }),
+  });
+
+  if (!deck || !lesson) {
     return (
       <div className="container">
         <p>レッスンが見つかりません</p>
@@ -45,32 +88,6 @@ export default function FlashScreen({
       </div>
     );
   }
-
-  const { lesson } = lessonWithDeck;
-  const word = lesson.words[index];
-  const isLast = index === lesson.words.length - 1;
-
-  /** Mark the current word as learned (idempotent per render cycle). */
-  const markCurrentLearned = () => {
-    const id = word.wordId;
-    if (learnedRef.current.has(id)) return;
-    learnedRef.current.add(id);
-    localProgress.markLearned({
-      deckId,
-      wordId: id,
-      learnedAt: new Date().toISOString(),
-    });
-  };
-
-  const handleNext = () => {
-    markCurrentLearned();
-    if (isLast) {
-      dispatch({ type: "go", screen: { name: "quiz", deckId, lessonId } });
-    } else {
-      setIndex((i) => i + 1);
-      setFlipped(false);
-    }
-  };
 
   return (
     <div className="container">
@@ -98,9 +115,6 @@ export default function FlashScreen({
         onClick={() => setFlipped((f) => !f)}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") setFlipped((f) => !f);
-        }}
         aria-label="カードをめくる"
         className="card flash-card"
         style={{
