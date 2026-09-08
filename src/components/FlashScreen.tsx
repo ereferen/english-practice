@@ -95,7 +95,6 @@ export default function FlashScreen({
       </div>
 
       <div
-        className="card"
         onClick={() => setFlipped((f) => !f)}
         role="button"
         tabIndex={0}
@@ -103,8 +102,8 @@ export default function FlashScreen({
           if (e.key === "Enter" || e.key === " ") setFlipped((f) => !f);
         }}
         aria-label="カードをめくる"
+        className="card flash-card"
         style={{
-          minHeight: "240px",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -115,11 +114,8 @@ export default function FlashScreen({
         {!flipped ? (
           <>
             <div
-              style={{
-                fontSize: "2rem",
-                fontWeight: 700,
-                marginBottom: "0.5rem",
-              }}
+              className="flash-term"
+              style={{ fontWeight: 700, marginBottom: "0.5rem" }}
             >
               {word.term}
             </div>
@@ -167,7 +163,10 @@ export default function FlashScreen({
         )}
       </div>
 
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div
+        className="flash-actions"
+        style={{ display: "flex", gap: "0.75rem" }}
+      >
         <button onClick={() => speak(word.term)} style={{ flex: 1 }}>
           音声再生
         </button>

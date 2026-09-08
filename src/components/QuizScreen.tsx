@@ -135,7 +135,7 @@ export default function QuizScreen({
       </div>
 
       <div className="card">
-        <p style={{ fontSize: "1.125rem", marginBottom: "1rem" }}>
+        <p className="quiz-prompt" style={{ marginBottom: "1rem" }}>
           {current.prompt}
         </p>
         <div className="choice-grid">
