@@ -59,68 +59,81 @@ export default function App() {
     );
   }
 
-  switch (state.screen.name) {
-    case "home":
-      return <Home state={state} dispatch={dispatch} storage={storage} />;
-    case "deckList":
-      return <DeckList state={state} dispatch={dispatch} />;
-    case "deckHome":
-      return (
-        <DeckHome
-          state={state}
-          dispatch={dispatch}
-          storage={storage}
-          deckId={state.screen.deckId}
-        />
-      );
-    case "flash":
-      return (
-        <FlashScreen
-          state={state}
-          dispatch={dispatch}
-          localProgress={localProgress}
-          deckId={state.screen.deckId}
-          lessonId={state.screen.lessonId}
-        />
-      );
-    case "quiz":
-      return (
-        <QuizScreen
-          state={state}
-          dispatch={dispatch}
-          storage={storage}
-          deckId={state.screen.deckId}
-          lessonId={state.screen.lessonId}
-        />
-      );
-    case "result":
-      return (
-        <ResultScreen
-          state={state}
-          dispatch={dispatch}
-          storage={storage}
-          deckId={state.screen.deckId}
-          lessonId={state.screen.lessonId}
-          answers={state.screen.answers}
-        />
-      );
-    case "progress":
-      return (
-        <ProgressScreen dispatch={dispatch} localProgress={localProgress} />
-      );
-    case "dashboard":
-      return <Dashboard state={state} dispatch={dispatch} storage={storage} />;
-    case "settings":
-      return <Settings state={state} dispatch={dispatch} storage={storage} />;
-    case "conversation":
-      return (
-        <ConversationScreen
-          state={state}
-          dispatch={dispatch}
-          storage={storage}
-        />
-      );
-    default:
-      return <Home state={state} dispatch={dispatch} storage={storage} />;
-  }
+  const screen = (() => {
+    switch (state.screen.name) {
+      case "home":
+        return <Home state={state} dispatch={dispatch} storage={storage} />;
+      case "deckList":
+        return <DeckList state={state} dispatch={dispatch} />;
+      case "deckHome":
+        return (
+          <DeckHome
+            state={state}
+            dispatch={dispatch}
+            storage={storage}
+            deckId={state.screen.deckId}
+          />
+        );
+      case "flash":
+        return (
+          <FlashScreen
+            state={state}
+            dispatch={dispatch}
+            localProgress={localProgress}
+            deckId={state.screen.deckId}
+            lessonId={state.screen.lessonId}
+          />
+        );
+      case "quiz":
+        return (
+          <QuizScreen
+            state={state}
+            dispatch={dispatch}
+            storage={storage}
+            deckId={state.screen.deckId}
+            lessonId={state.screen.lessonId}
+          />
+        );
+      case "result":
+        return (
+          <ResultScreen
+            state={state}
+            dispatch={dispatch}
+            storage={storage}
+            deckId={state.screen.deckId}
+            lessonId={state.screen.lessonId}
+            answers={state.screen.answers}
+          />
+        );
+      case "progress":
+        return (
+          <ProgressScreen dispatch={dispatch} localProgress={localProgress} />
+        );
+      case "dashboard":
+        return (
+          <Dashboard state={state} dispatch={dispatch} storage={storage} />
+        );
+      case "settings":
+        return <Settings state={state} dispatch={dispatch} storage={storage} />;
+      case "conversation":
+        return (
+          <ConversationScreen
+            state={state}
+            dispatch={dispatch}
+            storage={storage}
+          />
+        );
+      default:
+        return <Home state={state} dispatch={dispatch} storage={storage} />;
+    }
+  })();
+
+  return (
+    <>
+      <a className="skip-link" href="#main-content">
+        メインコンテンツへスキップ
+      </a>
+      <main id="main-content">{screen}</main>
+    </>
+  );
 }
