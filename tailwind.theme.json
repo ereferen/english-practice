@@ -1,0 +1,94 @@
+{
+  "theme": {
+    "extend": {
+      "colors": {
+        "primary": "#e8c56b",
+        "bg-night": "#070b14",
+        "bg-scene": "#0b1120",
+        "surface-panel": "#131c30",
+        "surface-raised": "#1b2740",
+        "surface-inset": "#0e1626",
+        "border-gold": "#c9a227",
+        "border-gold-dim": "#8a7233",
+        "border-hairline": "#31415f",
+        "text-parchment": "#f5ead1",
+        "text-body": "#d7deeb",
+        "text-muted": "#9aa7bf",
+        "accent-gold": "#e8c56b",
+        "accent-amber": "#d9963f",
+        "caret-blue": "#7cc7ff",
+        "status-success": "#6fdd9a",
+        "status-danger": "#ff8f8f",
+        "scrim-vignette": "#03060eb8"
+      },
+      "fontFamily": {
+        "display-lv1": [
+          "\"Shippori Mincho\", \"Hiragino Mincho ProN\", \"Yu Mincho\", Georgia, serif"
+        ],
+        "display-lv2": [
+          "\"Shippori Mincho\", \"Hiragino Mincho ProN\", \"Yu Mincho\", Georgia, serif"
+        ],
+        "menu-heading": [
+          "\"Shippori Mincho\", \"Hiragino Mincho ProN\", \"Yu Mincho\", Georgia, serif"
+        ],
+        "body-md": [
+          "\"Noto Sans JP\", \"Hiragino Sans\", \"Yu Gothic\", system-ui, sans-serif"
+        ],
+        "rune-caption": [
+          "\"DotGothic16\", \"MS PGothic\", monospace"
+        ]
+      },
+      "fontSize": {
+        "display-lv1": [
+          "2.5rem",
+          {
+            "letterSpacing": "0.04em",
+            "fontWeight": "700"
+          }
+        ],
+        "display-lv2": [
+          "1.75rem",
+          {
+            "letterSpacing": "0.03em",
+            "fontWeight": "700"
+          }
+        ],
+        "menu-heading": [
+          "1.25rem",
+          {
+            "letterSpacing": "0.06em",
+            "fontWeight": "600"
+          }
+        ],
+        "body-md": [
+          "1rem",
+          {
+            "letterSpacing": "0.01em",
+            "fontWeight": "400"
+          }
+        ],
+        "rune-caption": [
+          "0.75rem",
+          {
+            "letterSpacing": "0.12em",
+            "fontWeight": "400"
+          }
+        ]
+      },
+      "borderRadius": {
+        "none": "0px",
+        "sm": "4px",
+        "md": "8px",
+        "lg": "12px"
+      },
+      "spacing": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "gutter": "20px"
+      }
+    }
+  }
+}
