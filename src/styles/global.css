@@ -82,6 +82,59 @@ p {
   max-width: 1024px;
 }
 
+/* Issue #1: widen layout on larger screens */
+@media (min-width: 768px) {
+  .container {
+    --max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    --max-width: 960px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .container {
+    --max-width: 1200px;
+  }
+}
+
+/* Issue #2 / #11: responsive card grids (desktop multi-column, mobile stacked) */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.card-grid .card {
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.card-grid.stats-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (min-width: 768px) {
+  .card-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .card-grid.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
 .card {
   background: var(--color-surface);
   border-radius: var(--radius);
@@ -176,6 +229,22 @@ p {
 @media (min-width: 1200px) {
   .wrong-words-grid {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Issue #5: wider chat bubbles on desktop */
+.chat-bubble-wrap {
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.chat-bubble-wrap.user {
+  align-self: flex-end;
+}
+
+@media (min-width: 1024px) {
+  .chat-bubble-wrap {
+    max-width: min(70%, 720px);
   }
 }
 

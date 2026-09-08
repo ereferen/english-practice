@@ -86,42 +86,44 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       </div>
 
       <h3>レッスン一覧</h3>
-      {deck.lessons.map((lesson) => (
-        <div key={lesson.lessonId} className="card">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <strong>{lesson.title}</strong>
-              <p
-                style={{
-                  color: "var(--color-muted)",
-                  fontSize: "0.875rem",
-                  margin: 0,
-                }}
-              >
-                {lesson.words.length} 語
-              </p>
-            </div>
-            <button
-              className="primary"
-              onClick={() =>
-                dispatch({
-                  type: "startLesson",
-                  deckId,
-                  lessonId: lesson.lessonId,
-                })
-              }
+      <div className="card-grid">
+        {deck.lessons.map((lesson) => (
+          <div key={lesson.lessonId} className="card">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              学習・クイズ
-            </button>
+              <div>
+                <strong>{lesson.title}</strong>
+                <p
+                  style={{
+                    color: "var(--color-muted)",
+                    fontSize: "0.875rem",
+                    margin: 0,
+                  }}
+                >
+                  {lesson.words.length} 語
+                </p>
+              </div>
+              <button
+                className="primary"
+                onClick={() =>
+                  dispatch({
+                    type: "startLesson",
+                    deckId,
+                    lessonId: lesson.lessonId,
+                  })
+                }
+              >
+                学習・クイズ
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

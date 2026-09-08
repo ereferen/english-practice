@@ -70,7 +70,7 @@ export default function Home({ state, dispatch, storage }: Props) {
       </div>
 
       <div className="card">
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+        <div className="card-grid stats-grid">
           <div>
             <div className="badge">今日の復習</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{due} 語</div>
@@ -91,36 +91,42 @@ export default function Home({ state, dispatch, storage }: Props) {
       </div>
 
       <div className="card">
-        <button
-          className="primary"
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-          onClick={() => dispatch({ type: "go", screen: { name: "deckList" } })}
-        >
-          デッキを選ぶ
-        </button>
-        <button
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-          onClick={() =>
-            dispatch({ type: "go", screen: { name: "dashboard" } })
-          }
-        >
-          進捗ダッシュボード
-        </button>
-        <button
-          className="primary"
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-          onClick={() =>
-            dispatch({ type: "go", screen: { name: "conversation" } })
-          }
-        >
-          英会話
-        </button>
-        <button
-          style={{ width: "100%" }}
-          onClick={() => dispatch({ type: "go", screen: { name: "settings" } })}
-        >
-          設定
-        </button>
+        <div className="menu-grid">
+          <button
+            className="primary"
+            style={{ width: "100%" }}
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "deckList" } })
+            }
+          >
+            デッキを選ぶ
+          </button>
+          <button
+            style={{ width: "100%" }}
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "dashboard" } })
+            }
+          >
+            進捗ダッシュボード
+          </button>
+          <button
+            className="primary"
+            style={{ width: "100%" }}
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "conversation" } })
+            }
+          >
+            英会話
+          </button>
+          <button
+            style={{ width: "100%" }}
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "settings" } })
+            }
+          >
+            設定
+          </button>
+        </div>
       </div>
     </div>
   );

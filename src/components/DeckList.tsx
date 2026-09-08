@@ -17,35 +17,39 @@ export default function DeckList({ state, dispatch }: Props) {
           戻る
         </button>
       </div>
-      {state.decks.map((deck) => (
-        <div key={deck.deckId} className="card">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <h3>{deck.title}</h3>
-              <p style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}>
-                {deck.level} · {deck.lessons.length} レッスン
-              </p>
-            </div>
-            <button
-              className="primary"
-              onClick={() =>
-                dispatch({
-                  type: "go",
-                  screen: { name: "deckHome", deckId: deck.deckId },
-                })
-              }
+      <div className="card-grid">
+        {state.decks.map((deck) => (
+          <div key={deck.deckId} className="card">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              開く
-            </button>
+              <div>
+                <h3>{deck.title}</h3>
+                <p
+                  style={{ color: "var(--color-muted)", fontSize: "0.875rem" }}
+                >
+                  {deck.level} · {deck.lessons.length} レッスン
+                </p>
+              </div>
+              <button
+                className="primary"
+                onClick={() =>
+                  dispatch({
+                    type: "go",
+                    screen: { name: "deckHome", deckId: deck.deckId },
+                  })
+                }
+              >
+                開く
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
