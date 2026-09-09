@@ -650,7 +650,11 @@ label {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(120% 100% at 50% 42%, transparent 40%, rgba(3, 6, 14, 0.4) 100%),
+    radial-gradient(
+      120% 100% at 50% 42%,
+      transparent 40%,
+      rgba(3, 6, 14, 0.4) 100%
+    ),
     var(--color-scrim);
   display: flex;
   align-items: center;

@@ -17,6 +17,7 @@ import "@fontsource/noto-sans-jp/japanese-600.css";
 import "@fontsource/dotgothic16/latin-400.css";
 import "@fontsource/dotgothic16/japanese-400.css";
 import "./styles/global.css";
+import "./styles/motion.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

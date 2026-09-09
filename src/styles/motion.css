@@ -1,0 +1,143 @@
+/* Issue #52: EaseMotion-inspired motion layer.
+   We do NOT vendor easemotion-css itself: its base.css resets typography
+   to a light Inter/Google-Fonts theme that fights the night-stage design
+   (DESIGN.md), and its component classes ship a purple palette. Instead we
+   borrow its motion vocabulary — the cubic-bezier curves, entrance
+   keyframes, hover-lift, and delay staggering — as ~100 lines of CSS with
+   zero dependencies, keeping the bundle light (the issue's "軽量な動作は維持"
+   constraint). Curves mirror easemotion --ease-ease / --ease-ease-out /
+   --ease-ease-bounce. */
+
+:root {
+  /* Easing curves (same values as EaseMotion core/variables.css) */
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Speeds */
+  --motion-fast: 150ms;
+  --motion-medium: 300ms;
+  --motion-slow: 600ms;
+}
+
+/* ── Entrance keyframes ──────────────────────────────────────── */
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Utility classes (composed in markup or via the mounts below) ── */
+
+.motion-fade-in {
+  animation: motion-fade-in var(--motion-medium) var(--motion-ease) both;
+}
+
+.motion-slide-up {
+  animation: motion-slide-up var(--motion-medium) var(--motion-ease-out) both;
+}
+
+.motion-zoom-in {
+  animation: motion-zoom-in var(--motion-medium) var(--motion-ease-back) both;
+}
+
+/* ── Declarative stagger: grids animate their cards in, one after
+   another, EaseMotion's ease-delay style but without per-item classes.
+   Only direct .card/.menu-item children participate; 40ms steps,
+   capped visually by the 8th child rule below. ── */
+
+.card-grid > *,
+.menu-grid > * {
+  animation: motion-slide-up var(--motion-medium) var(--motion-ease-out) both;
+}
+
+.card-grid > :nth-child(2),
+.menu-grid > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.card-grid > :nth-child(3),
+.menu-grid > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.card-grid > :nth-child(4),
+.menu-grid > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.card-grid > :nth-child(5),
+.menu-grid > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.card-grid > :nth-child(6),
+.menu-grid > :nth-child(6) {
+  animation-delay: 200ms;
+}
+.card-grid > :nth-child(n + 7),
+.menu-grid > :nth-child(n + 7) {
+  animation-delay: 240ms;
+}
+
+/* ── Hover lift (EaseMotion .ease-hover-lift) in theme colors.
+   Applied to .card inside grids and compact menu rows; translateY is
+   separate from any transform the element already owns. ── */
+
+.card-grid .card {
+  transition:
+    translate var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+/* Cards only: .menu-item hover already has its own language (gold glow,
+   caret slide — issues #42/#46) and must not be overridden here. */
+@media (hover: hover) {
+  .card-grid .card:hover {
+    translate: 0 -2px;
+    box-shadow:
+      inset 0 0 0 4px var(--color-surface),
+      inset 0 0 0 5px var(--color-border-gold-dim),
+      0 6px 16px rgba(3, 6, 14, 0.6);
+  }
+}
+
+/* ── Reduced motion: kill entrances and lifts entirely (matches the
+   global.css convention of disabling motion per feature). ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-fade-in,
+  .motion-slide-up,
+  .motion-zoom-in,
+  .card-grid > *,
+  .menu-grid > * {
+    animation: none;
+  }
+
+  .card-grid .card {
+    translate: none;
+    transition: none;
+  }
+}

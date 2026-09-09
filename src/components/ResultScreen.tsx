@@ -105,7 +105,9 @@ export default function ResultScreen({
 
   return (
     <div className="container wide">
-      <div className={`card result-summary ${styles.summaryCard}`}>
+      <div
+        className={`card result-summary motion-zoom-in ${styles.summaryCard}`}
+      >
         <h2>セッション完了</h2>
         <div className="result-rate">{Math.round(rate * 100)}%</div>
         <p>
