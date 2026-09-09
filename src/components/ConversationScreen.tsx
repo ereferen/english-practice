@@ -252,10 +252,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
           className={styles.chatInput}
         />
         {loading ? (
-          <button
-            className={styles.sendButton}
-            onClick={handleStop}
-          >
+          <button className={styles.sendButton} onClick={handleStop}>
             停止
           </button>
         ) : (
