@@ -14,6 +14,7 @@ import Dashboard from "./components/Dashboard";
 import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
 import ShortcutHelp from "./components/ShortcutHelp";
+import StageDressing from "./components/StageDressing";
 import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
 import styles from "./App.module.css";
 
@@ -145,7 +146,12 @@ export default function App() {
       <a className="skip-link" href="#main-content">
         メインコンテンツへスキップ
       </a>
-      <main id="main-content">{screen}</main>
+      {/* Issue #84: gutter life (mountains + walking traveler) */}
+      <StageDressing />
+      {/* Issue #84: scene-change dip — remount animation on screen switch */}
+      <main id="main-content" key={state.screen.name} className={styles.scene}>
+        {screen}
+      </main>
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
     </>
   );

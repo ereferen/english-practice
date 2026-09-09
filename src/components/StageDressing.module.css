@@ -1,0 +1,59 @@
+/* Issue #84: stage dressing — decorative fixed layers living in the
+   wide-viewport gutters, behind the .container content. Design rules:
+   opacity ≤ 0.15 (textures must never fight text), no interaction,
+   hidden < 1024px where there are no gutters. */
+
+.mountains {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 140px;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: repeat-x;
+  background-position: bottom;
+  background-size: 400px 120px;
+  opacity: 0.12;
+}
+
+/* sprite sheet is 4 frames @ 24x24; render at 3x = 72x72, cycle -288px */
+.traveler {
+  position: fixed;
+  right: max(2vw, 24px);
+  bottom: 8vh;
+  width: 72px;
+  height: 72px;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 288px 72px;
+  animation: traveler-walk 0.64s steps(4) infinite;
+}
+
+@keyframes traveler-walk {
+  to {
+    background-position-x: -288px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .traveler {
+    right: 6vw;
+  }
+}
+
+@media (max-width: 1023px) {
+  .mountains,
+  .traveler {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .traveler {
+    animation: none;
+    background-position-x: 0;
+  }
+}
