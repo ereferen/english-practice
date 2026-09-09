@@ -5,7 +5,11 @@ import type {
   Settings as SettingsType,
 } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
-import { providersFromSettings, testLlmConnection } from "../domain/llm";
+import {
+  diagnoseFetchFailure,
+  providersFromSettings,
+  testLlmConnection,
+} from "../domain/llm";
 import styles from "./Settings.module.css";
 
 interface Props {
@@ -114,6 +118,26 @@ export default function Settings({ dispatch, storage }: Props) {
     setTesting(which);
     setMessage(null);
     const result = await testLlmConnection(provider);
+    if (!result.ok) {
+      // Issue #80: separate CORS-blocked from unreachable so the user knows
+      // whether they need a relay/proxy or a URL fix.
+      const raw = result.error ?? "";
+      if (raw.includes("Failed to fetch")) {
+        let origin = "";
+        try {
+          origin = new URL(provider.apiEndpoint).origin;
+        } catch {
+          origin = "";
+        }
+        if (origin) {
+          const diag = await diagnoseFetchFailure(origin);
+          if (diag === "cors-blocked") {
+            result.error =
+              "CORS拒否: サーバーには到達しましたが、このエンドポイントはブラウザ直接接続（fetch）を許可していません。同一オリジンのリレー/リバースプロキシ経由か、CORS対応プロバイダ（OpenRouter等）を使ってください";
+          }
+        }
+      }
+    }
     setTesting(null);
     if (result.ok) {
       setMessage(

@@ -153,6 +153,34 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+// Issue #80: a bare "Failed to fetch" conflates two very different problems:
+// the server replied but withheld CORS headers (browser direct-connect is
+// impossible → needs a same-origin relay), vs. the host is unreachable at
+// all (wrong URL / offline). A mode:"no-cors" probe is opaque but still
+// rejects on network failure, so it separates the two cases.
+export type EndpointDiagnosis = "cors-blocked" | "unreachable";
+
+export async function diagnoseFetchFailure(
+  endpoint: string,
+  timeoutMs = 8_000,
+): Promise<EndpointDiagnosis> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await fetch(endpoint, {
+      method: "GET",
+      mode: "no-cors",
+      signal: controller.signal,
+    });
+    // Opaque success ⇒ the server answered ⇒ the earlier POST died on CORS.
+    return "cors-blocked";
+  } catch {
+    return "unreachable";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function assertOk(response: Response): Promise<void> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
