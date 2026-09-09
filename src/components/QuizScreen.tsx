@@ -258,7 +258,10 @@ export default function QuizScreen({
     <div className="container">
       <div className="nav-header">
         <h2>
-          クイズ ({index + 1}/{activeItems.length})
+          クイズ{" "}
+          <span className={styles.progressCount}>
+            ({index + 1}/{activeItems.length})
+          </span>
         </h2>
         <button
           className="ghost"
@@ -292,7 +295,9 @@ export default function QuizScreen({
                 disabled={showFeedback}
                 onClick={() => handleChooseById(choice.choiceId)}
                 aria-label={`選択肢 ${idx + 1}: ${choice.text}`}
+                aria-current={isAnswer ? "true" : undefined}
                 className={[
+                  "menu-item",
                   isAnswer ? "choice-correct" : "",
                   isWrongPick ? "choice-wrong" : "",
                   isAnswer ? styles.choiceCorrect : "",
