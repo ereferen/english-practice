@@ -123,7 +123,7 @@ export default function Settings({ dispatch, storage }: Props) {
               max={100}
               value={settings.dailyGoalWords}
               onChange={(e) => save({ dailyGoalWords: Number(e.target.value) })}
-              className={styles.field}
+              className={`${styles.field} ${styles.goalNumber}`}
             />
           </label>
         </div>

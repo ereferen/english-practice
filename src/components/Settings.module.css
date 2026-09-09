@@ -1,4 +1,8 @@
-/* Issue #8: settings form (was inline styles) */
+/* Issue #8: settings form (was inline styles)
+   Issue #44: fields sit in the DESIGN.md text-input well — inset
+   surface + hairline border + gold focus border, labels as
+   menu-heading, the daily-goal number as rune-caption gold.
+   (token defaults live in global.css; sizing stays here) */
 
 .messageOk {
   color: var(--color-success);
@@ -9,22 +13,31 @@
 }
 
 .field {
+  display: block;
   width: 100%;
   margin-top: 0.5rem;
-  padding: 0.5rem;
+  padding: var(--space-sm);
 }
 
 /* standalone: same as .field plus bottom spacing */
 .fieldSpaced {
+  display: block;
   width: 100%;
   margin: 0.5rem 0 0.75rem;
-  padding: 0.5rem;
+  padding: var(--space-sm);
 }
 
 .checkboxLabel {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* DESIGN.md rune-caption: numeric entry in dot font, gold */
+.goalNumber {
+  font-family: var(--font-rune);
+  color: var(--color-accent-gold);
+  letter-spacing: 0.12em;
 }
 
 .blockButton {
@@ -44,7 +57,7 @@
 .exportArea {
   width: 100%;
   margin-bottom: 0.75rem;
-  padding: 0.5rem;
+  padding: var(--space-sm);
 }
 
 .hint {
