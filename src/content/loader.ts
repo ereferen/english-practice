@@ -248,7 +248,7 @@ export function generateQuizzesForLesson(deck: Deck, lessonId: string): Quiz[] {
     );
     quizzes.push(meaningQuiz);
 
-    const fb = makeFillBlank(word, lessonId);
+    const fb = makeFillBlank(word, pool, lessonId);
     if (fb) quizzes.push(fb);
   }
 
@@ -279,7 +279,16 @@ function makeChooseMeaning(
   };
 }
 
-function makeFillBlank(target: Word, lessonId: string): Quiz | undefined {
+/** 日本語（ひらがな・カタカナ・漢字）を含むか */
+export function containsJapanese(s: string): boolean {
+  return /[\u3040-\u30ff\u4e00-\u9faf]/.test(s);
+}
+
+function makeFillBlank(
+  target: Word,
+  pool: Word[],
+  lessonId: string,
+): Quiz | undefined {
   const first = target.examples[0];
   if (!first) return undefined;
   const termLower = target.term.toLowerCase();
@@ -291,17 +300,34 @@ function makeFillBlank(target: Word, lessonId: string): Quiz | undefined {
   );
   if (prompt === first.en) return undefined;
 
+  // 空欄には英単語が入るので、誤答も英語の term から選ぶ (issue #78)
+  const distractors = Array.from(
+    new Set(
+      pool
+        .filter(
+          (w) =>
+            w.wordId !== target.wordId &&
+            !containsJapanese(w.term) &&
+            w.term.toLowerCase() !== termLower,
+        )
+        .map((w) => w.term),
+    ),
+  ).slice(0, 3);
+  if (distractors.length < 3) return undefined;
+
+  const choices = shuffle([
+    { choiceId: "c-ans", text: target.term },
+    ...distractors.map((text, i) => ({ choiceId: `c-d${i + 1}`, text })),
+  ]);
+  const answer = choices.find((c) => c.text === target.term);
+  if (!answer) throw new Error("answer choice not found");
+
   return {
     quizId: `gen:${lessonId}:${target.wordId}:fb`,
     type: "fill-blank",
     wordId: target.wordId,
     prompt,
-    choices: [
-      { choiceId: "c-ans", text: target.term },
-      { choiceId: "c-d1", text: target.reading },
-      { choiceId: "c-d2", text: target.meaning },
-      { choiceId: "c-d3", text: target.term + target.term },
-    ],
+    choices,
     answerChoiceId: "c-ans",
   };
 }
