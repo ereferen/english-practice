@@ -28,6 +28,8 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
   const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
   const [configError, setConfigError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
+  // Issue #73: last failed user text + flag so the error card can offer 再送/設定へ
+  const [failedSendText, setFailedSendText] = useState<string | null>(null);
   // Issue #47: which message is currently being read aloud (Web Speech)
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,53 +72,64 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
     };
   }, []);
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || providers.length === 0) return;
+  const sendMessage = useCallback(
+    async (overrideText?: string) => {
+      const text = (overrideText ?? input).trim();
+      if (!text || providers.length === 0) return;
 
-    const userMsg = createUserMessage(text);
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput("");
-    setLoading(true);
-    setStreamingContent("");
-
-    const controller = new AbortController();
-    controllerRef.current = controller;
-
-    try {
-      const result = await requestLlmChat({
-        providers,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...updated.map((m) => ({ role: m.role, content: m.content })),
-        ],
-        onChunk: (chunk) => {
-          setStreamingContent((prev) => prev + chunk);
-        },
-        signal: controller.signal,
-      });
-      const assistantMsg = createAssistantMessage(result.content);
-      setMessages((prev) => [...prev, assistantMsg]);
+      const userMsg = createUserMessage(text);
+      const updated = [...messages, userMsg];
+      setMessages(updated);
+      setInput("");
+      setFailedSendText(null);
+      setLoading(true);
       setStreamingContent("");
 
-      // Auto-speak the response (issue #47: track it for the gold badge)
-      setSpeakingId(assistantMsg.id);
-      speak(result.content, () => setSpeakingId(null));
-    } catch (e: unknown) {
-      if (e instanceof Error && e.name === "AbortError") return;
-      const errMsg = e instanceof Error ? e.message : String(e);
-      setStreamingContent("");
-      setMessages((prev) => [
-        ...prev,
-        createAssistantMessage(`⚠ エラー: ${errMsg}`),
-      ]);
-    } finally {
-      setLoading(false);
-      controllerRef.current = null;
-      inputRef.current?.focus();
-    }
-  }, [input, providers, messages]);
+      const controller = new AbortController();
+      controllerRef.current = controller;
+
+      try {
+        const result = await requestLlmChat({
+          providers,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...updated.map((m) => ({ role: m.role, content: m.content })),
+          ],
+          onChunk: (chunk) => {
+            setStreamingContent((prev) => prev + chunk);
+          },
+          signal: controller.signal,
+        });
+        const assistantMsg = createAssistantMessage(result.content);
+        setMessages((prev) => [...prev, assistantMsg]);
+        setStreamingContent("");
+
+        // Auto-speak the response (issue #47: track it for the gold badge)
+        setSpeakingId(assistantMsg.id);
+        speak(result.content, () => setSpeakingId(null));
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === "AbortError") return;
+        const rawMsg = e instanceof Error ? e.message : String(e);
+        // Issue #73: "Failed to fetch" is developer-speak; tell the user
+        // what it plausibly means and what to do next.
+        const errMsg = rawMsg.includes("Failed to fetch")
+          ? `${rawMsg}\nエンドポイントに到達できませんでした。URL・CORS設定・ネットワークを確認するか、[設定を確認] からやり直してください。`
+          : rawMsg;
+        setStreamingContent("");
+        // Issue #73: remember the failed text so 再送 works without retyping.
+        setFailedSendText(text);
+        setMessages((prev) => [
+          ...prev,
+          createAssistantMessage(`⚠ エラー: ${errMsg}`),
+        ]);
+      } finally {
+        setLoading(false);
+        controllerRef.current = null;
+        inputRef.current?.focus();
+      }
+    },
+    [input, providers, messages],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -168,9 +181,19 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         </div>
       </div>
 
-      {/* Config warning */}
+      {/* Config warning (issue #73: direct link to settings) */}
       {configError && (
-        <div className={`card ${styles.configWarning}`}>{configError}</div>
+        <div className={`card ${styles.configWarning}`}>
+          <span>{configError}</span>
+          <button
+            className={`ghost ${styles.settingsLink}`}
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "settings" } })
+            }
+          >
+            設定を開く
+          </button>
+        </div>
       )}
 
       {/* Messages */}
@@ -236,6 +259,29 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
           </div>
         )}
 
+        {/* Issue #73: after a send failure, offer 再送 without retyping */}
+        {failedSendText && !loading && (
+          <div className={styles.retryBar}>
+            <button
+              className={`primary ${styles.retryButton}`}
+              onClick={() => sendMessage(failedSendText)}
+            >
+              再送
+            </button>
+            <span className={styles.retryHint}>
+              「{failedSendText}」を再送信
+            </span>
+            <button
+              className={`ghost ${styles.retrySettingsButton}`}
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "settings" } })
+              }
+            >
+              設定を確認
+            </button>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -258,7 +304,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         ) : (
           <button
             className={`primary ${styles.sendButton}`}
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={!input.trim() || providers.length === 0}
           >
             送信

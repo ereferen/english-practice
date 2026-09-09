@@ -111,9 +111,18 @@ describe("FlashScreen", () => {
   const deck = makeTestDeck();
   const word0 = deck.lessons[0].words[0];
 
-  it("shows the first word term and reading on the card front", () => {
+  it("shows only the term on the card front (issue #72: no answer leak)", () => {
     renderFlashScreen(makeState(deck));
     expect(screen.getByText(word0.term)).toBeTruthy();
+    // Reading and meaning stay hidden until the card is flipped.
+    expect(screen.queryByText(word0.reading)).toBeNull();
+    expect(screen.queryByText(word0.meaning)).toBeNull();
+  });
+
+  it("reveals reading on the card back after flip (issue #72)", async () => {
+    renderFlashScreen(makeState(deck));
+    const card = screen.getByRole("button", { name: /カードをめくる/ });
+    await userEvent.click(card);
     expect(screen.getByText(word0.reading)).toBeTruthy();
   });
 
@@ -322,9 +331,9 @@ describe("FlashScreen", () => {
     expect(screen.getByRole("button", { name: "音声再生" })).toBeTruthy();
   });
 
-  it("provides a 中断 button to return to deck home", async () => {
+  it("provides a 戻る button to return to deck home (issue #75)", async () => {
     const { dispatch } = renderFlashScreen(makeState(deck));
-    const abortBtn = screen.getByRole("button", { name: "中断" });
+    const abortBtn = screen.getByRole("button", { name: "戻る" });
     expect(abortBtn).toBeTruthy();
     await userEvent.click(abortBtn);
     expect(dispatch).toHaveBeenCalledWith({

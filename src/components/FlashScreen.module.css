@@ -53,6 +53,20 @@
   color: var(--color-muted);
 }
 
+/* Issue #72: reading belongs to the answer side, not the prompt side. */
+.readingBack {
+  composes: reading;
+  margin-bottom: 0.25rem;
+}
+
+/* Issue #72: hint that the card must be flipped to see the meaning. */
+.flipHint {
+  margin-top: 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+}
+
 .meaning {
   /* body-md emphasis without going display-size (avoid gold body) */
   font-size: 1.5rem;

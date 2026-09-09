@@ -264,13 +264,14 @@ export default function QuizScreen({
             ({index + 1}/{activeItems.length})
           </span>
         </h2>
+        {/* Issue #75: consistent exit label across study screens */}
         <button
           className="ghost"
           onClick={() =>
             dispatch({ type: "go", screen: { name: "deckHome", deckId } })
           }
         >
-          中断
+          戻る
         </button>
         <button
           className="ghost"
