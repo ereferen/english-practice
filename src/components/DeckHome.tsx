@@ -96,7 +96,7 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
                 <p className={styles.lessonCount}>{lesson.words.length} 語</p>
               </div>
               <button
-                className="primary"
+                className="menu-item menu-item--compact"
                 onClick={() =>
                   dispatch({
                     type: "startLesson",

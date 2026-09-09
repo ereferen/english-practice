@@ -92,7 +92,7 @@ export default function Home({ state, dispatch, storage }: Props) {
       <div className="card">
         <div className="menu-grid">
           <button
-            className={`primary ${styles.menuButton}`}
+            className={`menu-item ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "deckList" } })
             }
@@ -100,7 +100,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             デッキを選ぶ
           </button>
           <button
-            className={styles.menuButton}
+            className={`menu-item ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "dashboard" } })
             }
@@ -108,7 +108,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             進捗ダッシュボード
           </button>
           <button
-            className={`primary ${styles.menuButton}`}
+            className={`menu-item ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "conversation" } })
             }
@@ -116,7 +116,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             英会話
           </button>
           <button
-            className={styles.menuButton}
+            className={`menu-item ${styles.menuButton}`}
             onClick={() =>
               dispatch({ type: "go", screen: { name: "settings" } })
             }
