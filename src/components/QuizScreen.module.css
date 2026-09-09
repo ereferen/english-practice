@@ -1,21 +1,38 @@
-/* Issue #8: quiz screen (was inline styles) */
+/* Issue #8: quiz screen (was inline styles)
+   Issue #46: choices are .menu-item (▸ caret + glow from #42).
+   Feedback stays color-independent (#10 ✓/✕ markers kept in TSX):
+   correct = inset success ring + faint gold glow + caret parked via
+   aria-current; wrong = inset danger ring. Inset rings instead of
+   borders so the grid never shifts after answering. */
 
 .prompt {
   margin-bottom: 1rem;
 }
 
-/* Feedback state classes: applied conditionally on choice buttons.
-   The button.type compound keeps these winning over the global
-   `.choice-grid button` rules (the old inline styles beat classes;
-   these beat classes by specificity). */
+/* DESIGN.md rune-caption for the progress numerals */
+.progressCount {
+  font-family: var(--font-rune);
+  font-size: 0.85em;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-gold);
+}
+
 :global(.choice-grid) button.choiceCorrect {
-  background: var(--color-success);
-  color: var(--color-bg-scene);
+  box-shadow:
+    inset 0 0 0 1px var(--color-success),
+    0 0 12px rgba(232, 197, 107, 0.25);
 }
 
 :global(.choice-grid) button.choiceWrong {
-  background: var(--color-danger);
-  color: var(--color-bg-scene);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+button.choiceCorrect :global(.choice-marker) {
+  color: var(--color-success);
+}
+
+button.choiceWrong :global(.choice-marker) {
+  color: var(--color-danger);
 }
 
 .nextButton {

@@ -668,10 +668,9 @@ label {
     transform 120ms ease;
 }
 
-.choice-grid button:hover:not(:disabled) {
-  background: var(--color-surface-2);
-  outline: 1px solid var(--color-primary);
-}
+/* Issue #4 / #46: hover affordance now comes from .menu-item
+   (surface-raised lift + gold glow). The old outline-on-hover rule
+   was removed to keep one menu language across the app. */
 
 @media (min-width: 1024px) {
   .choice-grid {
