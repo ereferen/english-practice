@@ -315,6 +315,74 @@ describe("generateQuizzesForLesson", () => {
     }
   });
 
+  // issue #78: fill-blank choices must all be English terms (no kana/kanji)
+  it("fill-blank choices never contain Japanese text", () => {
+    const quizzes = generateQuizzesForLesson(baseDeck, "l1");
+    const fillBlanks = quizzes.filter((q) => q.type === "fill-blank");
+    expect(fillBlanks.length).toBeGreaterThan(0);
+    for (const q of fillBlanks) {
+      for (const c of q.choices) {
+        expect(c.text).not.toMatch(/[\u3040-\u30ff\u4e00-\u9faf]/);
+      }
+      const target = baseDeck.lessons[0].words.find(
+        (w) => w.wordId === q.wordId,
+      );
+      expect(
+        q.choices.find((c) => c.choiceId === q.answerChoiceId)?.text,
+      ).toBe(target?.term);
+    }
+  });
+
+  it("skips fill-blank when fewer than 3 English distractor terms exist", () => {
+    const deck: Deck = {
+      schemaVersion: "1.0",
+      deckId: "few-distractors",
+      level: "beginner",
+      title: "few",
+      lessons: [
+        {
+          lessonId: "l1",
+          title: "L1",
+          words: [
+            {
+              wordId: "apple",
+              term: "apple",
+              reading: "アップル",
+              meaning: "りんご",
+              examples: [{ en: "I eat an apple." }],
+            },
+            {
+              wordId: "banana",
+              term: "バナナ",
+              reading: "バナナ",
+              meaning: "バナナ",
+              examples: [{ en: "I eat a banana." }],
+            },
+            {
+              wordId: "cherry",
+              term: "チェリー",
+              reading: "チェリー",
+              meaning: "さくらんぼ",
+              examples: [{ en: "The cherry is red." }],
+            },
+            {
+              wordId: "date",
+              term: "デート",
+              reading: "デート",
+              meaning: "デート; 日付",
+              examples: [{ en: "I have a date tonight." }],
+            },
+          ],
+          quizzes: [],
+        },
+      ],
+    };
+    const quizzes = generateQuizzesForLesson(deck, "l1");
+    expect(quizzes.filter((q) => q.type === "fill-blank")).toHaveLength(0);
+    // choose-meaning is still generated
+    expect(quizzes.filter((q) => q.type === "choose-meaning").length).toBe(4);
+  });
+
   it("returns an empty array for an unknown lesson", () => {
     expect(generateQuizzesForLesson(baseDeck, "missing")).toEqual([]);
   });
