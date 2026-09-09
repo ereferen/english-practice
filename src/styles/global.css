@@ -46,6 +46,15 @@
   --rounded-lg: 12px;
 
   --max-width: 640px;
+
+  /* Issue #39: 3-layer typography (DESIGN.md §Typography).
+     Bundled via @fontsource in main.tsx; fallback chains keep layout
+     intact even if webfont files fail to load. */
+  --font-display:
+    "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --font-body:
+    "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --font-rune: "DotGothic16", "MS PGothic", monospace;
 }
 
 * {
@@ -62,11 +71,37 @@ body,
 body {
   background: var(--color-bg);
   color: var(--color-text);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  line-height: 1.5;
+  font-family: var(--font-body);
+  line-height: 1.7; /* DESIGN.md body-md */
+  letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Issue #39: headings use the mincho display stack (DESIGN.md §Typography) */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 2.5rem; /* display-lv1 */
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+}
+
+h2 {
+  font-size: 1.75rem; /* display-lv2 */
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+h3 {
+  font-size: 1.25rem; /* menu-heading */
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 button {
@@ -184,12 +219,15 @@ p {
   margin-bottom: 1rem;
 }
 
+/* DESIGN.md badge-gold / rune-caption: dot font labels (Issue #39) */
 .badge {
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
   background: var(--color-surface-2);
+  font-family: var(--font-rune);
   font-size: 0.75rem;
+  letter-spacing: 0.12em;
   color: var(--color-muted);
 }
 
@@ -215,14 +253,18 @@ p {
 
 /* Result screen */
 .result-rate {
+  font-family: var(--font-display);
   font-size: 3rem;
   font-weight: 700;
   line-height: 1.2;
+  color: var(--color-accent-gold);
 }
 
 .result-time {
   color: var(--color-muted);
-  font-size: 0.875rem;
+  font-family: var(--font-rune);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
 }
 
 .wrong-words-grid {
