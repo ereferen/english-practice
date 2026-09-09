@@ -83,7 +83,11 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           </div>
           <div className={styles.sessionMeta}>
             {state.decks.find((d) => d.deckId === s.deckId)?.title ?? s.deckId}{" "}
-            · {s.lessonId}
+            ·{" "}
+            {state.decks
+              .find((d) => d.deckId === s.deckId)
+              ?.lessons.find((l) => l.lessonId === s.lessonId)?.title ??
+              s.lessonId}
           </div>
         </div>
       ))}
