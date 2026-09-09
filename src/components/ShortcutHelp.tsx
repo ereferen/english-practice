@@ -62,7 +62,7 @@ export default function ShortcutHelp({ onClose }: Props) {
       aria-modal="true"
       aria-label="キーボードショートカット一覧"
       onClick={onClose}
-      className={styles.overlay}
+      className="modal-overlay"
     >
       <div
         onClick={(e) => e.stopPropagation()}

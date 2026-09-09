@@ -641,6 +641,56 @@ label {
   letter-spacing: 0.06em;
 }
 
+/* Issue #49: DESIGN.md modal-overlay — full-stage scrim-vignette with a
+   radial vignette sinking the edges, reused by ShortcutHelp and future
+   Self-Improve approval UI (#20). Content panels keep .card (panel-frame
+   from #41). Open/close is a soft gold-lit fade <=200ms; reduced motion
+   makes it instant. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(120% 100% at 50% 42%, transparent 40%, rgba(3, 6, 14, 0.4) 100%),
+    var(--color-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  animation: modal-fade-in 200ms ease;
+}
+
+.modal-overlay > * {
+  animation: modal-panel-in 200ms ease;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-overlay > * {
+    animation: none;
+  }
+}
+
 /* Issue #10: accessibility — visible focus ring, skip link, choice markers */
 :focus-visible {
   outline: 2px solid var(--color-primary);
