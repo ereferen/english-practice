@@ -180,3 +180,42 @@
 .sendButton {
   white-space: nowrap;
 }
+
+/* Issue #73: retry bar shown under the messages after a send failure */
+.retryBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.25rem;
+}
+
+.retryButton {
+  white-space: nowrap;
+}
+
+.retryHint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.retrySettingsButton {
+  white-space: nowrap;
+}
+
+/* Issue #73: inline jump to settings from the config warning card */
+.configWarning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.settingsLink {
+  white-space: nowrap;
+}

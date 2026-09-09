@@ -74,7 +74,37 @@ export default function Settings({ dispatch, storage }: Props) {
     setMessage("データを削除しました");
   };
 
+  // Issue #74: client-side validation before hitting the network, so the
+  // user sees "エンドポイントが空です" instead of a bare "Failed to fetch".
+  const validateProvider = (which: "primary" | "fallback"): string | null => {
+    const endpoint =
+      which === "primary"
+        ? settings.llmApiEndpoint
+        : settings.llmFallbackApiEndpoint;
+    const model =
+      which === "primary" ? settings.llmModel : settings.llmFallbackModel;
+    if (!endpoint.trim()) return "APIエンドポイントが空です";
+    if (!/^https?:\/\//i.test(endpoint.trim()))
+      return "APIエンドポイントが http(s):// で始まりません";
+    if (!model.trim()) return "モデル名が空です";
+    return null;
+  };
+
+  const friendlyTestError = (raw: string): string => {
+    if (raw === "Failed to fetch" || raw === "timeout") {
+      return `${raw === "timeout" ? "タイムアウト（15秒応答なし）" : "接続できませんでした（URL誤り・CORS・ネット切れのいずれか）"}`;
+    }
+    return raw;
+  };
+
   const handleTest = async (which: "primary" | "fallback") => {
+    const validationError = validateProvider(which);
+    if (validationError) {
+      setMessage(
+        `接続テスト失敗（${which === "primary" ? "プライマリ" : "フォールバック"}）: ${validationError}`,
+      );
+      return;
+    }
     const chain = providersFromSettings(settings);
     const provider = which === "primary" ? chain[0] : chain[1];
     if (!provider) {
@@ -86,11 +116,15 @@ export default function Settings({ dispatch, storage }: Props) {
     const result = await testLlmConnection(provider);
     setTesting(null);
     if (result.ok) {
-      setMessage(`接続OK（${provider.label}: ${result.latencyMs}ms）`);
+      setMessage(
+        `接続OK（${provider.label} / ${provider.model}）: ${result.latencyMs}ms`,
+      );
     } else {
-      setMessage(`接続テスト失敗（${provider.label}）: ${result.error}`);
+      setMessage(
+        `接続テスト失敗（${provider.label}）: ${friendlyTestError(result.error ?? "不明なエラー")}（${result.latencyMs}ms）`,
+      );
     }
-    setTimeout(() => setMessage(null), 6000);
+    setTimeout(() => setMessage(null), 8000);
   };
 
   return (

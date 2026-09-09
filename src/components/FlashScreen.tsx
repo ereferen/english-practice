@@ -30,6 +30,10 @@ export default function FlashScreen({
   const learnedRef = useRef<Set<string>>(new Set());
 
   const toggleFlip = () => {
+    // Issue #75: once the user has revealed the answer, count the word as
+    // learned immediately. Previously only 「次の語」 recorded it, so
+    // pressing 戻る lost all visible progress (学習率 0% complaint).
+    if (!flipped) markCurrentLearned();
     setFlipped((f) => !f);
     setFlipping(true);
     window.setTimeout(() => setFlipping(false), 180);
@@ -104,13 +108,15 @@ export default function FlashScreen({
         <h2>
           フラッシュカード ({index + 1}/{lesson.words.length})
         </h2>
+        {/* Issue #75: one clearly-labelled exit button (was 中断, which
+            confused users looking for 戻る — aborting keeps learned words). */}
         <button
           className="ghost"
           onClick={() =>
             dispatch({ type: "go", screen: { name: "deckHome", deckId } })
           }
         >
-          中断
+          戻る
         </button>
         <button
           className="ghost"
@@ -130,11 +136,16 @@ export default function FlashScreen({
       >
         {!flipped ? (
           <>
+            {/* Issue #72: the front shows ONLY the term. Reading + meaning
+                stay hidden so users can self-test before flipping. */}
             <div className={`flash-term ${styles.term}`}>{word.term}</div>
-            <div className={styles.reading}>{word.reading}</div>
+            <div className={styles.flipHint} aria-hidden="true">
+              クリック / Space でめくる
+            </div>
           </>
         ) : (
           <>
+            <div className={styles.readingBack}>{word.reading}</div>
             <div className={styles.meaning}>{word.meaning}</div>
             {word.partOfSpeech && (
               <div className={`badge-gold ${styles.partOfSpeech}`}>
