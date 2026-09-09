@@ -1,12 +1,24 @@
-/* Issue #8: deck list (was inline styles) */
+/* Issue #8: deck list (was inline styles)
+   Issue #42: rows became .menu-item buttons; spans stacked vertically */
 
-.deckRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.deckTitle {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem; /* menu-heading */
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
 }
 
 .deckMeta {
+  display: block;
   color: var(--color-muted);
   font-size: 0.875rem;
+}
+
+/* muted stays muted on hover — DESIGN.md: text-muted is 補足専用,
+   the gold signal belongs to the title + caret */
+:global(.menu-item):hover:not(:disabled) .deckMeta,
+:global(.menu-item):focus-visible .deckMeta {
+  color: var(--color-muted);
 }

@@ -453,6 +453,75 @@ p {
   }
 }
 
+/* Issue #42: DESIGN.md menu-item / menu-item-hover / caret-menu-item.
+   List-selection buttons (deck rows, lesson rows, home menu). Base is
+   surface-panel; hover/keyboard-focus lifts to surface-raised with gold
+   text + soft outer glow. The ▸ caret is a pseudo-element living in the
+   reserved left padding, so showing it never shifts the label. The
+   focus-visible ring (#10) is untouched — glow and ring coexist. */
+.menu-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--color-surface-panel);
+  color: var(--color-text-body);
+  border-radius: var(--rounded-sm);
+  padding: var(--space-md);
+  /* left padding reserves the caret track (caret sits at 10px..26px) */
+  padding-left: 44px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.menu-item::before {
+  content: "▸";
+  position: absolute;
+  left: var(--space-md);
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--color-accent-gold);
+  font-family: var(--font-display);
+  font-size: 1.25rem; /* menu-heading */
+  line-height: 1;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 100ms ease,
+    transform 100ms ease;
+  pointer-events: none;
+}
+
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible {
+  background: var(--color-surface-raised);
+  color: var(--color-accent-gold);
+  box-shadow: 0 0 12px rgba(232, 197, 107, 0.25);
+}
+
+.menu-item:hover:not(:disabled)::before,
+.menu-item:focus-visible::before,
+.menu-item[aria-current="true"]::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Compact variant for inline action buttons (e.g. a lesson row's
+   start button) where the full caret track would be too wide. */
+.menu-item--compact {
+  display: inline-block;
+  width: auto;
+  padding: var(--space-sm) var(--space-md);
+  padding-left: 28px;
+}
+
+.menu-item--compact::before {
+  left: var(--space-sm);
+  font-size: 1rem;
+}
+
 /* Issue #10: accessibility — visible focus ring, skip link, choice markers */
 :focus-visible {
   outline: 2px solid var(--color-primary);
@@ -605,10 +674,21 @@ p {
 }
 
 /* Issue #40 / DESIGN.md: stop particle + glow motion for users who
-   prefer reduced motion. The static vignette/gradient stays. */
+   prefer reduced motion. The static vignette/gradient stays.
+   Issue #42: menu-item caret slide + glow fade become instant state
+   changes (background/color still switch, just without animation). */
 @media (prefers-reduced-motion: reduce) {
   body::before,
   body::after {
     animation: none;
+  }
+
+  .menu-item,
+  .menu-item::before {
+    transition: none;
+  }
+
+  .menu-item::before {
+    transform: none;
   }
 }
