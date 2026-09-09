@@ -241,7 +241,7 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         />
         {loading ? (
           <button
-            className={`danger ${styles.sendButton}`}
+            className={styles.sendButton}
             onClick={handleStop}
           >
             停止
