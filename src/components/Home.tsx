@@ -14,6 +14,7 @@ interface Props {
 
 export default function Home({ state, dispatch, storage }: Props) {
   const [due, setDue] = useState(0);
+  const [dueDeckId, setDueDeckId] = useState<string | null>(null);
   const [todayAnswered, setTodayAnswered] = useState(0);
   const [goal, setGoal] = useState(10);
   const [streak, setStreak] = useState(0);
@@ -29,6 +30,21 @@ export default function Home({ state, dispatch, storage }: Props) {
       const dates = sessions.map((s) => s.startedAt.slice(0, 10));
       if (!mounted) return;
       setDue(reviews.length);
+      // Issue #82: remember which deck owns most due reviews so the card
+      // can jump straight to it.
+      const byDeck = new Map<string, number>();
+      for (const r of reviews) {
+        byDeck.set(r.deckId, (byDeck.get(r.deckId) ?? 0) + 1);
+      }
+      let topDeck: string | null = null;
+      let topCount = 0;
+      for (const [id, n] of byDeck) {
+        if (n > topCount) {
+          topCount = n;
+          topDeck = id;
+        }
+      }
+      setDueDeckId(topDeck);
       setTodayAnswered(count);
       setGoal(settings.dailyGoalWords);
       let streakCount = 0;
@@ -63,6 +79,17 @@ export default function Home({ state, dispatch, storage }: Props) {
     goal,
   );
 
+  // Issue #82: the "今日の復習" card is the answer to "what next?" —
+  // clicking it goes straight to the deck with due reviews (or the deck
+  // list when nothing is due).
+  const handleReviewShortcut = () => {
+    if (dueDeckId && state.decks.some((d) => d.deckId === dueDeckId)) {
+      dispatch({ type: "go", screen: { name: "deckHome", deckId: dueDeckId } });
+    } else {
+      dispatch({ type: "go", screen: { name: "deckList" } });
+    }
+  };
+
   return (
     <div className="container">
       <div className="card">
@@ -72,10 +99,19 @@ export default function Home({ state, dispatch, storage }: Props) {
 
       <div className="card">
         <div className="card-grid stats-grid">
-          <div>
+          <button
+            type="button"
+            className={styles.statButton}
+            onClick={handleReviewShortcut}
+            title={
+              due > 0
+                ? "復習デッキへジャンプ"
+                : "本日の復習はありません — デッキ一覧へ"
+            }
+          >
             <div className="badge">今日の復習</div>
             <div className={styles.statValue}>{due} 語</div>
-          </div>
+          </button>
           <div>
             <div className="badge">目標達成率</div>
             <div className={styles.statValue}>
