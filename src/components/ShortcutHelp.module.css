@@ -1,15 +1,7 @@
-/* Issue #8: shortcut help modal (was inline styles) */
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 1rem;
-}
+/* Issue #8: shortcut help modal (was inline styles)
+   Issue #49: the scrim + centering + fade now come from the shared
+   global .modal-overlay (DESIGN.md modal-overlay / scrim-vignette),
+   reusable for Self-Improve approval UI (#20). */
 
 :global(.card).modal {
   max-width: 32rem;
