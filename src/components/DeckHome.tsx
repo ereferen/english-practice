@@ -82,7 +82,18 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
         <p>{deck.description}</p>
         <div className={styles.metaRow}>
           <span className="badge">{deck.level}</span>
-          <span className="badge">学習率 {completion}%</span>
+          <span className="badge-gold">学習率 {completion}%</span>
+        </div>
+        {/* Issue #48: DESIGN.md progress-track (amber fill on inset rail) */}
+        <div
+          className="progress-track"
+          role="progressbar"
+          aria-valuenow={completion}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="学習率"
+        >
+          <div className="progress-fill" style={{ width: `${completion}%` }} />
         </div>
       </div>
 

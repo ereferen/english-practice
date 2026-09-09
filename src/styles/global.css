@@ -410,12 +410,44 @@ p {
   }
 }
 
+/* Issue #48: DESIGN.md rune-caption numerals — "numbers float" stat
+   display used by Home / Dashboard / ProgressScreen stat values.
+   Labels above them stay .badge (muted). Tabular-width monospace-ish
+   rune font keeps layout stable when digit counts change. */
+.stat-value {
+  font-family: var(--font-rune);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-gold);
+}
+
+/* Issue #48: DESIGN.md progress-track — surface-inset rail, amber fill,
+   rounded.none, 6px tall */
+.progress-track {
+  height: 6px;
+  background: var(--color-surface-inset);
+  border-radius: var(--rounded-none);
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-accent-amber);
+  border-radius: var(--rounded-none);
+  transition: width 200ms ease;
+}
+
 /* Result screen */
 .result-rate {
-  font-family: var(--font-display);
+  /* Issue #48: numerals -> rune-caption gold (was display mincho) */
+  font-family: var(--font-rune);
   font-size: 3rem;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.2;
+  letter-spacing: 0.06em;
   color: var(--color-accent-gold);
 }
 

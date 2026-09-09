@@ -1,8 +1,10 @@
 /* Issue #8: dashboard (was inline styles) */
 
+/* Issue #48: DESIGN.md rune-caption numerals — the global
+   .stat-value class carries font/color; sizing override only here
+   where needed. */
 .statValue {
-  font-size: 1.5rem;
-  font-weight: 700;
+  composes: stat-value from global;
 }
 
 .sessionRow {
