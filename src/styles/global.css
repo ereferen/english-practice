@@ -200,18 +200,30 @@ h3 {
   letter-spacing: 0.06em;
 }
 
+/* Issue #43: DESIGN.md button trio.
+   - base button = button-secondary (surface-raised + text-parchment,
+     rounded.sm 4px, 12px padding)
+   - .primary   = gold ground, bg-scene dark text, menu-heading type
+                  (max one per screen)
+   - .danger    = status-danger ground with bg-night text (white-on-red
+                  fails contrast; dark-on-red is AA+)
+   - .ghost     = no ground, text-muted, hover/focus lifts to gold text
+                  with the shared menu-item glow
+   - :disabled  = never gold; sinks to muted on the inset surface */
 button {
   font: inherit;
   cursor: pointer;
   border: none;
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
-  background: var(--color-surface-2);
-  color: var(--color-text);
+  border-radius: var(--rounded-sm);
+  padding: 12px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-parchment);
 }
 
 button:disabled {
-  opacity: 0.5;
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -219,17 +231,40 @@ button:disabled {
 button.primary {
   background: var(--color-primary);
   color: var(--color-bg-scene);
-  font-weight: 700;
+  font-family: var(--font-display); /* menu-heading */
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* disabled must not advertise itself with gold */
+button.primary:disabled {
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
 }
 
 button.danger {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-bg-night);
+  font-weight: 700;
+}
+
+button.danger:disabled {
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
 }
 
 button.ghost {
   background: transparent;
-  color: var(--color-muted);
+  color: var(--color-text-muted);
+  transition:
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+button.ghost:hover:not(:disabled),
+button.ghost:focus-visible {
+  color: var(--color-accent-gold);
+  box-shadow: 0 0 12px rgba(232, 197, 107, 0.25);
 }
 
 h1,
