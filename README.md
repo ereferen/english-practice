@@ -3,6 +3,26 @@
 ローカルに学習・復習・進捗を保存する英語学習アプリ MVP です。
 ブラウザ上で動作し、IndexedDB にデータを永続化します。
 
+## スクリーンショット
+
+Nightfall Ledger（HD-2D）テーマの主要画面。撮り直し手順は [`docs/screenshots/README.md`](docs/screenshots/README.md) 参照。
+
+| ホーム | デッキ |
+|---|---|
+| ![ホーム](docs/screenshots/home.webp) | ![デッキ詳細](docs/screenshots/deck-home.webp) |
+
+| フラッシュカード（語句） | フラッシュカード（意味） |
+|---|---|
+| ![フラッシュ表](docs/screenshots/flash-front.webp) | ![フラッシュ裏](docs/screenshots/flash-back.webp) |
+
+| クイズ採点（▸ が正解を指す） | 英会話（NPC 対話風） |
+|---|---|
+| ![クイズ](docs/screenshots/quiz-feedback.webp) | ![英会話](docs/screenshots/conversation.webp) |
+
+| 設定 | ショートカットヘルプ（`?`） |
+|---|---|
+| ![設定](docs/screenshots/settings.webp) | ![モーダル](docs/screenshots/shortcut-modal.webp) |
+
 ## 技術スタック
 
 - React 19 + TypeScript + Vite 8
