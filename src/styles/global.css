@@ -55,6 +55,9 @@
   --font-body:
     "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
   --font-rune: "DotGothic16", "MS PGothic", monospace;
+
+  /* DESIGN.md Elevation & Depth — static panel inner glow (Issue #41) */
+  --shadow-panel-glow: inset 0 0 24px rgba(201, 162, 39, 0.06);
 }
 
 * {
@@ -305,11 +308,27 @@ p {
   }
 }
 
+/* Issue #41: DESIGN.md panel-frame — double gold frame (outer border-gold,
+   inner border-gold-dim 4px apart) + faint inner glow, on every .card.
+   The inner ring is drawn with inset box-shadows (gap filled with the panel
+   surface color), so corner radius stays rounded.md (8px, Shapes ≤ 8px). */
 .card {
   background: var(--color-surface);
+  border: 1px solid var(--color-border-gold);
   border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
+  box-shadow:
+    inset 0 0 0 4px var(--color-surface),
+    inset 0 0 0 5px var(--color-border-gold-dim),
+    var(--shadow-panel-glow);
+}
+
+/* Issue #41: hairline-gold divider under card headings */
+.card h2,
+.card h3 {
+  border-bottom: 1px solid var(--color-border-gold-dim);
+  padding-bottom: 0.35rem;
 }
 
 /* DESIGN.md badge-gold / rune-caption: dot font labels (Issue #39) */
@@ -550,7 +569,8 @@ p {
     font-size: clamp(16px, 1.2vw, 18px);
   }
 
-  .card,
+  /* Issue #41: .card now always carries the gold panel-frame border,
+     so the #12 contrast border only applies to .badge. */
   .badge {
     border: 1px solid var(--color-surface-2);
   }
