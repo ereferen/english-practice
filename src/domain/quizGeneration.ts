@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { uuid } from "./uuid";
 import type { Deck, Quiz } from "../content/schema";
 import { quizSchema } from "../content/schema";
 import { allWords, wordById } from "../content/loader";
@@ -213,7 +214,7 @@ export async function generateQuizzesWithLlm(
 
   const generatedAt = new Date().toISOString();
   const batchId = normalizeBatchId(
-    `${opts.source}-${generatedAt}-${crypto.randomUUID().slice(0, 8)}`,
+    `${opts.source}-${generatedAt}-${uuid().slice(0, 8)}`,
   );
   const { quizzes, rejected } = toQuizzes(parsed.data, opts.deck, batchId);
   if (quizzes.length === 0) {

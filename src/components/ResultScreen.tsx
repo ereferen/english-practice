@@ -6,6 +6,7 @@ import { scoreRate, wrongWordIds } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
+import { uuid } from "../domain/uuid";
 import { localProgress } from "../storage/localProgress";
 import styles from "./ResultScreen.module.css";
 
@@ -31,7 +32,7 @@ export default function ResultScreen({
   useEffect(() => {
     if (!deck) return;
     const endedAt = new Date().toISOString();
-    const sessionId = crypto.randomUUID();
+    const sessionId = uuid();
     storage
       .startSession({
         id: sessionId,

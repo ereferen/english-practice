@@ -3,6 +3,7 @@ import type { AppState, Action } from "../app/types";
 import type { GeneratedQuizSource, StorageProvider } from "../storage/types";
 import { generateQuizzesForLesson, pickLesson } from "../content/loader";
 import { buildSessionQuizItems, isCorrect } from "../domain/session";
+import { uuid } from "../domain/uuid";
 import type { AnswerRecord } from "../domain/session";
 import {
   canGenerateToday,
@@ -149,7 +150,7 @@ export default function QuizScreen({
     setShowFeedback(true);
 
     void storage.recordAnswer({
-      id: crypto.randomUUID(),
+      id: uuid(),
       sessionId: `${deckId}-${lessonId}-${startedAt}`,
       wordId: current.wordId,
       askedAt: new Date().toISOString(),
