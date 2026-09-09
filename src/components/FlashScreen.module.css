@@ -1,4 +1,10 @@
-/* Issue #8: flashcard layout (was inline styles) */
+/* Issue #8: flashcard layout (was inline styles)
+   Issue #45: HD-2D treatment — the flashcard is the front-most object
+   on stage: it gets the only real drop shadow DESIGN.md allows
+   (0 16px 48px rgba(0,0,0,.5)), on top of the #41 panel-frame inset
+   rings it already carries via .card. Flipping cross-fades a faint
+   gold rim glow. No 3D rotate: content is remounted per side, so a
+   transform-only scale keeps text crisp and reduced-motion-safe. */
 
 .flipCard {
   display: flex;
@@ -6,25 +12,61 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  box-shadow:
+    inset 0 0 0 4px var(--color-surface),
+    inset 0 0 0 5px var(--color-border-gold-dim),
+    var(--shadow-panel-glow),
+    0 16px 48px rgba(0, 0, 0, 0.5);
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+/* mid-flip: the gold rim breathes once (DESIGN.md: 発光は注目のしるし) */
+.flipCard[data-flipping="true"] {
+  box-shadow:
+    inset 0 0 0 4px var(--color-surface),
+    inset 0 0 0 5px var(--color-border-gold),
+    0 0 18px rgba(232, 197, 107, 0.25),
+    0 16px 48px rgba(0, 0, 0, 0.5);
+  transform: scale(0.985);
 }
 
 .term {
+  /* DESIGN.md display-lv1: mincho parchment. .flash-term already
+     carries the display stack; here we pin the parchment color and
+     weight so the term side reads as the ledger's headline. */
+  color: var(--color-text-parchment);
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
 
 .reading {
+  /* body-md, muted is 補足専用 so this is its sanctioned use */
   color: var(--color-muted);
 }
 
 .meaning {
+  /* body-md emphasis without going display-size (avoid gold body) */
   font-size: 1.5rem;
   font-weight: 700;
+  color: var(--color-text-parchment);
   margin-bottom: 0.5rem;
 }
 
 .partOfSpeech {
   margin-bottom: 0.75rem;
+}
+
+/* Issue #45: reduced motion — the flip stays instant, no scale/glow pulse */
+@media (prefers-reduced-motion: reduce) {
+  .flipCard {
+    transition: none;
+  }
+
+  .flipCard[data-flipping="true"] {
+    transform: none;
+  }
 }
 
 .examples {

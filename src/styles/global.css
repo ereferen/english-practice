@@ -378,6 +378,18 @@ p {
   color: var(--color-muted);
 }
 
+/* Issue #45: DESIGN.md badge-gold — bg-night ground, accent-gold rune text */
+.badge-gold {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--rounded-sm);
+  background: var(--color-bg-night);
+  color: var(--color-accent-gold);
+  font-family: var(--font-rune);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
 .correct {
   color: var(--color-success);
 }

@@ -25,7 +25,15 @@ export default function FlashScreen({
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  // Issue #45: brief gold-rim pulse while the card face changes.
+  const [flipping, setFlipping] = useState(false);
   const learnedRef = useRef<Set<string>>(new Set());
+
+  const toggleFlip = () => {
+    setFlipped((f) => !f);
+    setFlipping(true);
+    window.setTimeout(() => setFlipping(false), 180);
+  };
 
   useEffect(() => {
     setIndex(0);
@@ -64,8 +72,8 @@ export default function FlashScreen({
 
   // Keyboard shortcuts (issue #9): flip, next, audio, abort.
   useKeyboardShortcuts({
-    " ": () => lesson && setFlipped((f) => !f),
-    Enter: () => lesson && setFlipped((f) => !f),
+    " ": toggleFlip,
+    Enter: toggleFlip,
     ArrowRight: handleNext,
     n: handleNext,
     N: handleNext,
@@ -113,10 +121,11 @@ export default function FlashScreen({
       </div>
 
       <div
-        onClick={() => setFlipped((f) => !f)}
+        onClick={toggleFlip}
         role="button"
         tabIndex={0}
         aria-label="カードをめくる"
+        data-flipping={flipping ? "true" : undefined}
         className={`card flash-card ${styles.flipCard}`}
       >
         {!flipped ? (
@@ -128,7 +137,7 @@ export default function FlashScreen({
           <>
             <div className={styles.meaning}>{word.meaning}</div>
             {word.partOfSpeech && (
-              <div className={`badge ${styles.partOfSpeech}`}>
+              <div className={`badge-gold ${styles.partOfSpeech}`}>
                 {word.partOfSpeech}
               </div>
             )}
