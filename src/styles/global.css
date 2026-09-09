@@ -557,6 +557,46 @@ p {
   font-size: 1rem;
 }
 
+/* Issue #44: DESIGN.md text-input — surface-inset well + hairline
+   border; border turns gold only while focused. Caret is gold so the
+   cursor position stays readable on the dark inset ground. IME
+   composition keeps native rendering (no height locking). */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+textarea,
+select {
+  background: var(--color-surface-inset);
+  color: var(--color-text-parchment);
+  border: 1px solid var(--color-border-hairline);
+  border-radius: var(--rounded-sm);
+  caret-color: var(--color-accent-gold);
+  font: inherit;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-border-gold);
+}
+
+/* range + checkbox pick up the gold accent instead of UA blue */
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--color-accent-gold);
+}
+
+/* fieldset labels read as menu headings (DESIGN.md menu-heading) */
+label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
 /* Issue #10: accessibility — visible focus ring, skip link, choice markers */
 :focus-visible {
   outline: 2px solid var(--color-primary);

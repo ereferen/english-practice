@@ -105,15 +105,20 @@
   background: var(--color-bg);
 }
 
+/* Issue #44: DESIGN.md text-input well (inset + hairline, gold on focus) */
 .chatInput {
   flex: 1;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--color-surface-2);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border-radius: var(--rounded-sm);
+  border: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-inset);
+  color: var(--color-text-parchment);
+  caret-color: var(--color-accent-gold);
   font-size: 1rem;
-  outline: none;
+}
+
+.chatInput:focus {
+  border-color: var(--color-border-gold);
 }
 
 .sendButton {
