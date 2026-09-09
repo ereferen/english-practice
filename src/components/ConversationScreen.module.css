@@ -72,6 +72,60 @@
   color: var(--color-bg-scene);
 }
 
+/* Issue #47: RPG dialogue treatment. NPC (assistant) lines get the
+   ▸ speaker marker + menu-heading typography and a dim gold rim;
+   user lines are plain body-md on surface-raised. Long en+ja strings
+   wrap via word-break/overflow-wrap already on the bubble. */
+:global(.card).bubbleNpc {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-color: var(--color-border-gold-dim);
+}
+
+:global(.card).bubbleNpc::before {
+  content: "▸";
+  color: var(--color-accent-gold);
+  margin-right: 0.5em;
+}
+
+:global(.card).bubbleUser {
+  background: var(--color-surface-raised);
+  color: var(--color-text-body);
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+/* speaking (read-aloud) state: faint gold lift + rune badge */
+:global(.card).bubble.speaking {
+  box-shadow:
+    inset 0 0 0 4px var(--color-surface),
+    inset 0 0 0 5px var(--color-border-gold),
+    var(--shadow-panel-glow);
+}
+
+.speakingBadge {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  font-family: var(--font-rune);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-gold);
+  animation: blinkBadge 1.6s ease-in-out infinite;
+}
+
+@keyframes blinkBadge {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speakingBadge {
+    animation: none;
+  }
+}
+
 .speakButton {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
@@ -86,6 +140,8 @@
 }
 
 .cursorBlink {
+  /* Issue #47: streaming caret in gold (DESIGN.md accent) */
+  color: var(--color-accent-gold);
   animation: blinkCursor 1s step-end infinite;
 }
 

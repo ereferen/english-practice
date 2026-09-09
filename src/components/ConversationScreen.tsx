@@ -28,6 +28,8 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
   const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
   const [configError, setConfigError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
+  // Issue #47: which message is currently being read aloud (Web Speech)
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -98,8 +100,9 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
       setMessages((prev) => [...prev, assistantMsg]);
       setStreamingContent("");
 
-      // Auto-speak the response
-      speak(result.content);
+      // Auto-speak the response (issue #47: track it for the gold badge)
+      setSpeakingId(assistantMsg.id);
+      speak(result.content, () => setSpeakingId(null));
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
       const errMsg = e instanceof Error ? e.message : String(e);
@@ -137,8 +140,10 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
     }
   };
 
-  const handleSpeak = (text: string) => {
-    speak(text);
+  const handleSpeak = (id: string, text: string) => {
+    // Issue #47: gold rune-caption indicator while the utterance plays
+    setSpeakingId(id);
+    speak(text, () => setSpeakingId(null));
   };
 
   return (
@@ -188,7 +193,9 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
           >
             <div
               className={`card ${styles.bubble} ${
-                msg.role === "user" ? styles.bubbleUser : ""
+                msg.role === "assistant" ? styles.bubbleNpc : ""
+              } ${msg.role === "user" ? styles.bubbleUser : ""} ${
+                speakingId === msg.id ? styles.speaking : ""
               }`}
             >
               {msg.content}
@@ -196,11 +203,16 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
             {msg.role === "assistant" && (
               <button
                 className={`ghost ${styles.speakButton}`}
-                onClick={() => handleSpeak(msg.content)}
+                onClick={() => handleSpeak(msg.id, msg.content)}
                 title="音声再生"
               >
                 🔊 読み上げ
               </button>
+            )}
+            {msg.role === "assistant" && speakingId === msg.id && (
+              <span className={styles.speakingBadge} aria-live="polite">
+                ♪ 読み上げ中
+              </span>
             )}
           </div>
         ))}
