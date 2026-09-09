@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import { pickLesson } from "../content/loader";
 import { speak } from "../domain/speech";
+import { useSpeechSupport } from "../domain/useSpeechSupport";
 import type { LocalProgressStore } from "../storage/localProgress";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 import styles from "./FlashScreen.module.css";
@@ -28,6 +29,18 @@ export default function FlashScreen({
   // Issue #45: brief gold-rim pulse while the card face changes.
   const [flipping, setFlipping] = useState(false);
   const learnedRef = useRef<Set<string>>(new Set());
+  // Issue #83: when the environment has no TTS voices, the audio button
+  // must say so instead of silently doing nothing.
+  const speechAvail = useSpeechSupport();
+  const [ttsNotice, setTtsNotice] = useState(false);
+
+  const handleSpeak = (text: string) => {
+    const played = speak(text);
+    if (!played) {
+      setTtsNotice(true);
+      window.setTimeout(() => setTtsNotice(false), 2500);
+    }
+  };
 
   const toggleFlip = () => {
     // Issue #75: once the user has revealed the answer, count the word as
@@ -81,8 +94,8 @@ export default function FlashScreen({
     ArrowRight: handleNext,
     n: handleNext,
     N: handleNext,
-    s: () => word && speak(word.term),
-    S: () => word && speak(word.term),
+    s: () => word && handleSpeak(word.term),
+    S: () => word && handleSpeak(word.term),
     Escape: () =>
       dispatch({ type: "go", screen: { name: "deckHome", deckId } }),
   });
@@ -166,9 +179,22 @@ export default function FlashScreen({
       </div>
 
       <div className={`flash-actions ${styles.actions}`}>
-        <button className={styles.audioButton} onClick={() => speak(word.term)}>
-          音声再生
+        <button
+          className={styles.audioButton}
+          onClick={() => handleSpeak(word.term)}
+          title={
+            speechAvail === "ready"
+              ? "発音再生 (S)"
+              : "このブラウザは音声未対応（TTSボイス0個）"
+          }
+        >
+          {speechAvail === "ready" ? "🔊" : "🔇"} 音声再生
         </button>
+        {ttsNotice && (
+          <span className={styles.ttsNotice} role="status" aria-live="polite">
+            このブラウザは音声未対応です（TTSボイスがありません）
+          </span>
+        )}
         <button className={`primary ${styles.nextButton}`} onClick={handleNext}>
           {isLast ? "クイズへ" : "次の語"}
         </button>

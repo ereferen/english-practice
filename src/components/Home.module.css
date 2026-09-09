@@ -12,3 +12,26 @@
 .menuButton {
   width: 100%;
 }
+
+/* Issue #82: "今日の復習" stat cell doubles as a shortcut button.
+   Looks like the plain stat cells around it, with a subtle hover cue. */
+.statButton {
+  display: block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: transform 120ms ease;
+}
+
+.statButton:hover {
+  transform: translateY(-2px);
+}
+
+.statButton:hover .statValue {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

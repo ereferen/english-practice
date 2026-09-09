@@ -121,3 +121,11 @@
 .nextButton {
   flex: 2;
 }
+
+/* Issue #83: inline feedback when TTS has no voices */
+.ttsNotice {
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}

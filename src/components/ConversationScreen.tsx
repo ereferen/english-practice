@@ -13,6 +13,7 @@ import {
   requestLlmChat,
 } from "../domain/llm";
 import { speak } from "../domain/speech";
+import { useSpeechSupport } from "../domain/useSpeechSupport";
 import styles from "./ConversationScreen.module.css";
 
 interface Props {
@@ -32,6 +33,8 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
   const [failedSendText, setFailedSendText] = useState<string | null>(null);
   // Issue #47: which message is currently being read aloud (Web Speech)
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  // Issue #83: TTS availability (no-voices env gets explicit feedback)
+  const speechAvail = useSpeechSupport();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -105,8 +108,10 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
         setStreamingContent("");
 
         // Auto-speak the response (issue #47: track it for the gold badge)
-        setSpeakingId(assistantMsg.id);
-        speak(result.content, () => setSpeakingId(null));
+        // Issue #83: only show the badge if an utterance actually queued.
+        if (speak(result.content, () => setSpeakingId(null))) {
+          setSpeakingId(assistantMsg.id);
+        }
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") return;
         const rawMsg = e instanceof Error ? e.message : String(e);
@@ -155,6 +160,16 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
 
   const handleSpeak = (id: string, text: string) => {
     // Issue #47: gold rune-caption indicator while the utterance plays
+    // Issue #83: give feedback when the env has no TTS voices
+    if (speechAvail !== "ready") {
+      setMessages((prev) => [
+        ...prev,
+        createAssistantMessage(
+          "⚠ このブラウザは音声未対応です（TTSボイスがありません）",
+        ),
+      ]);
+      return;
+    }
     setSpeakingId(id);
     speak(text, () => setSpeakingId(null));
   };
@@ -227,9 +242,13 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
               <button
                 className={`ghost ${styles.speakButton}`}
                 onClick={() => handleSpeak(msg.id, msg.content)}
-                title="音声再生"
+                title={
+                  speechAvail === "ready"
+                    ? "音声再生"
+                    : "このブラウザは音声未対応（TTSボイス0個）"
+                }
               >
-                🔊 読み上げ
+                {speechAvail === "ready" ? "🔊" : "🔇"} 読み上げ
               </button>
             )}
             {msg.role === "assistant" && speakingId === msg.id && (
