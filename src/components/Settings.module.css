@@ -33,8 +33,10 @@
   gap: 0.5rem;
 }
 
-/* DESIGN.md rune-caption: numeric entry in dot font, gold */
-.goalNumber {
+/* DESIGN.md rune-caption: numeric entry in dot font, gold.
+   Two classes raise specificity above the global
+   `input[type="number"]` element+attribute rule (0,1,1). */
+.field.goalNumber {
   font-family: var(--font-rune);
   color: var(--color-accent-gold);
   letter-spacing: 0.12em;
