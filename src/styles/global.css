@@ -68,13 +68,106 @@ body,
   margin: 0;
 }
 
+/* Issue #40: night-stage scene (DESIGN.md Elevation & Depth / Layout).
+   Layers: bg-night -> bg-scene -> bg-night vertical gradient, a radial
+   vignette that sinks the outer edges into bg-night, and a CSS-only
+   star/dust field (box-shadow dots, opacity <= 0.05). Decorations stay
+   at two (vignette + particles) per the "装飾は2つまで" principle —
+   no noise texture overlay. */
 body {
-  background: var(--color-bg);
+  background:
+    radial-gradient(
+      140% 100% at 50% 38%,
+      transparent 45%,
+      var(--color-bg-night) 100%
+    ),
+    linear-gradient(
+      180deg,
+      var(--color-bg-night) 0%,
+      var(--color-bg-scene) 45%,
+      var(--color-bg-night) 100%
+    );
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-body);
   line-height: 1.7; /* DESIGN.md body-md */
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Star/dust field: one 1px dot replicated via box-shadow (CSS only,
+   no canvas). Fixed layer below all content; never interactive. */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  color: var(--color-text-parchment);
+  background: transparent;
+  box-shadow:
+    7vw 12vh 0 0,
+    23vw 4vh 0 0,
+    41vw 18vh 0 0,
+    58vw 7vh 0 0,
+    76vw 15vh 0 0,
+    91vw 9vh 0 0,
+    12vw 28vh 0 0,
+    34vw 33vh 0 0,
+    63vw 26vh 0 0,
+    84vw 31vh 0 0,
+    5vw 47vh 0 0,
+    27vw 55vh 0 0,
+    49vw 44vh 0 0,
+    71vw 52vh 0 0,
+    93vw 46vh 0 0,
+    16vw 68vh 0 0,
+    38vw 74vh 0 0,
+    60vw 66vh 0 0,
+    82vw 71vh 0 0,
+    9vw 86vh 0 0,
+    31vw 92vh 0 0,
+    53vw 84vh 0 0,
+    74vw 90vh 0 0,
+    95vw 82vh 0 0;
+  animation: star-drift 180s linear infinite;
+}
+
+/* A few brighter gold motes, sparser */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  color: var(--color-accent-gold);
+  background: transparent;
+  box-shadow:
+    18vw 22vh 0 0,
+    55vw 12vh 0 0,
+    87vw 38vh 0 0,
+    22vw 61vh 0 0,
+    67vw 78vh 0 0,
+    41vw 91vh 0 0;
+  animation: star-drift 240s linear infinite reverse;
+}
+
+@keyframes star-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4vh);
+  }
 }
 
 /* Issue #39: headings use the mincho display stack (DESIGN.md §Typography) */
@@ -488,5 +581,14 @@ p {
 @keyframes blink {
   50% {
     opacity: 0;
+  }
+}
+
+/* Issue #40 / DESIGN.md: stop particle + glow motion for users who
+   prefer reduced motion. The static vignette/gradient stays. */
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
   }
 }
