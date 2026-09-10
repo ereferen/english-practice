@@ -53,7 +53,21 @@ FAIL 例（違反PNGで確認済み）:
 - `prefers-reduced-motion: reduce` では帧0で静止
 - ≥1024px の gutters のみ表示、`aria-hidden` / `pointer-events: none`
 
+## 会話画面 NPC 口パタパタ（2帧 bust / PoC素材で実装済み）
+
+- シート: `src/assets/npc-talk-sheet.png`（2帧 @ 24x24 = 48x24、口閉じ/口開けの差分のみ）
+- PoC素材は `scripts/make-npc-talk-sprite.py` で生成（同じ10色パレット契約、
+  `validate-sprite.py --frames 2` PASS 確認済み）。生成AI本番素材が届いたら
+  同検証を通してから差し替え。
+- 生成プロンプト案: 「Octopath Traveler style NPC bust sprite, kind face,
+  shoulder-up only, eyes open, 2-frame talking cycle differing ONLY in the
+  mouth (closed line / open 4x2 cavity), 24x24px, limited palette as above,
+  transparent background, no anti-aliasing」
+- 実装: `src/components/TalkSprite.tsx` / `.module.css` — 読み上げ中
+  （`speakingId` 一致）の assistant 气泡の左に `steps(2)` 0.32s で配置、
+  reduced-motion では口閉じ帧で静止。
+
 ## 残作業（このIssueを開いたままにする理由）
 
-- [ ] 会話画面 NPC 気泡横の2帧「口パタパタ」スプライト（生成AI素材待ち）
-- [ ] 生成素材の受け取り → validate-sprite.py 通し → `src/assets/traveler-sheet.png` 差し替え
+- [x] 会話画面 NPC 気泡横の2帧「口パタパタ」スプライト（PoC素材で実装）
+- [ ] 生成素材の受け取り → validate-sprite.py 通し → `src/assets/traveler-sheet.png` / `npc-talk-sheet.png` 差し替え

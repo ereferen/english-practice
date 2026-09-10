@@ -14,6 +14,7 @@ import {
 } from "../domain/llm";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
+import TalkSprite from "./TalkSprite";
 import styles from "./ConversationScreen.module.css";
 
 interface Props {
@@ -226,36 +227,44 @@ export default function ConversationScreen({ dispatch, storage }: Props) {
           <div
             key={msg.id}
             className={
-              "chat-bubble-wrap" + (msg.role === "user" ? " user" : "")
+              "chat-bubble-wrap" +
+              (msg.role === "user" ? " user" : "") +
+              (speakingId === msg.id ? ` ${styles.speakingRow}` : "")
             }
           >
-            <div
-              className={`card ${styles.bubble} ${
-                msg.role === "assistant" ? styles.bubbleNpc : ""
-              } ${msg.role === "user" ? styles.bubbleUser : ""} ${
-                speakingId === msg.id ? styles.speaking : ""
-              }`}
-            >
-              {msg.content}
-            </div>
-            {msg.role === "assistant" && (
-              <button
-                className={`ghost ${styles.speakButton}`}
-                onClick={() => handleSpeak(msg.id, msg.content)}
-                title={
-                  speechAvail === "ready"
-                    ? "音声再生"
-                    : "このブラウザは音声未対応（TTSボイス0個）"
-                }
-              >
-                {speechAvail === "ready" ? "🔊" : "🔇"} 読み上げ
-              </button>
-            )}
+            {/* Issue #85: NPC mouth flaps while the bubble is read aloud */}
             {msg.role === "assistant" && speakingId === msg.id && (
-              <span className={styles.speakingBadge} aria-live="polite">
-                ♪ 読み上げ中
-              </span>
+              <TalkSprite />
             )}
+            <div className={styles.bubbleColumn}>
+              <div
+                className={`card ${styles.bubble} ${
+                  msg.role === "assistant" ? styles.bubbleNpc : ""
+                } ${msg.role === "user" ? styles.bubbleUser : ""} ${
+                  speakingId === msg.id ? styles.speaking : ""
+                }`}
+              >
+                {msg.content}
+              </div>
+              {msg.role === "assistant" && (
+                <button
+                  className={`ghost ${styles.speakButton}`}
+                  onClick={() => handleSpeak(msg.id, msg.content)}
+                  title={
+                    speechAvail === "ready"
+                      ? "音声再生"
+                      : "このブラウザは音声未対応（TTSボイス0個）"
+                  }
+                >
+                  {speechAvail === "ready" ? "🔊" : "🔇"} 読み上げ
+                </button>
+              )}
+              {msg.role === "assistant" && speakingId === msg.id && (
+                <span className={styles.speakingBadge} aria-live="polite">
+                  ♪ 読み上げ中
+                </span>
+              )}
+            </div>
           </div>
         ))}
 

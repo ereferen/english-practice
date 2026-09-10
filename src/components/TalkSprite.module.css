@@ -1,0 +1,28 @@
+/* Issue #85: NPC talk sprite next to the read-aloud bubble.
+   Sheet is 2 frames @ 24x24; render at 2x = 48x48, cycle -96px.
+   Purely decorative (aria-hidden, pointer-events none). */
+
+.sprite {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  vertical-align: top;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 96px 48px;
+  animation: npc-talk 0.32s steps(2) infinite;
+}
+
+@keyframes npc-talk {
+  to {
+    background-position-x: -96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite {
+    animation: none;
+    background-position-x: 0;
+  }
+}

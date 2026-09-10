@@ -96,6 +96,20 @@
   font-weight: 400;
 }
 
+/* Issue #85: while read-aloud, the row gains the talk sprite next to the
+   bubble column. chat-bubble-wrap is a block by default; flex only here. */
+.speakingRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.bubbleColumn {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 /* speaking (read-aloud) state: faint gold lift + rune badge */
 :global(.card).bubble.speaking {
   box-shadow:
