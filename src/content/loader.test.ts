@@ -327,9 +327,9 @@ describe("generateQuizzesForLesson", () => {
       const target = baseDeck.lessons[0].words.find(
         (w) => w.wordId === q.wordId,
       );
-      expect(
-        q.choices.find((c) => c.choiceId === q.answerChoiceId)?.text,
-      ).toBe(target?.term);
+      expect(q.choices.find((c) => c.choiceId === q.answerChoiceId)?.text).toBe(
+        target?.term,
+      );
     }
   });
 

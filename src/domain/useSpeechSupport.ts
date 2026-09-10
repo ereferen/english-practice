@@ -5,9 +5,7 @@ import { speechSupport, type SpeechSupport } from "./speech";
 // after getVoices() first returns []). Subscribe so the UI settles on the
 // true support state instead of disabling the button too eagerly.
 export function useSpeechSupport(): SpeechSupport {
-  const [support, setSupport] = useState<SpeechSupport>(() =>
-    speechSupport(),
-  );
+  const [support, setSupport] = useState<SpeechSupport>(() => speechSupport());
 
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {

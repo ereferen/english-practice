@@ -329,9 +329,7 @@ describe("FlashScreen", () => {
   it("provides an audio playback button (issue #83: shows mute glyph when TTS unavailable)", () => {
     renderFlashScreen(makeState(deck));
     // jsdom has no speechSynthesis → the button renders 🔇 音声再生
-    expect(
-      screen.getByRole("button", { name: /音声再生/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /音声再生/ })).toBeTruthy();
   });
 
   it("provides a 戻る button to return to deck home (issue #75)", async () => {
