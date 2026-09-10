@@ -77,6 +77,10 @@ export class DexieStorageProvider implements StorageProvider {
     return db.answers.where("askedAt").aboveOrEqual(date).count();
   }
 
+  async listAnswersSince(date: string): Promise<AnswerEvent[]> {
+    return db.answers.where("askedAt").aboveOrEqual(date).toArray();
+  }
+
   async saveGeneratedQuiz(set: GeneratedQuizSet): Promise<void> {
     await db.generatedQuizzes.put(set);
   }
