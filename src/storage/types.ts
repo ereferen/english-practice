@@ -39,7 +39,27 @@ export interface Settings {
   llmFallbackApiEndpoint: string;
   llmFallbackModel: string;
   llmFallbackApiKey: string;
+  // issue #17: SRSパラメータ最適化（LLM提案→ユーザー承認で適用）
+  srsParams: SrsParams;
 }
+
+/**
+ * issue #17: SRS（間隔反復）のパラメータ。デフォルトは従来の固定挙動と一致。
+ * loadSettings() の DEFAULT_SETTINGS スプレッドで既存行にも補完されるため
+ * IndexedDB スキーマ変更は不要（破壊的マイグレーションなし）。
+ */
+export interface SrsParams {
+  /** level n 正答後の復習間隔（日）。index=level 0..3 */
+  intervalDays: [number, number, number, number];
+  /** level 3 で誤答した際の降格先（level<=2 の誤答は従来どおり level 0） */
+  level3WrongDemotesTo: 0 | 1 | 2;
+}
+
+/** issue #17: 従来の固定挙動（level2=翌日 / level3=4日後 / level3誤答はlevel1へ） */
+export const DEFAULT_SRS_PARAMS: SrsParams = {
+  intervalDays: [0, 0, 1, 4],
+  level3WrongDemotesTo: 1,
+};
 
 export interface StorageProvider {
   loadSettings(): Promise<Settings>;
@@ -113,6 +133,7 @@ export const DEFAULT_SETTINGS: Settings = {
   llmFallbackApiEndpoint: "",
   llmFallbackModel: "",
   llmFallbackApiKey: "",
+  srsParams: DEFAULT_SRS_PARAMS,
 };
 
 export function progressKey(deckId: string, wordId: string): string {

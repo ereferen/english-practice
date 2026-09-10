@@ -1,4 +1,4 @@
-import type { ReviewState } from "../storage/types";
+import type { ReviewState, SrsParams } from "../storage/types";
 
 export interface Clock {
   now(): Date;
@@ -31,10 +31,15 @@ export interface NextReviewResult {
   wrongTotal: number;
 }
 
+/**
+ * issue #17: SRSパラメータはユーザー単位で上書き可能（デフォルトは従来動作）。
+ * params は省略可能 — 未設定なら従来の固定挙動と完全に一致させる。
+ */
 export function nextReviewState(
   state: ReviewState | undefined,
   correct: boolean,
   clock: Clock = systemClock,
+  params?: SrsParams,
 ): NextReviewResult {
   const now = clock.now();
   const today = clock.today();
@@ -55,7 +60,7 @@ export function nextReviewState(
   if (correct) {
     const nextLevel: 0 | 1 | 2 | 3 = Math.min(3, state.level + 1) as
       0 | 1 | 2 | 3;
-    const intervalDays = levelIntervalDays(nextLevel);
+    const intervalDays = levelIntervalDays(nextLevel, params);
     return {
       level: nextLevel,
       dueAt: addDays(today, intervalDays),
@@ -66,7 +71,8 @@ export function nextReviewState(
     };
   }
 
-  const nextLevel: 0 | 1 | 2 | 3 = state.level === 3 ? 1 : 0;
+  const nextLevel: 0 | 1 | 2 | 3 =
+    state.level === 3 ? (params?.level3WrongDemotesTo ?? 1) : 0;
   return {
     level: nextLevel,
     dueAt: today,
@@ -77,7 +83,14 @@ export function nextReviewState(
   };
 }
 
-export function levelIntervalDays(level: 0 | 1 | 2 | 3): number {
+export function levelIntervalDays(
+  level: 0 | 1 | 2 | 3,
+  params?: SrsParams,
+): number {
+  const fromParams = params?.intervalDays?.[level];
+  if (typeof fromParams === "number" && Number.isFinite(fromParams)) {
+    return Math.max(0, Math.round(fromParams));
+  }
   switch (level) {
     case 0:
       return 0;

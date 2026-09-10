@@ -62,9 +62,16 @@ export default function ResultScreen({
     );
 
     (async () => {
+      // issue #17: ユーザー承認済みの SRS パラメータを復習間隔に反映
+      const settings = await storage.loadSettings();
       for (const a of answers) {
         const existing = await storage.loadReview(deckId, a.wordId);
-        const updated = nextReviewState(existing, a.correct, systemClock);
+        const updated = nextReviewState(
+          existing,
+          a.correct,
+          systemClock,
+          settings.srsParams,
+        );
         await storage.saveReview({
           deckId,
           wordId: a.wordId,

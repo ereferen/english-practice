@@ -8,6 +8,14 @@ import {
   buildWeaknessInput,
 } from "../domain/weaknessAnalysis";
 import type { WeaknessReport } from "../domain/weaknessAnalysis";
+import {
+  buildSrsOptimizationInput,
+  proposeSrsParamsWithLlm,
+  proposalToParams,
+  isNoopProposal,
+  SRS_OPTIMIZATION_MIN_ANSWERS,
+} from "../domain/srsOptimization";
+import type { SrsProposal } from "../domain/srsOptimization";
 import styles from "./Dashboard.module.css";
 
 interface Props {
@@ -37,6 +45,11 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [report, setReport] = useState<WeaknessReport | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  // issue #17: SRS最適化提案（承認するまで Settings には書かない）
+  const [srsProposal, setSrsProposal] = useState<SrsProposal | null>(null);
+  const [srsOptimizing, setSrsOptimizing] = useState(false);
+  const [srsError, setSrsError] = useState<string | null>(null);
+  const [srsApplied, setSrsApplied] = useState(false);
 
   // Issue #16: 分析対象期間の開始日（表示用）
   const [windowStart] = useState(() => daysAgoDate(new Date(), 30));
@@ -95,6 +108,52 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       setAnalyzeError(e instanceof Error ? e.message : String(e));
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleOptimizeSrs = async () => {
+    setSrsOptimizing(true);
+    setSrsError(null);
+    setSrsApplied(false);
+    try {
+      const settings = await storage.loadSettings();
+      const providers = providersFromSettings(settings);
+      if (providers.length === 0) {
+        throw new Error(
+          "LLMが設定されていません。設定画面からAPIエンドポイントとモデルを登録してください。",
+        );
+      }
+      const answers = await storage.listAnswersSince(windowStart);
+      const input = buildSrsOptimizationInput({
+        answers,
+        params: settings.srsParams,
+        today: new Date().toISOString().slice(0, 10),
+      });
+      const proposal = await proposeSrsParamsWithLlm({ providers, input });
+      if (isNoopProposal(proposal, settings.srsParams)) {
+        setSrsProposal(null);
+        setSrsError(
+          `現在のSRSパラメータは最適のようです（${proposal.rationale}）`,
+        );
+      } else {
+        setSrsProposal(proposal);
+      }
+    } catch (e) {
+      setSrsProposal(null);
+      setSrsError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSrsOptimizing(false);
+    }
+  };
+
+  const handleApplySrsProposal = async () => {
+    if (!srsProposal) return;
+    try {
+      await storage.saveSettings({ srsParams: proposalToParams(srsProposal) });
+      setSrsApplied(true);
+      setSrsProposal(null);
+    } catch (e) {
+      setSrsError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -193,6 +252,69 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
               再分析
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Issue #17: SRSパラメータ最適化（提案→承認） */}
+      <h3>SRS最適化</h3>
+      <div className="card">
+        <p className={styles.reportEmpty}>
+          直近{SRS_OPTIMIZATION_MIN_ANSWERS}
+          回以上の回答データから、復習間隔の調整案をLLMに提案させます。
+          適用は「承認」を押したときだけ。
+        </p>
+        {srsOptimizing && (
+          <div className={styles.reportEmpty}>
+            <span className="loading-dots">提案生成中...</span>
+          </div>
+        )}
+        {!srsOptimizing && srsError && (
+          <div className={styles.reportError}>
+            <span>{srsError}</span>
+            <button
+              className="ghost"
+              onClick={() => setSrsError(null)}
+              aria-label="SRSエラーを閉じる"
+            >
+              とじる
+            </button>
+          </div>
+        )}
+        {!srsOptimizing && srsApplied && (
+          <p>✅ SRSパラメータを適用しました。今後の復習間隔に反映されます。</p>
+        )}
+        {!srsOptimizing && srsProposal && (
+          <div className={styles.report}>
+            <p className={styles.reportSummary}>{srsProposal.rationale}</p>
+            <p>
+              復習間隔:{" "}
+              {srsProposal.intervalDays
+                .map((d, i) => `L${i}=${d}日`)
+                .join(" / ")}
+              {" · "}
+              L3誤答の降格先: L{srsProposal.level3WrongDemotesTo}（信頼度:{" "}
+              {srsProposal.confidence}）
+            </p>
+            <div className={styles.sessionRow}>
+              <button
+                className="primary"
+                onClick={() => void handleApplySrsProposal()}
+              >
+                承認して適用
+              </button>
+              <button className="ghost" onClick={() => setSrsProposal(null)}>
+                却下
+              </button>
+            </div>
+          </div>
+        )}
+        {!srsOptimizing && !srsProposal && (
+          <button
+            className={`primary ${styles.analyzeButton}`}
+            onClick={() => void handleOptimizeSrs()}
+          >
+            {srsApplied ? "もう一度提案させる" : "SRS調整案を出してもらう"}
+          </button>
         )}
       </div>
 
