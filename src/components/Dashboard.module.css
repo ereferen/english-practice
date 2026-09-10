@@ -16,3 +16,56 @@
   color: var(--color-muted);
   font-size: 0.875rem;
 }
+
+/* Issue #16: weakness report card */
+.reportEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--color-muted);
+}
+
+.analyzeButton {
+  flex-shrink: 0;
+}
+
+.reportError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-danger, #e07b6a);
+}
+
+.reportSummary {
+  margin: 0 0 8px;
+}
+
+.reportCategories {
+  margin: 0 0 8px;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.reportCategories li {
+  line-height: 1.5;
+}
+
+.badgeWeak {
+  background: rgba(224, 123, 106, 0.18);
+  color: var(--color-danger, #e07b6a);
+}
+
+.badgeStrong {
+  background: rgba(122, 199, 134, 0.18);
+  color: var(--color-success, #7ac786);
+}
+
+.reportFocus {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}

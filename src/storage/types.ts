@@ -60,6 +60,8 @@ export interface StorageProvider {
 
   recordAnswer(event: AnswerEvent): Promise<void>;
   countAnswersSince(date: string): Promise<number>;
+  /** 弱点分析 (issue #16): 指定日付以降の AnswerEvent を全部返す */
+  listAnswersSince(date: string): Promise<AnswerEvent[]>;
 
   // LLM生成クイズ (issue #15)
   saveGeneratedQuiz(set: GeneratedQuizSet): Promise<void>;
