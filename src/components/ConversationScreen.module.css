@@ -233,3 +233,84 @@
 .settingsLink {
   white-space: nowrap;
 }
+
+/* Issue #19: conversation extraction panel */
+.extractBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 1rem;
+}
+
+.extractButton {
+  white-space: nowrap;
+}
+
+.savedHint {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.extractPanel {
+  margin: 0.5rem 1rem;
+}
+
+.extractTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.extractList {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.extractItem label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.extractType {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.5rem;
+  background: var(--color-muted);
+  color: var(--color-bg, #fff);
+}
+
+.extractTerm {
+  font-weight: 700;
+}
+
+.extractMeaning {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.extractExample {
+  margin: 0.15rem 0 0 1.5rem;
+  font-size: 0.85rem;
+}
+
+.extractNote {
+  margin: 0.15rem 0 0 1.5rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.extractActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.saveAllButton {
+  white-space: nowrap;
+}
