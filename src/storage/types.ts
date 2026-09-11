@@ -92,6 +92,11 @@ export interface StorageProvider {
   ): Promise<GeneratedQuizSet[]>;
   deleteGeneratedQuiz(id: string): Promise<void>;
 
+  // ユーザーデッキ（会話抽出の承認保存、issue #19）
+  saveUserDeck(record: UserDeckRecord): Promise<void>;
+  listUserDecks(): Promise<UserDeckRecord[]>;
+  deleteUserDeck(deckId: string): Promise<void>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
@@ -102,6 +107,19 @@ export interface UserDeckMeta {
   source: "bundled" | "import";
   title: string;
   level: string;
+}
+
+/**
+ * issue #19: 会話ログ抽出から承認後に保存するユーザーデッキ。
+ * deck は content/schema の deckSchema 検証済み（source: "conversation"）。
+ */
+export interface UserDeckRecord {
+  deckId: string;
+  deck: import("../content/schema").Deck;
+  /** 抽出元の会話ログターン数（UI の出所表示用） */
+  sourceTurns: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** LLM生成クイズの保存単位 (issue #15) */

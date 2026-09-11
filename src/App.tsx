@@ -40,7 +40,13 @@ export default function App() {
         if (errors.length > 0) {
           setError(errors.map((e) => `${e.url}: ${e.reason}`).join("\n"));
         }
-        dispatch({ type: "setDecks", decks: decks.map((d) => d.deck) });
+        // issue #19: 会話抽出で承認保存されたユーザーデッキも一覧に載せる
+        const userDecks = await storage.listUserDecks().catch(() => []);
+        if (!mounted) return;
+        dispatch({
+          type: "setDecks",
+          decks: [...decks.map((d) => d.deck), ...userDecks.map((u) => u.deck)],
+        });
       } catch (e) {
         if (!mounted) return;
         setError(e instanceof Error ? e.message : String(e));

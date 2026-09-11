@@ -5,6 +5,7 @@ import type {
   ReviewState,
   SessionRecord,
   Settings,
+  UserDeckRecord,
 } from "./types";
 
 export interface DexieSchema {
@@ -13,6 +14,7 @@ export interface DexieSchema {
   sessions: EntityTable<SessionRecord, "id">;
   answers: EntityTable<AnswerEvent, "id">;
   generatedQuizzes: EntityTable<GeneratedQuizSet, "id">;
+  userDecks: EntityTable<UserDeckRecord, "deckId">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -27,4 +29,9 @@ db.version(1).stores({
 // issue #15: LLM生成クイズの一時保存（追加テーブルのみ、既存データの移行は不要）
 db.version(2).stores({
   generatedQuizzes: "id, deckId, lessonId, generatedAt, [deckId+lessonId]",
+});
+
+// issue #19: 会話ログ抽出から作成したユーザーデッキ（追加テーブルのみ）
+db.version(3).stores({
+  userDecks: "deckId, updatedAt",
 });
