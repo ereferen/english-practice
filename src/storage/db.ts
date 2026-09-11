@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type {
   AnswerEvent,
   GeneratedQuizSet,
+  ImprovementAction,
   ReviewState,
   SessionRecord,
   Settings,
@@ -15,6 +16,7 @@ export interface DexieSchema {
   answers: EntityTable<AnswerEvent, "id">;
   generatedQuizzes: EntityTable<GeneratedQuizSet, "id">;
   userDecks: EntityTable<UserDeckRecord, "deckId">;
+  improvementActions: EntityTable<ImprovementAction, "id">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -34,4 +36,9 @@ db.version(2).stores({
 // issue #19: 会話ログ抽出から作成したユーザーデッキ（追加テーブルのみ）
 db.version(3).stores({
   userDecks: "deckId, updatedAt",
+});
+
+// issue #20: Self-Improve 承認→適用→ロールバックの監査ログ（追加テーブルのみ）
+db.version(4).stores({
+  improvementActions: "id, category, appliedAt",
 });

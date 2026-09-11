@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
-import type { StorageProvider, SessionRecord } from "../storage/types";
+import type {
+  ImprovementAction,
+  StorageProvider,
+  SessionRecord,
+} from "../storage/types";
 import { allWords } from "../content/loader";
 import { providersFromSettings } from "../domain/llm";
 import {
@@ -16,6 +20,10 @@ import {
   SRS_OPTIMIZATION_MIN_ANSWERS,
 } from "../domain/srsOptimization";
 import type { SrsProposal } from "../domain/srsOptimization";
+import {
+  makeSrsApplyRecord,
+  resolveSrsRollback,
+} from "../domain/improvements";
 import styles from "./Dashboard.module.css";
 
 interface Props {
@@ -50,6 +58,13 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [srsOptimizing, setSrsOptimizing] = useState(false);
   const [srsError, setSrsError] = useState<string | null>(null);
   const [srsApplied, setSrsApplied] = useState(false);
+  const [srsProposalModel, setSrsProposalModel] = useState("");
+  // issue #20: 改善アクションの履歴（承認→適用→ロールバックの監査ログ）
+  const [improvements, setImprovements] = useState<ImprovementAction[]>([]);
+
+  const reloadImprovements = async () => {
+    setImprovements(await storage.listImprovementActions(20));
+  };
 
   // Issue #16: 分析対象期間の開始日（表示用）
   const [windowStart] = useState(() => daysAgoDate(new Date(), 30));
@@ -60,6 +75,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       const list = await storage.listSessions(50);
       if (!mounted) return;
       setSessions(list);
+      await reloadImprovements();
     })();
     return () => {
       mounted = false;
@@ -137,6 +153,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         );
       } else {
         setSrsProposal(proposal);
+        setSrsProposalModel(providers[0]?.label ?? "unknown");
       }
     } catch (e) {
       setSrsProposal(null);
@@ -149,9 +166,43 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const handleApplySrsProposal = async () => {
     if (!srsProposal) return;
     try {
+      const settings = await storage.loadSettings();
+      // issue #20: 適用と監査ログ書き込みをセットで（previous スナップショット付き）
+      const record = makeSrsApplyRecord({
+        proposal: srsProposal,
+        previous: settings.srsParams,
+        model: srsProposalModel || "unknown",
+      });
       await storage.saveSettings({ srsParams: proposalToParams(srsProposal) });
+      await storage.saveImprovementAction(record);
       setSrsApplied(true);
       setSrsProposal(null);
+      await reloadImprovements();
+    } catch (e) {
+      setSrsError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // issue #20: 履歴からのロールバック（resolveSrsRollback が安全条件を検証）
+  const handleRollback = async (target: ImprovementAction) => {
+    setSrsError(null);
+    try {
+      const settings = await storage.loadSettings();
+      const result = resolveSrsRollback(
+        improvements,
+        target.id,
+        settings.srsParams,
+      );
+      if (!result.ok) {
+        setSrsError(result.reason);
+        return;
+      }
+      await storage.saveSettings({ srsParams: result.restore });
+      await storage.saveImprovementAction({
+        ...target,
+        rolledBackAt: new Date().toISOString(),
+      });
+      await reloadImprovements();
     } catch (e) {
       setSrsError(e instanceof Error ? e.message : String(e));
     }
@@ -316,6 +367,42 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             {srsApplied ? "もう一度提案させる" : "SRS調整案を出してもらう"}
           </button>
         )}
+      </div>
+
+      {/* Issue #20: 改善履歴（承認→適用→ロールバックの監査ログ） */}
+      <h3>改善履歴</h3>
+      <div className="card">
+        {improvements.length === 0 && (
+          <p className={styles.reportEmpty}>
+            まだ改善の適用履歴はありません。SRS最適化で提案を承認すると、
+            ここに根拠・モデル・ロールバック先が記録されます。
+          </p>
+        )}
+        {improvements.map((a) => (
+          <div key={a.id} className={styles.sessionRow}>
+            <div>
+              <span className="badge">
+                {a.category === "srs-params" ? "SRSパラメータ" : a.category}
+              </span>{" "}
+              {a.rationale}
+              <div className={styles.sessionMeta}>
+                {a.appliedAt.slice(0, 16).replace("T", " ")} · {a.model} ·{" "}
+                間隔 {a.applied.intervalDays.join("/")}日 · 従来{" "}
+                {a.previous.intervalDays.join("/")}日 に戻せる
+              </div>
+            </div>
+            {a.rolledBackAt ? (
+              <span className="badge">ロールバック済み</span>
+            ) : (
+              <button
+                className="ghost"
+                onClick={() => void handleRollback(a)}
+              >
+                ロールバック
+              </button>
+            )}
+          </div>
+        ))}
       </div>
 
       <h3>最近のセッション</h3>

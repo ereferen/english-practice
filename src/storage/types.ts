@@ -97,6 +97,10 @@ export interface StorageProvider {
   listUserDecks(): Promise<UserDeckRecord[]>;
   deleteUserDeck(deckId: string): Promise<void>;
 
+  // 改善アクション履歴（issue #20: 承認→適用→ロールバックの監査ログ）
+  saveImprovementAction(record: ImprovementAction): Promise<void>;
+  listImprovementActions(limit?: number): Promise<ImprovementAction[]>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
@@ -120,6 +124,32 @@ export interface UserDeckRecord {
   sourceTurns: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * issue #20: Self-Improve の「適用」履歴（承認フローの監査ログ）。
+ * LLM 提案をユーザー承認して適用した記録だけを保存する。
+ * previous を保持することで特定提案のロールバックを可能にする。
+ * ※ 追加テーブルのみで既存データへの移行は不要（db.version(4)）。
+ */
+export type ImprovementCategory = "srs-params";
+
+export interface ImprovementAction {
+  /** uuid */
+  id: string;
+  category: ImprovementCategory;
+  /** 提案時の根拠文（LLM rationale or 人手入力のメモ） */
+  rationale: string;
+  /** 提案を出したモデル/プロバイダ名。人手適用なら "manual" */
+  model: string;
+  /** 適用日時 ISO */
+  appliedAt: string;
+  /** 適用後のパラメータスナップショット */
+  applied: SrsParams;
+  /** 適用前のパラメータスナップショット（ロールバック先） */
+  previous: SrsParams;
+  /** ロールバック済みならその日時 ISO */
+  rolledBackAt: string | null;
 }
 
 /** LLM生成クイズの保存単位 (issue #15) */

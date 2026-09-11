@@ -2,6 +2,7 @@ import { db } from "./db";
 import type {
   AnswerEvent,
   GeneratedQuizSet,
+  ImprovementAction,
   ReviewState,
   SessionRecord,
   Settings,
@@ -118,6 +119,21 @@ export class DexieStorageProvider implements StorageProvider {
     await db.review.where("deckId").equals(deckId).delete();
   }
 
+  // issue #20: 改善アクション履歴（承認→適用→ロールバックの監査ログ）
+  async saveImprovementAction(record: ImprovementAction): Promise<void> {
+    await db.improvementActions.put(record);
+  }
+
+  async listImprovementActions(
+    limit = 50,
+  ): Promise<ImprovementAction[]> {
+    return db.improvementActions
+      .orderBy("appliedAt")
+      .reverse()
+      .limit(limit)
+      .toArray();
+  }
+
   async exportAll(): Promise<unknown> {
     return {
       settings: await db.settings.toArray(),
@@ -126,6 +142,7 @@ export class DexieStorageProvider implements StorageProvider {
       answers: await db.answers.toArray(),
       generatedQuizzes: await db.generatedQuizzes.toArray(),
       userDecks: await db.userDecks.toArray(),
+      improvementActions: await db.improvementActions.toArray(),
     };
   }
 
@@ -137,6 +154,7 @@ export class DexieStorageProvider implements StorageProvider {
       answers?: AnswerEvent[];
       generatedQuizzes?: GeneratedQuizSet[];
       userDecks?: UserDeckRecord[];
+      improvementActions?: ImprovementAction[];
     };
     await db.transaction(
       "rw",
@@ -147,6 +165,7 @@ export class DexieStorageProvider implements StorageProvider {
         db.answers,
         db.generatedQuizzes,
         db.userDecks,
+        db.improvementActions,
       ],
       async () => {
         await db.settings.clear();
@@ -155,6 +174,7 @@ export class DexieStorageProvider implements StorageProvider {
         await db.answers.clear();
         await db.generatedQuizzes.clear();
         await db.userDecks.clear();
+        await db.improvementActions.clear();
         if (payload.settings?.length)
           await db.settings.bulkAdd(payload.settings);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
@@ -165,6 +185,8 @@ export class DexieStorageProvider implements StorageProvider {
           await db.generatedQuizzes.bulkAdd(payload.generatedQuizzes);
         if (payload.userDecks?.length)
           await db.userDecks.bulkAdd(payload.userDecks);
+        if (payload.improvementActions?.length)
+          await db.improvementActions.bulkAdd(payload.improvementActions);
       },
     );
   }
