@@ -71,3 +71,8 @@ FAIL 例（違反PNGで確認済み）:
 
 - [x] 会話画面 NPC 気泡横の2帧「口パタパタ」スプライト（PoC素材で実装）
 - [ ] 生成素材の受け取り → validate-sprite.py 通し → `src/assets/traveler-sheet.png` / `npc-talk-sheet.png` 差し替え
+  - 受け取りは `scripts/import-sprite.py` で行う（グリッド崩れのリサイズ→NEAREST、
+    alpha二値化、パレット最近隣量子化→同スクリプト内の validate で PASS 時のみ書き込み、
+    FAIL 時はバックアップへロールバック。坏素材でデプロイ先が壊れることはない）。
+    例: `python3 scripts/import-sprite.py incoming.png src/assets/traveler-sheet.png`
+    / `... src/assets/npc-talk-sheet.png --frames 2`
