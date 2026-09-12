@@ -3,6 +3,7 @@ import type {
   AnswerEvent,
   GeneratedQuizSet,
   ImprovementAction,
+  ProposalRecord,
   ReviewState,
   SessionRecord,
   Settings,
@@ -17,6 +18,7 @@ export interface DexieSchema {
   generatedQuizzes: EntityTable<GeneratedQuizSet, "id">;
   userDecks: EntityTable<UserDeckRecord, "deckId">;
   improvementActions: EntityTable<ImprovementAction, "id">;
+  proposals: EntityTable<ProposalRecord, "id">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -41,4 +43,9 @@ db.version(3).stores({
 // issue #20: Self-Improve 承認→適用→ロールバックの監査ログ（追加テーブルのみ）
 db.version(4).stores({
   improvementActions: "id, category, appliedAt",
+});
+
+// issue #20: 未承認の改善提案（提案レビュー画面・Homeバッジ。追加テーブルのみ）
+db.version(5).stores({
+  proposals: "id, status, category, createdAt",
 });

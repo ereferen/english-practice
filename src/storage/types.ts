@@ -41,7 +41,18 @@ export interface Settings {
   llmFallbackApiKey: string;
   // issue #17: SRSパラメータ最適化（LLM提案→ユーザー承認で適用）
   srsParams: SrsParams;
+  // issue #20: Self-Improve 承認UX。デフォルト = オフ（明示的に有効化する）
+  selfImproveEnabled: boolean;
+  autoApplyLevel: AutoApplyLevel;
 }
+
+/**
+ * issue #20: 自動適用レベル。基本方針は「デフォルトはすべて提案のみ」。
+ * - none: すべての提案は承認必須
+ * - quiz: 問題生成（#15）のみ自動適用、パラメータ変更は承認必須
+ * - all: 安全範囲（clamp済み）の提案なら自動適用してよいカテゴリに限り適用
+ */
+export type AutoApplyLevel = "none" | "quiz" | "all";
 
 /**
  * issue #17: SRS（間隔反復）のパラメータ。デフォルトは従来の固定挙動と一致。
@@ -101,6 +112,10 @@ export interface StorageProvider {
   saveImprovementAction(record: ImprovementAction): Promise<void>;
   listImprovementActions(limit?: number): Promise<ImprovementAction[]>;
 
+  // 未承認の改善提案（issue #20: 提案レビュー画面・Homeバッジ）
+  saveProposal(record: ProposalRecord): Promise<void>;
+  listProposals(status?: ProposalStatus): Promise<ProposalRecord[]>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
@@ -152,6 +167,31 @@ export interface ImprovementAction {
   rolledBackAt: string | null;
 }
 
+/**
+ * issue #20: 未承認の改善提案（提案レビュー画面 & Homeバッジ）。
+ * #17 の SRS 提案のように「LLMが出したが生かせていない」案を永続化し、
+ * 承認/却下までアプリを閉じても失われないようにする。
+ * payload は category ごとに形が違うので unknown にし、
+ * domain 側（proposals.ts）でパースする。
+ */
+export type ProposalStatus = "pending" | "approved" | "rejected";
+
+export type ProposalCategory = "srs-params";
+
+export interface ProposalRecord {
+  /** uuid */
+  id: string;
+  category: ProposalCategory;
+  status: ProposalStatus;
+  /** category ごとの提案本体（SRSなら SrsProposal）。保存時 domain でJSON化検証済み */
+  payload: unknown;
+  /** 提案を出したモデル/プロバイダ名 */
+  model: string;
+  createdAt: string;
+  /** 承認/却下した日時 ISO */
+  decidedAt: string | null;
+}
+
 /** LLM生成クイズの保存単位 (issue #15) */
 export type GeneratedQuizSource = "llm-supplement" | "llm-wrong-focus";
 
@@ -182,6 +222,8 @@ export const DEFAULT_SETTINGS: Settings = {
   llmFallbackModel: "",
   llmFallbackApiKey: "",
   srsParams: DEFAULT_SRS_PARAMS,
+  selfImproveEnabled: false,
+  autoApplyLevel: "none",
 };
 
 export function progressKey(deckId: string, wordId: string): string {

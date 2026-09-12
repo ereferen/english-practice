@@ -3,6 +3,8 @@ import type {
   AnswerEvent,
   GeneratedQuizSet,
   ImprovementAction,
+  ProposalRecord,
+  ProposalStatus,
   ReviewState,
   SessionRecord,
   Settings,
@@ -124,14 +126,25 @@ export class DexieStorageProvider implements StorageProvider {
     await db.improvementActions.put(record);
   }
 
-  async listImprovementActions(
-    limit = 50,
-  ): Promise<ImprovementAction[]> {
+  async listImprovementActions(limit = 50): Promise<ImprovementAction[]> {
     return db.improvementActions
       .orderBy("appliedAt")
       .reverse()
       .limit(limit)
       .toArray();
+  }
+
+  // issue #20: 未承認の改善提案（提案レビュー画面・Homeバッジ）
+  async saveProposal(record: ProposalRecord): Promise<void> {
+    await db.proposals.put(record);
+  }
+
+  async listProposals(status?: ProposalStatus): Promise<ProposalRecord[]> {
+    const base = status
+      ? db.proposals.where("status").equals(status)
+      : db.proposals.toCollection();
+    const rows = await base.sortBy("createdAt");
+    return rows.reverse();
   }
 
   async exportAll(): Promise<unknown> {
@@ -143,6 +156,7 @@ export class DexieStorageProvider implements StorageProvider {
       generatedQuizzes: await db.generatedQuizzes.toArray(),
       userDecks: await db.userDecks.toArray(),
       improvementActions: await db.improvementActions.toArray(),
+      proposals: await db.proposals.toArray(),
     };
   }
 
@@ -155,6 +169,7 @@ export class DexieStorageProvider implements StorageProvider {
       generatedQuizzes?: GeneratedQuizSet[];
       userDecks?: UserDeckRecord[];
       improvementActions?: ImprovementAction[];
+      proposals?: ProposalRecord[];
     };
     await db.transaction(
       "rw",
@@ -166,6 +181,7 @@ export class DexieStorageProvider implements StorageProvider {
         db.generatedQuizzes,
         db.userDecks,
         db.improvementActions,
+        db.proposals,
       ],
       async () => {
         await db.settings.clear();
@@ -175,6 +191,7 @@ export class DexieStorageProvider implements StorageProvider {
         await db.generatedQuizzes.clear();
         await db.userDecks.clear();
         await db.improvementActions.clear();
+        await db.proposals.clear();
         if (payload.settings?.length)
           await db.settings.bulkAdd(payload.settings);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
@@ -187,6 +204,8 @@ export class DexieStorageProvider implements StorageProvider {
           await db.userDecks.bulkAdd(payload.userDecks);
         if (payload.improvementActions?.length)
           await db.improvementActions.bulkAdd(payload.improvementActions);
+        if (payload.proposals?.length)
+          await db.proposals.bulkAdd(payload.proposals);
       },
     );
   }

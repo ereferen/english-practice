@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  decideProposal,
   makeSrsApplyRecord,
+  makeSrsProposalRecord,
   resolveSrsRollback,
+  srsProposalFromRecord,
   srsParamsEqual,
 } from "./improvements";
 import type { SrsProposal } from "./srsOptimization";
 import { DEFAULT_SRS_PARAMS } from "../storage/types";
-import type { ImprovementAction, SrsParams } from "../storage/types";
+import type {
+  ImprovementAction,
+  ProposalRecord,
+  SrsParams,
+} from "../storage/types";
 
 const PROPOSAL: SrsProposal = {
   intervalDays: [0, 0, 2, 6],
@@ -112,9 +119,7 @@ describe("resolveSrsRollback", () => {
     });
     // 現状カテゴリは srs-params のみ。category フィルタの挙動を確認するため
     // 同じカテゴリの newer は上記テスト済み → ここでは filtered 検索の整合を見る
-    expect(resolveSrsRollback([other, action()], "a1", applied).ok).toBe(
-      false,
-    );
+    expect(resolveSrsRollback([other, action()], "a1", applied).ok).toBe(false);
   });
 });
 
@@ -129,5 +134,82 @@ describe("srsParamsEqual", () => {
         level3WrongDemotesTo: 1,
       }),
     ).toBe(false);
+  });
+});
+
+describe("makeSrsProposalRecord / srsProposalFromRecord", () => {
+  it("pendingステータスでpayloadを検証済みProposalRecordにする", () => {
+    const rec = makeSrsProposalRecord({
+      proposal: {
+        intervalDays: [0, 0, 2, 6],
+        level3WrongDemotesTo: 1,
+        rationale: "level3正答率92%",
+        confidence: "high",
+      },
+      model: "m1",
+      createdAt: "2026-09-12T00:00:00.000Z",
+      id: "p1",
+    });
+    expect(rec.status).toBe("pending");
+    expect(rec.decidedAt).toBeNull();
+    expect(rec.category).toBe("srs-params");
+    expect(srsProposalFromRecord(rec)).toEqual({
+      intervalDays: [0, 0, 2, 6],
+      level3WrongDemotesTo: 1,
+      rationale: "level3正答率92%",
+      confidence: "high",
+    });
+  });
+
+  it("不正payload（範囲外間隔）は保存時に弾く", () => {
+    expect(() =>
+      makeSrsProposalRecord({
+        proposal: {
+          intervalDays: [0, 0, 99, 6],
+          level3WrongDemotesTo: 1,
+          rationale: "x",
+          confidence: "low",
+        },
+        model: "m",
+      }),
+    ).toThrow("ペイロード検証");
+  });
+
+  it("破損payloadの読み出しは例外", () => {
+    expect(() =>
+      srsProposalFromRecord({
+        id: "p",
+        category: "srs-params",
+        status: "pending",
+        payload: { nope: true },
+        model: "m",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        decidedAt: null,
+      }),
+    ).toThrow("形式が不正");
+  });
+});
+
+describe("decideProposal", () => {
+  const base: ProposalRecord = {
+    id: "p1",
+    category: "srs-params",
+    status: "pending",
+    payload: {},
+    model: "m",
+    createdAt: "2026-09-12T00:00:00.000Z",
+    decidedAt: null,
+  };
+  it("pending→approved/rejected は decidedAt 付き", () => {
+    const a = decideProposal(base, "approved", "2026-09-12T01:00:00.000Z");
+    expect(a.status).toBe("approved");
+    expect(a.decidedAt).toBe("2026-09-12T01:00:00.000Z");
+    const r = decideProposal(base, "rejected");
+    expect(r.status).toBe("rejected");
+    expect(r.decidedAt).not.toBeNull();
+  });
+  it("決定済み提案の再決定は拒否", () => {
+    const a = decideProposal(base, "approved");
+    expect(() => decideProposal(a, "rejected")).toThrow("処理済み");
   });
 });

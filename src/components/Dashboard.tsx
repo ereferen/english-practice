@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type {
   ImprovementAction,
+  ProposalRecord,
   StorageProvider,
   SessionRecord,
 } from "../storage/types";
@@ -19,11 +20,14 @@ import {
   isNoopProposal,
   SRS_OPTIMIZATION_MIN_ANSWERS,
 } from "../domain/srsOptimization";
-import type { SrsProposal } from "../domain/srsOptimization";
 import {
+  decideProposal,
   makeSrsApplyRecord,
+  makeSrsProposalRecord,
   resolveSrsRollback,
+  srsProposalFromRecord,
 } from "../domain/improvements";
+import type { SrsProposal } from "../domain/srsOptimization";
 import styles from "./Dashboard.module.css";
 
 interface Props {
@@ -53,17 +57,23 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [report, setReport] = useState<WeaknessReport | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  // issue #17: SRS最適化提案（承認するまで Settings には書かない）
-  const [srsProposal, setSrsProposal] = useState<SrsProposal | null>(null);
+  // issue #17/#20: SRS最適化提案は永続化（pending提案としてリロード後も残る）
+  const [pendingSrs, setPendingSrs] = useState<ProposalRecord | null>(null);
   const [srsOptimizing, setSrsOptimizing] = useState(false);
   const [srsError, setSrsError] = useState<string | null>(null);
   const [srsApplied, setSrsApplied] = useState(false);
-  const [srsProposalModel, setSrsProposalModel] = useState("");
   // issue #20: 改善アクションの履歴（承認→適用→ロールバックの監査ログ）
   const [improvements, setImprovements] = useState<ImprovementAction[]>([]);
+  // issue #20: Self-Improveが設定でオフなら提案UIを出さない（デフォルト=オフ）
+  const [selfImproveEnabled, setSelfImproveEnabled] = useState(false);
 
   const reloadImprovements = async () => {
     setImprovements(await storage.listImprovementActions(20));
+  };
+
+  const reloadPendingSrs = async () => {
+    const pending = await storage.listProposals("pending");
+    setPendingSrs(pending.find((p) => p.category === "srs-params") ?? null);
   };
 
   // Issue #16: 分析対象期間の開始日（表示用）
@@ -73,9 +83,12 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
     let mounted = true;
     (async () => {
       const list = await storage.listSessions(50);
+      const settings = await storage.loadSettings();
       if (!mounted) return;
+      setSelfImproveEnabled(settings.selfImproveEnabled);
       setSessions(list);
       await reloadImprovements();
+      await reloadPendingSrs();
     })();
     return () => {
       mounted = false;
@@ -147,16 +160,19 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       });
       const proposal = await proposeSrsParamsWithLlm({ providers, input });
       if (isNoopProposal(proposal, settings.srsParams)) {
-        setSrsProposal(null);
         setSrsError(
           `現在のSRSパラメータは最適のようです（${proposal.rationale}）`,
         );
       } else {
-        setSrsProposal(proposal);
-        setSrsProposalModel(providers[0]?.label ?? "unknown");
+        // issue #20: 提案を永続化 — アプリを閉じてもレビューに残る
+        const record = makeSrsProposalRecord({
+          proposal,
+          model: providers[0]?.label ?? "unknown",
+        });
+        await storage.saveProposal(record);
+        await reloadPendingSrs();
       }
     } catch (e) {
-      setSrsProposal(null);
       setSrsError(e instanceof Error ? e.message : String(e));
     } finally {
       setSrsOptimizing(false);
@@ -164,20 +180,33 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   };
 
   const handleApplySrsProposal = async () => {
-    if (!srsProposal) return;
+    if (!pendingSrs) return;
     try {
       const settings = await storage.loadSettings();
+      const proposal = srsProposalFromRecord(pendingSrs);
       // issue #20: 適用と監査ログ書き込みをセットで（previous スナップショット付き）
       const record = makeSrsApplyRecord({
-        proposal: srsProposal,
+        proposal,
         previous: settings.srsParams,
-        model: srsProposalModel || "unknown",
+        model: pendingSrs.model || "unknown",
       });
-      await storage.saveSettings({ srsParams: proposalToParams(srsProposal) });
+      await storage.saveSettings({ srsParams: proposalToParams(proposal) });
       await storage.saveImprovementAction(record);
+      await storage.saveProposal(decideProposal(pendingSrs, "approved"));
       setSrsApplied(true);
-      setSrsProposal(null);
       await reloadImprovements();
+      await reloadPendingSrs();
+    } catch (e) {
+      setSrsError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // issue #20: 却下も履歴として残す（再提案まで保留バッジが消えないように）
+  const handleRejectSrsProposal = async () => {
+    if (!pendingSrs) return;
+    try {
+      await storage.saveProposal(decideProposal(pendingSrs, "rejected"));
+      await reloadPendingSrs();
     } catch (e) {
       setSrsError(e instanceof Error ? e.message : String(e));
     }
@@ -306,66 +335,114 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         )}
       </div>
 
-      {/* Issue #17: SRSパラメータ最適化（提案→承認） */}
+      {/* Issue #17: SRSパラメータ最適化（提案→承認）。#20: Self-Improveオンのときのみ */}
       <h3>SRS最適化</h3>
       <div className="card">
-        <p className={styles.reportEmpty}>
-          直近{SRS_OPTIMIZATION_MIN_ANSWERS}
-          回以上の回答データから、復習間隔の調整案をLLMに提案させます。
-          適用は「承認」を押したときだけ。
-        </p>
-        {srsOptimizing && (
+        {!selfImproveEnabled && (
           <div className={styles.reportEmpty}>
-            <span className="loading-dots">提案生成中...</span>
-          </div>
-        )}
-        {!srsOptimizing && srsError && (
-          <div className={styles.reportError}>
-            <span>{srsError}</span>
+            <span>
+              Self-Improveはオフです。設定画面の「Self-Improve（自己改善）」から
+              有効にすると、LLMによる復習間隔の調整案を受け取れるようになります。
+            </span>
             <button
               className="ghost"
-              onClick={() => setSrsError(null)}
-              aria-label="SRSエラーを閉じる"
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "settings" } })
+              }
             >
-              とじる
+              設定へ
             </button>
           </div>
         )}
-        {!srsOptimizing && srsApplied && (
-          <p>✅ SRSパラメータを適用しました。今後の復習間隔に反映されます。</p>
-        )}
-        {!srsOptimizing && srsProposal && (
-          <div className={styles.report}>
-            <p className={styles.reportSummary}>{srsProposal.rationale}</p>
-            <p>
-              復習間隔:{" "}
-              {srsProposal.intervalDays
-                .map((d, i) => `L${i}=${d}日`)
-                .join(" / ")}
-              {" · "}
-              L3誤答の降格先: L{srsProposal.level3WrongDemotesTo}（信頼度:{" "}
-              {srsProposal.confidence}）
+        {selfImproveEnabled && (
+          <>
+            <p className={styles.reportEmpty}>
+              直近{SRS_OPTIMIZATION_MIN_ANSWERS}
+              回以上の回答データから、復習間隔の調整案をLLMに提案させます。
+              適用は「承認」を押したときだけ。
             </p>
-            <div className={styles.sessionRow}>
+            {srsOptimizing && (
+              <div className={styles.reportEmpty}>
+                <span className="loading-dots">提案生成中...</span>
+              </div>
+            )}
+            {!srsOptimizing && srsError && (
+              <div className={styles.reportError}>
+                <span>{srsError}</span>
+                <button
+                  className="ghost"
+                  onClick={() => setSrsError(null)}
+                  aria-label="SRSエラーを閉じる"
+                >
+                  とじる
+                </button>
+              </div>
+            )}
+            {!srsOptimizing && srsApplied && (
+              <p>
+                ✅ SRSパラメータを適用しました。今後の復習間隔に反映されます。
+              </p>
+            )}
+            {!srsOptimizing && pendingSrs && (
+              <div className={styles.report}>
+                {(() => {
+                  let p: SrsProposal | null = null;
+                  try {
+                    p = srsProposalFromRecord(pendingSrs);
+                  } catch {
+                    /* payload破損は下にフォールバック表示 */
+                  }
+                  if (!p) {
+                    return (
+                      <p className={styles.reportError}>
+                        保存された提案の形式が不正です。「SRS調整案を出す」で再作成してください。
+                      </p>
+                    );
+                  }
+                  return (
+                    <>
+                      <p className={styles.reportSummary}>{p.rationale}</p>
+                      <p>
+                        復習間隔:{" "}
+                        {p.intervalDays
+                          .map((d, i) => `L${i}=${d}日`)
+                          .join(" / ")}
+                        {" · "}
+                        L3誤答の降格先: L{p.level3WrongDemotesTo}（信頼度:{" "}
+                        {p.confidence}）
+                      </p>
+                      <p className={styles.sessionMeta}>
+                        {pendingSrs.createdAt.slice(0, 16).replace("T", " ")} ·{" "}
+                        {pendingSrs.model} 提案
+                      </p>
+                      <div className={styles.sessionRow}>
+                        <button
+                          className="primary"
+                          onClick={() => void handleApplySrsProposal()}
+                        >
+                          承認して適用
+                        </button>
+                        <button
+                          className="ghost"
+                          onClick={() => void handleRejectSrsProposal()}
+                        >
+                          却下
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            {!srsOptimizing && !pendingSrs && (
               <button
-                className="primary"
-                onClick={() => void handleApplySrsProposal()}
+                className={`primary ${styles.analyzeButton}`}
+                onClick={() => void handleOptimizeSrs()}
               >
-                承認して適用
+                {srsApplied ? "もう一度提案させる" : "SRS調整案を出してもらう"}
               </button>
-              <button className="ghost" onClick={() => setSrsProposal(null)}>
-                却下
-              </button>
-            </div>
-          </div>
-        )}
-        {!srsOptimizing && !srsProposal && (
-          <button
-            className={`primary ${styles.analyzeButton}`}
-            onClick={() => void handleOptimizeSrs()}
-          >
-            {srsApplied ? "もう一度提案させる" : "SRS調整案を出してもらう"}
-          </button>
+            )}
+          </>
         )}
       </div>
 
@@ -386,18 +463,15 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
               </span>{" "}
               {a.rationale}
               <div className={styles.sessionMeta}>
-                {a.appliedAt.slice(0, 16).replace("T", " ")} · {a.model} ·{" "}
-                間隔 {a.applied.intervalDays.join("/")}日 · 従来{" "}
+                {a.appliedAt.slice(0, 16).replace("T", " ")} · {a.model} · 間隔{" "}
+                {a.applied.intervalDays.join("/")}日 · 従来{" "}
                 {a.previous.intervalDays.join("/")}日 に戻せる
               </div>
             </div>
             {a.rolledBackAt ? (
               <span className="badge">ロールバック済み</span>
             ) : (
-              <button
-                className="ghost"
-                onClick={() => void handleRollback(a)}
-              >
+              <button className="ghost" onClick={() => void handleRollback(a)}>
                 ロールバック
               </button>
             )}

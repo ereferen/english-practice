@@ -11,8 +11,10 @@
  *   履歴を巻き戻すことにならないので拒否する。
  */
 
+import { z } from "zod";
 import type {
   ImprovementAction,
+  ProposalRecord,
   SrsParams,
 } from "../storage/types";
 import type { SrsProposal } from "./srsOptimization";
@@ -59,8 +61,7 @@ export function makeSrsApplyRecord(
 }
 
 export type RollbackResult =
-  | { ok: true; restore: SrsParams }
-  | { ok: false; reason: string };
+  { ok: true; restore: SrsParams } | { ok: false; reason: string };
 
 /**
  * actions は appliedAt 降順（storage.listImprovementActions の並び順）を想定。
@@ -103,3 +104,69 @@ export function resolveSrsRollback(
 }
 
 export { sameParams as srsParamsEqual };
+
+// ---------------------------------------------------------------------------
+// issue #20: 未承認提案の永続化（提案レビュー画面・Homeバッジ）
+// ---------------------------------------------------------------------------
+
+const srsProposalPayloadSchema = z.object({
+  intervalDays: z
+    .array(z.number().int().min(0).max(30))
+    .length(4)
+    .transform((v) => v as [number, number, number, number]),
+  level3WrongDemotesTo: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  rationale: z.string().min(1).max(400),
+  confidence: z.enum(["low", "medium", "high"]),
+});
+
+/** LLM提案を pending の ProposalRecord に変換（保存前にpayload検証） */
+export function makeSrsProposalRecord(input: {
+  proposal: SrsProposal;
+  model: string;
+  createdAt?: string;
+  id?: string;
+}): ProposalRecord {
+  const parsed = srsProposalPayloadSchema.safeParse(input.proposal);
+  if (!parsed.success) {
+    throw new Error("SRS提案のペイロード検証に失敗しました。");
+  }
+  return {
+    id: input.id ?? uuid(),
+    category: "srs-params",
+    status: "pending",
+    payload: parsed.data,
+    model: input.model,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    decidedAt: null,
+  };
+}
+
+/** ProposalRecord → SrsProposal（承認適用時）。形が崩れていたら例外 */
+export function srsProposalFromRecord(record: ProposalRecord): SrsProposal {
+  if (record.category !== "srs-params") {
+    throw new Error(`未対応の提案カテゴリです: ${record.category}`);
+  }
+  const parsed = srsProposalPayloadSchema.safeParse(record.payload);
+  if (!parsed.success) {
+    throw new Error(
+      "保存された提案の形式が不正です（再分析し直してください）。",
+    );
+  }
+  return parsed.data;
+}
+
+/** 承認/却下時のステータス遷移（決定日付を付けて返すだけ、保存は呼び出し側） */
+export function decideProposal(
+  record: ProposalRecord,
+  status: "approved" | "rejected",
+  decidedAt?: string,
+): ProposalRecord {
+  if (record.status !== "pending") {
+    throw new Error("この提案は既に処理済みです。");
+  }
+  return {
+    ...record,
+    status,
+    decidedAt: decidedAt ?? new Date().toISOString(),
+  };
+}

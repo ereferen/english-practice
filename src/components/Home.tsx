@@ -18,6 +18,8 @@ export default function Home({ state, dispatch, storage }: Props) {
   const [todayAnswered, setTodayAnswered] = useState(0);
   const [goal, setGoal] = useState(10);
   const [streak, setStreak] = useState(0);
+  // issue #20: 未承認の改善提案数（Self-Improve有効時のみバッジ表示）
+  const [pendingProposals, setPendingProposals] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +30,12 @@ export default function Home({ state, dispatch, storage }: Props) {
       const count = await storage.countAnswersSince(`${today}T00:00:00.000Z`);
       const sessions = await storage.listSessions(200);
       const dates = sessions.map((s) => s.startedAt.slice(0, 10));
+      let proposals = 0;
+      if (settings.selfImproveEnabled) {
+        proposals = (await storage.listProposals("pending")).length;
+      }
       if (!mounted) return;
+      setPendingProposals(proposals);
       setDue(reviews.length);
       // Issue #82: remember which deck owns most due reviews so the card
       // can jump straight to it.
@@ -95,6 +102,18 @@ export default function Home({ state, dispatch, storage }: Props) {
       <div className="card">
         <h1>English Practice</h1>
         <p>ローカルに学習・復習・進捗を保存する英語学習アプリ</p>
+        {pendingProposals > 0 && (
+          <button
+            type="button"
+            className="badge"
+            title="保留中の改善提案があります — ダッシュボードで承認/却下できます"
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "dashboard" } })
+            }
+          >
+            ✨ 新しい改善提案があります（{pendingProposals}）
+          </button>
+        )}
       </div>
 
       <div className="card">

@@ -221,6 +221,45 @@ export default function Settings({ dispatch, storage }: Props) {
         </div>
 
         <div className="card">
+          <h3>Self-Improve（自己改善）</h3>
+          <p className={styles.hint}>
+            LLMによる復習間隔の調整案などを生成する機能です。デフォルトはオフ。
+            提案は「承認」を押すまで適用されません。
+          </p>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={settings.selfImproveEnabled}
+              onChange={(e) => save({ selfImproveEnabled: e.target.checked })}
+            />
+            Self-Improveを有効にする
+          </label>
+          <fieldset disabled={!settings.selfImproveEnabled}>
+            <legend>自動適用レベル</legend>
+            {(
+              [
+                ["none", "すべて提案のみ（承認必須）"],
+                ["quiz", "問題生成のみ自動適用"],
+                ["all", "安全範囲の提案は自動適用"],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className={styles.checkboxLabel}>
+                <input
+                  type="radio"
+                  name="autoApplyLevel"
+                  checked={settings.autoApplyLevel === value}
+                  onChange={() => save({ autoApplyLevel: value })}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <p className={styles.hintFooter}>
+            提案のレビュー・履歴・ロールバックは進捗ダッシュボードから行えます。
+          </p>
+        </div>
+
+        <div className="card">
           <h3>英会話 AI 設定</h3>
           <label>
             API エンドポイント
