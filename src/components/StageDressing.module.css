@@ -21,6 +21,32 @@
   background-position: bottom;
   background-size: 400px 120px;
   opacity: 0.12;
+  /* #97: follow the time-of-day tint */
+  filter: hue-rotate(var(--sky-hue-shift)) saturate(var(--sky-sat))
+    brightness(var(--sky-bright));
+  transition: filter 60s linear;
+}
+
+/* Issue #97: sky veil — a fixed warm/cool tone layer whose strength is
+   derived from the ambient sat var (0 at night, ~0.13-0.24 at dawn and
+   golden hour). aria-hidden + pointer-events:none like the other props;
+   text/UI sits above it so readability never changes. */
+.skyVeil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(232, 197, 107, 0.5) 0%,
+    rgba(232, 197, 107, 0.12) 38%,
+    transparent 62%
+  );
+  opacity: calc((var(--sky-sat) - 1) * 1.6);
+  filter: hue-rotate(var(--sky-hue-shift));
+  transition:
+    opacity 60s linear,
+    filter 60s linear;
 }
 
 /* sprite sheet is 4 frames @ 24x24; render at 3x = 72x72, cycle -288px */
@@ -56,6 +82,16 @@
   z-index: -1;
   pointer-events: none;
   background: transparent;
+}
+
+/* #97: star/mist/firefly layers ride the same sky tint */
+.starsFar,
+.starsNear,
+.mist,
+.motes {
+  filter: hue-rotate(var(--sky-hue-shift)) saturate(var(--sky-sat))
+    brightness(var(--sky-bright));
+  transition: filter 60s linear;
 }
 
 .starsFar {
@@ -265,6 +301,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* #97: colour may still follow the clock (it is not motion), but the
+     per-minute fade becomes an instant step. */
+  .mountains,
+  .starsFar,
+  .starsNear,
+  .mist,
+  .motes,
+  .skyVeil {
+    transition: none;
+  }
+
   .traveler {
     animation: none;
     background-position-x: 0;

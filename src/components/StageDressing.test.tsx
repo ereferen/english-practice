@@ -30,6 +30,17 @@ describe("StageDressing ambient layers (#93)", () => {
     expect(new Set(xs).size).toBe(xs.length);
   });
 
+  it("adds the #97 sky veil as a decorative layer", () => {
+    const { container } = render(<StageDressing />);
+    const veil = container.querySelector("[aria-hidden='true']");
+    const veils = [...container.querySelectorAll("div")].filter((d) =>
+      (d.className as string).includes("skyVeil"),
+    );
+    expect(veils).toHaveLength(1);
+    expect(veils[0].getAttribute("aria-hidden")).toBe("true");
+    expect(veil).not.toBeNull();
+  });
+
   it("keeps the traveler sprite wired to the walk sheet", () => {
     const { container } = render(<StageDressing />);
     const traveler = container.querySelector(
