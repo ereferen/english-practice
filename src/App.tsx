@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 import { reducer, initialState } from "./app/types";
+import type { Action } from "./app/types";
 import { loadBundledDecks } from "./content/loader";
 import { storage } from "./storage/dexieProvider";
 import { localProgress } from "./storage/localProgress";
@@ -16,6 +17,11 @@ import Settings from "./components/Settings";
 import ShortcutHelp from "./components/ShortcutHelp";
 import StageDressing from "./components/StageDressing";
 import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
+import {
+  actionScreenName,
+  directionFor,
+  runScreenTransition,
+} from "./app/viewTransition";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -24,10 +30,24 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
+  // Issue #95: wrap every screen-changing dispatch in a View Transition
+  // (graceful instant fallback on unsupported browsers / reduced motion).
+  const dispatchTransitioned = (action: Action) => {
+    const to = actionScreenName(action);
+    if (!to || to === state.screen.name) {
+      dispatch(action);
+      return;
+    }
+    runScreenTransition(
+      () => dispatch(action),
+      directionFor(state.screen.name, to),
+    );
+  };
+
   // Global shortcuts (issue #9): h = home, ? = shortcut help.
   useKeyboardShortcuts({
-    h: () => dispatch({ type: "go", screen: { name: "home" } }),
-    H: () => dispatch({ type: "go", screen: { name: "home" } }),
+    h: () => dispatchTransitioned({ type: "go", screen: { name: "home" } }),
+    H: () => dispatchTransitioned({ type: "go", screen: { name: "home" } }),
     "?": () => setShowHelp((v) => !v),
   });
 
@@ -80,14 +100,20 @@ export default function App() {
   const screen = (() => {
     switch (state.screen.name) {
       case "home":
-        return <Home state={state} dispatch={dispatch} storage={storage} />;
+        return (
+          <Home
+            state={state}
+            dispatch={dispatchTransitioned}
+            storage={storage}
+          />
+        );
       case "deckList":
-        return <DeckList state={state} dispatch={dispatch} />;
+        return <DeckList state={state} dispatch={dispatchTransitioned} />;
       case "deckHome":
         return (
           <DeckHome
             state={state}
-            dispatch={dispatch}
+            dispatch={dispatchTransitioned}
             storage={storage}
             deckId={state.screen.deckId}
           />
@@ -96,7 +122,7 @@ export default function App() {
         return (
           <FlashScreen
             state={state}
-            dispatch={dispatch}
+            dispatch={dispatchTransitioned}
             localProgress={localProgress}
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
@@ -106,7 +132,7 @@ export default function App() {
         return (
           <QuizScreen
             state={state}
-            dispatch={dispatch}
+            dispatch={dispatchTransitioned}
             storage={storage}
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
@@ -117,7 +143,7 @@ export default function App() {
         return (
           <ResultScreen
             state={state}
-            dispatch={dispatch}
+            dispatch={dispatchTransitioned}
             storage={storage}
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
@@ -126,24 +152,43 @@ export default function App() {
         );
       case "progress":
         return (
-          <ProgressScreen dispatch={dispatch} localProgress={localProgress} />
+          <ProgressScreen
+            dispatch={dispatchTransitioned}
+            localProgress={localProgress}
+          />
         );
       case "dashboard":
         return (
-          <Dashboard state={state} dispatch={dispatch} storage={storage} />
+          <Dashboard
+            state={state}
+            dispatch={dispatchTransitioned}
+            storage={storage}
+          />
         );
       case "settings":
-        return <Settings state={state} dispatch={dispatch} storage={storage} />;
+        return (
+          <Settings
+            state={state}
+            dispatch={dispatchTransitioned}
+            storage={storage}
+          />
+        );
       case "conversation":
         return (
           <ConversationScreen
             state={state}
-            dispatch={dispatch}
+            dispatch={dispatchTransitioned}
             storage={storage}
           />
         );
       default:
-        return <Home state={state} dispatch={dispatch} storage={storage} />;
+        return (
+          <Home
+            state={state}
+            dispatch={dispatchTransitioned}
+            storage={storage}
+          />
+        );
     }
   })();
 
