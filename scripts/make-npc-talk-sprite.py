@@ -84,12 +84,19 @@ def base_bust() -> list:
 
 def render_frame(mouth_open: bool) -> list:
     grid = base_bust()
+    # Issue #85 evidence pass: the old 4x1 mouth line gave only 4 differing
+    # px between frames — invisible at 2x render. The open frame is now a
+    # 4x3 cavity with a bright inner row so the flap reads on screen.
     if mouth_open:
-        # open: 4x2 dark cavity with a warm interior
+        # open: 4x3 dark cavity, bright throat row for contrast
         for xx in range(10, 14):
+            grid[9][xx] = K
             grid[10][xx] = K
-        grid[10][11] = n
-        grid[10][12] = n
+            grid[11][xx] = K
+        grid[10][10] = n
+        grid[10][13] = n
+        grid[10][11] = B  # inner highlight -> crisp on/off read
+        grid[10][12] = B
     else:
         # closed: 1px mouth line
         for xx in range(10, 14):
