@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import type { AnswerRecord } from "../domain/session";
@@ -8,6 +8,8 @@ import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
 import { uuid } from "../domain/uuid";
 import { localProgress } from "../storage/localProgress";
+import type { LocalProgressStore } from "../storage/localProgress";
+import { useCountUp } from "../app/useCountUp";
 import styles from "./ResultScreen.module.css";
 
 interface Props {
@@ -17,6 +19,16 @@ interface Props {
   deckId: string;
   lessonId: string;
   answers: AnswerRecord[];
+  /** Issue #96: injectable for tests; defaults to the shared store. */
+  progress?: LocalProgressStore;
+}
+
+/** Issue #96: rim colour tier by score — gold >= 90%, silver >= 60%,
+ *  parchment below. */
+function rimTier(rate: number): "gold" | "silver" | "parchment" {
+  if (rate >= 0.9) return "gold";
+  if (rate >= 0.6) return "silver";
+  return "parchment";
 }
 
 export default function ResultScreen({
@@ -26,12 +38,32 @@ export default function ResultScreen({
   deckId,
   lessonId,
   answers,
+  progress = localProgress,
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
+  const rate = scoreRate(answers);
+  const displayRate = useCountUp(Math.round(rate * 100), 600);
+
+  // Issue #96: compare against the previous best BEFORE this session is
+  // recorded (the effect below writes it). No past sessions => no badge.
+  const [isRecord, setIsRecord] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!deck) return;
     const endedAt = new Date().toISOString();
+    try {
+      const prev = progress.load();
+      const prevBest = prev.sessions.reduce(
+        (best, s) =>
+          s.askedCount > 0
+            ? Math.max(best, s.correctCount / s.askedCount)
+            : best,
+        -1,
+      );
+      setIsRecord(prevBest >= 0 && rate > prevBest);
+    } catch {
+      setIsRecord(null);
+    }
     const sessionId = uuid();
     storage
       .startSession({
@@ -46,12 +78,12 @@ export default function ResultScreen({
       .catch(() => {});
 
     // Persist to localStorage progress store (survives page reload)
-    localProgress.recordSession({
+    progress.recordSession({
       askedCount: answers.length,
       correctCount: answers.filter((a) => a.correct).length,
       answeredAt: endedAt,
     });
-    localProgress.saveQuizResults(
+    progress.saveQuizResults(
       deckId,
       lessonId,
       answers.map((a) => ({
@@ -84,7 +116,7 @@ export default function ResultScreen({
         });
       }
     })().catch(() => {});
-  }, [deck, deckId, lessonId, answers, storage]);
+  }, [deck, deckId, lessonId, answers, storage, progress, rate]);
 
   if (!deck) {
     return (
@@ -99,7 +131,6 @@ export default function ResultScreen({
     );
   }
 
-  const rate = scoreRate(answers);
   const elapsedSec = Math.round(
     answers.reduce((sum, a) => sum + a.latencyMs, 0) / 1000,
   );
@@ -117,7 +148,14 @@ export default function ResultScreen({
         className={`card result-summary motion-zoom-in ${styles.summaryCard}`}
       >
         <h2>セッション完了</h2>
-        <div className="result-rate">{Math.round(rate * 100)}%</div>
+        <div className={`result-rate ${styles[`rim-${rimTier(rate)}`]}`}>
+          {displayRate}%
+        </div>
+        {isRecord && (
+          <div className={styles.newRecordBadge} aria-label="自己新記録">
+            NEW RECORD
+          </div>
+        )}
         <p>
           正解 {answers.filter((a) => a.correct).length} / {answers.length} 問
         </p>
