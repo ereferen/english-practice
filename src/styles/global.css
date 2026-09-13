@@ -924,3 +924,61 @@ label {
     transform: none;
   }
 }
+
+/* Issue #95: View Transitions API screen switches.
+   html carries vt-forward / vt-back during the transition (set by
+   src/app/viewTransition.ts). Forward: the new screen slides in from
+   the right (280ms ease-out) while fading; back: from the left. The
+   old screen just fades. No @property needed — transform/opacity only.
+   Browsers without support never see these classes doing anything
+   harmful; the scene-in dip is suppressed while a transition runs so
+   the two effects don't stack. */
+@keyframes vt-new-from-right {
+  from {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes vt-new-from-left {
+  from {
+    transform: translateX(-48px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes vt-old-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.vt-forward ::view-transition-old(root),
+.vt-back ::view-transition-old(root) {
+  animation: vt-old-fade 140ms ease-in both;
+}
+
+.vt-forward ::view-transition-new(root) {
+  animation: vt-new-from-right 280ms ease-out both;
+}
+
+.vt-back ::view-transition-new(root) {
+  animation: vt-new-from-left 280ms ease-out both;
+}
+
+/* while a view transition owns the entrance, drop the #84 remount dip */
+html.vt-forward .scene,
+html.vt-back .scene {
+  animation: none;
+}
