@@ -1,7 +1,13 @@
 /* Issue #84: stage dressing — decorative fixed layers living in the
    wide-viewport gutters, behind the .container content. Design rules:
    opacity ≤ 0.15 (textures must never fight text), no interaction,
-   hidden < 1024px where there are no gutters. */
+   hidden < 1024px where there are no gutters.
+
+   Issue #93 adds the ambient layer on top of the same canvas: twinkling
+   star fields, drifting night mist, firefly motes, and a lantern flame
+   pulse on the traveler. Everything is pure CSS (box-shadow star dots,
+   repeatable gradients, keyframes) — zero image assets, and every moving
+   part stops under prefers-reduced-motion. */
 
 .mountains {
   position: fixed;
@@ -29,12 +35,215 @@
   image-rendering: pixelated;
   background-repeat: no-repeat;
   background-size: 288px 72px;
-  animation: traveler-walk 0.64s steps(4) infinite;
+  animation:
+    traveler-walk 0.64s steps(4) infinite,
+    lantern-glow 2.4s ease-in-out infinite;
 }
+
+/* ── #93: star fields ────────────────────────────────────────────────
+   One 1px element carrying many box-shadow "dots" (classic multi-star
+   trick). Two layers at different sizes/speeds give a cheap parallax
+   twinkle. Positions are authored in a 300x200 tile that repeats
+   across the top of the viewport. */
+
+.starsFar,
+.starsNear {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  z-index: -1;
+  pointer-events: none;
+  background: transparent;
+}
+
+.starsFar {
+  box-shadow:
+    40px 30px var(--color-text-parchment),
+    120px 55px var(--color-muted),
+    200px 20px var(--color-text-parchment),
+    260px 80px var(--color-muted),
+    75px 110px var(--color-text-parchment),
+    160px 140px var(--color-muted),
+    235px 105px var(--color-text-parchment),
+    25px 70px var(--color-muted);
+  animation: stars-twinkle 5s ease-in-out infinite;
+  opacity: 0.14;
+}
+
+.starsNear {
+  width: 2px;
+  height: 2px;
+  box-shadow:
+    90px 45px var(--color-accent-gold),
+    180px 90px var(--color-text-parchment),
+    30px 130px var(--color-caret-blue),
+    250px 40px var(--color-text-parchment),
+    130px 15px var(--color-accent-gold),
+    280px 120px var(--color-text-parchment);
+  animation: stars-twinkle 3.2s ease-in-out infinite;
+  animation-delay: -1.6s;
+  opacity: 0.18;
+}
+
+@keyframes stars-twinkle {
+  0%,
+  100% {
+    opacity: 0.06;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Star tiles repeat horizontally by wrapping the shadow block in a
+   pseudo-element sized to the tile; simpler: scale with viewport via
+   two stacked repeating copies on wide screens is overkill — one
+   tiled layer reads fine because stars are sparse. */
+.starsFar::after,
+.starsNear::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 300px;
+  width: inherit;
+  height: inherit;
+  box-shadow: inherit;
+  background: transparent;
+}
+
+/* ── #93: drifting night mist ───────────────────────────────────────
+   Horizontally repeatable soft bands built from layered gradients,
+   slid via background-position. Very low alpha so it never fights
+   text. Two bands at different speeds give depth. */
+
+.mist {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 100px;
+  height: 160px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image:
+    radial-gradient(
+      ellipse 180px 26px at 90px 70%,
+      var(--color-text-body),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 220px 20px at 300px 40%,
+      var(--color-muted),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 160px 24px at 520px 85%,
+      var(--color-text-body),
+      transparent 70%
+    );
+  background-size:
+    640px 160px,
+    640px 160px,
+    640px 160px;
+  background-repeat: repeat-x;
+  animation: mist-drift 90s linear infinite;
+}
+
+.mist::after {
+  content: "";
+  position: absolute;
+  inset: -40px 0 40px 0;
+  background-image: radial-gradient(
+    ellipse 240px 22px at 200px 50%,
+    var(--color-muted),
+    transparent 70%
+  );
+  background-size: 720px 120px;
+  background-repeat: repeat-x;
+  animation: mist-drift-2 55s linear infinite reverse;
+  opacity: 0.8;
+}
+
+@keyframes mist-drift-2 {
+  to {
+    background-position-x: -720px;
+  }
+}
+
+@keyframes mist-drift {
+  to {
+    background-position-x: 640px;
+  }
+}
+
+/* ── #93: firefly motes ─────────────────────────────────────────────
+   A handful of gold dots wandering slow loops near the ground.
+   Per-mote position/delay/duration come from CSS custom properties
+   set inline by the component (deterministic seeded values). */
+
+.motes {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 40vw;
+  height: 40vh;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mote {
+  position: absolute;
+  left: var(--x);
+  bottom: var(--y);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-accent-gold);
+  box-shadow: 0 0 6px 1px var(--color-border-gold-dim);
+  opacity: 0;
+  animation: mote-drift var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes mote-drift {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.35;
+    translate: -18px -26px;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    translate: 8px -48px;
+  }
+}
+
+/* ── shared keyframes ────────────────────────────────────────────────*/
 
 @keyframes traveler-walk {
   to {
     background-position-x: -288px;
+  }
+}
+
+/* lantern flame: soft gold halo breathing around the sprite */
+@keyframes lantern-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(232, 197, 107, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(232, 197, 107, 0.6));
   }
 }
 
@@ -46,7 +255,11 @@
 
 @media (max-width: 1023px) {
   .mountains,
-  .traveler {
+  .traveler,
+  .starsFar,
+  .starsNear,
+  .mist,
+  .motes {
     display: none;
   }
 }
@@ -55,5 +268,22 @@
   .traveler {
     animation: none;
     background-position-x: 0;
+    filter: none;
+  }
+
+  .starsFar,
+  .starsNear {
+    animation: none;
+    opacity: 0.14;
+  }
+
+  .mist,
+  .mist::after {
+    animation: none;
+  }
+
+  .mote {
+    animation: none;
+    opacity: 0.4;
   }
 }

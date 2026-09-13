@@ -10,6 +10,7 @@
  * in z-order. Hidden entirely under prefers-reduced-motion's walker
  * (stands still on frame 0) and below 1024px.
  */
+import type { CSSProperties } from "react";
 import travelerSheet from "../assets/traveler-sheet.png";
 import styles from "./StageDressing.module.css";
 
@@ -24,6 +25,35 @@ const MOUNTAINS_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 
 
 const mountainsUrl = `url("data:image/svg+xml,${encodeURIComponent(MOUNTAINS_SVG)}")`;
 
+/* Issue #93: firefly motes — deterministic positions/timings so SSR
+   tests stay stable and reloads don't reshuffle the scene. Spread over
+   the right-hand gutter where the traveler walks. */
+interface Mote {
+  x: string;
+  y: string;
+  dur: string;
+  delay: string;
+}
+
+const MOTES: Mote[] = [
+  { x: "8%", y: "18%", dur: "9s", delay: "0s" },
+  { x: "26%", y: "9%", dur: "12s", delay: "-3s" },
+  { x: "44%", y: "24%", dur: "10.5s", delay: "-6s" },
+  { x: "61%", y: "6%", dur: "13s", delay: "-2s" },
+  { x: "75%", y: "30%", dur: "8.5s", delay: "-5.5s" },
+  { x: "90%", y: "14%", dur: "11s", delay: "-8s" },
+  { x: "18%", y: "38%", dur: "14s", delay: "-4s" },
+];
+
+function moteStyle(m: Mote): CSSProperties {
+  return {
+    "--x": m.x,
+    "--y": m.y,
+    "--dur": m.dur,
+    "--delay": m.delay,
+  } as CSSProperties;
+}
+
 export default function StageDressing() {
   return (
     <>
@@ -37,6 +67,15 @@ export default function StageDressing() {
         className={styles.traveler}
         style={{ backgroundImage: `url(${travelerSheet})` }}
       />
+      {/* #93 ambient layers: star parallax, drifting mist, fireflies */}
+      <div aria-hidden="true" className={styles.starsFar} />
+      <div aria-hidden="true" className={styles.starsNear} />
+      <div aria-hidden="true" className={styles.mist} />
+      <div aria-hidden="true" className={styles.motes}>
+        {MOTES.map((m, i) => (
+          <span key={i} className={styles.mote} style={moteStyle(m)} />
+        ))}
+      </div>
     </>
   );
 }
