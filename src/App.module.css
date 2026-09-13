@@ -27,3 +27,11 @@
     animation: none;
   }
 }
+
+/* Issue #95: while a view transition owns the entrance, drop the #84
+   remount dip so the two effects don't stack. The vt-forward / vt-back
+   class sits on <html> (set by src/app/viewTransition.ts). */
+:global(html.vt-forward) .scene,
+:global(html.vt-back) .scene {
+  animation: none;
+}

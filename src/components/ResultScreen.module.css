@@ -7,3 +7,62 @@
 .actionButton {
   flex: 1;
 }
+
+/* Issue #96: score celebration.
+   - rim tiers recolour the result numeral (gold / silver / parchment —
+     all existing palette tokens, no new hardcoded colours)
+   - NEW RECORD badge lands once with a rotateX "stamp" (steps-like:
+     two quick keyframe stops), only rendered when a previous record
+     was actually beaten. */
+.rim-gold {
+  color: var(--color-accent-gold);
+  text-shadow: 0 0 18px rgba(232, 197, 107, 0.35);
+}
+
+.rim-silver {
+  color: var(--color-muted);
+  text-shadow: 0 0 14px rgba(154, 167, 191, 0.28);
+}
+
+.rim-parchment {
+  color: var(--color-text-parchment);
+  text-shadow: none;
+}
+
+.newRecordBadge {
+  display: inline-block;
+  margin: 0.25rem auto 0.5rem;
+  padding: 0.3rem 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  font-size: 0.9rem;
+  color: var(--color-bg-scene);
+  background: var(--color-accent-gold);
+  border-radius: var(--rounded-sm);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 0%;
+  animation: stamp-in 260ms steps(2, jump-none) both;
+}
+
+@keyframes stamp-in {
+  from {
+    transform: perspective(400px) rotateX(70deg) scale(1.15);
+    opacity: 0;
+  }
+  60% {
+    transform: perspective(400px) rotateX(-8deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: perspective(400px) rotateX(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* reduced motion: no stamp, badge simply appears (instant) */
+@media (prefers-reduced-motion: reduce) {
+  .newRecordBadge {
+    animation: none;
+  }
+}
