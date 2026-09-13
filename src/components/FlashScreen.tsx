@@ -49,7 +49,9 @@ export default function FlashScreen({
     if (!flipped) markCurrentLearned();
     setFlipped((f) => !f);
     setFlipping(true);
-    window.setTimeout(() => setFlipping(false), 180);
+    // Issue #94: matches the paperFlip animation (320ms) so the rim glow
+    // persists for the full sweep.
+    window.setTimeout(() => setFlipping(false), 320);
   };
 
   useEffect(() => {
