@@ -218,6 +218,8 @@ button {
   padding: 12px;
   background: var(--color-surface-raised);
   color: var(--color-text-parchment);
+  /* Issue #94: anchor for the gold-rim ::before sweep */
+  position: relative;
 }
 
 button:disabled {
@@ -265,6 +267,54 @@ button.ghost:hover:not(:disabled),
 button.ghost:focus-visible {
   color: var(--color-accent-gold);
   box-shadow: 0 0 12px rgba(232, 197, 107, 0.25);
+}
+
+/* Issue #94: micro-interactions — light lands on the controls.
+   hover/focus: a gold rim runs in from the top edge and settles as a
+   full ring (inset box-shadow + a top-down linear gradient; no
+   border-image, no mask). Pressed: the button sinks 1px and the
+   shadows shrink. Tap areas and the :focus-visible ring (#10) are
+   untouched. Disabled buttons get nothing. */
+button {
+  transition:
+    box-shadow 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+button:not(.menu-item)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(232, 197, 107, 0.18),
+    rgba(232, 197, 107, 0) 55%
+  );
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 250ms ease;
+  pointer-events: none;
+}
+
+button:not(.menu-item):hover:not(:disabled)::before,
+button:not(.menu-item):focus-visible::before {
+  clip-path: inset(0 0 0 0);
+}
+
+/* gold rim settles as a full inset ring once the sweep lands
+   (.menu-item keeps its own #42 hover glow language) */
+button:not(.menu-item):hover:not(:disabled),
+button:not(.menu-item):focus-visible {
+  box-shadow:
+    inset 0 0 0 1px var(--color-border-gold-dim),
+    0 0 14px rgba(232, 197, 107, 0.18);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 0 0 1px var(--color-border-gold-dim);
 }
 
 h1,
@@ -861,6 +911,16 @@ label {
   }
 
   .menu-item::before {
+    transform: none;
+  }
+
+  /* Issue #94: no rim sweep, no press sink, no flip/flash keyframes */
+  button,
+  button:not(.menu-item)::before {
+    transition: none;
+  }
+
+  button:active:not(:disabled) {
     transform: none;
   }
 }

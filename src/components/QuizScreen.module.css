@@ -21,6 +21,22 @@
   box-shadow:
     inset 0 0 0 1px var(--color-success),
     0 0 12px rgba(232, 197, 107, 0.25);
+  /* Issue #94: one-shot gold flash when the answer lands */
+  animation: goldFlash 450ms ease-out;
+}
+
+@keyframes goldFlash {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px var(--color-success),
+      inset 0 0 24px rgba(232, 197, 107, 0.55),
+      0 0 28px rgba(232, 197, 107, 0.45);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px var(--color-success),
+      0 0 12px rgba(232, 197, 107, 0.25);
+  }
 }
 
 :global(.choice-grid) button.choiceWrong {
@@ -37,4 +53,12 @@ button.choiceWrong :global(.choice-marker) {
 
 .nextButton {
   width: 100%;
+}
+
+/* Issue #94: reduced motion — the success ring stays (it is static
+   state, not motion), but the one-shot flash is dropped. */
+@media (prefers-reduced-motion: reduce) {
+  :global(.choice-grid) button.choiceCorrect {
+    animation: none;
+  }
 }

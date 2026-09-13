@@ -154,6 +154,18 @@ describe("FlashScreen", () => {
     expect(screen.getByText(word0.meaning)).toBeTruthy();
   });
 
+  // Issue #94: the paper-shadow flip is driven by the data-flipping
+  // attribute; verify the state wiring (CSS itself is not testable here).
+  it("sets data-flipping during the flip and clears it after the sweep", async () => {
+    renderFlashScreen(makeState(deck));
+    const card = screen.getByRole("button", { name: /カードをめくる/ });
+    expect(card.getAttribute("data-flipping")).toBeNull();
+    await userEvent.click(card);
+    expect(card.getAttribute("data-flipping")).toBe("true");
+    await new Promise((r) => setTimeout(r, 400));
+    expect(card.getAttribute("data-flipping")).toBeNull();
+  });
+
   it('shows "次の語" button when not on the last word', () => {
     renderFlashScreen(makeState(deck));
     expect(screen.getByRole("button", { name: "次の語" })).toBeTruthy();
