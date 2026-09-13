@@ -67,6 +67,9 @@ export default function StageDressing() {
         className={styles.traveler}
         style={{ backgroundImage: `url(${travelerSheet})` }}
       />
+      {/* #97: time-of-day tone — one fixed veil gradient whose colour
+          and alpha follow the --sky-* custom properties */}
+      <div aria-hidden="true" className={styles.skyVeil} />
       {/* #93 ambient layers: star parallax, drifting mist, fireflies */}
       <div aria-hidden="true" className={styles.starsFar} />
       <div aria-hidden="true" className={styles.starsNear} />

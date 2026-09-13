@@ -22,6 +22,7 @@ import {
   directionFor,
   runScreenTransition,
 } from "./app/viewTransition";
+import { createSkyTintController } from "./app/skyTint";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -50,6 +51,14 @@ export default function App() {
     H: () => dispatchTransitioned({ type: "go", screen: { name: "home" } }),
     "?": () => setShowHelp((v) => !v),
   });
+
+  // Issue #97: time-of-day ambient tint — apply now, then re-lerp every
+  // minute (colour only; harmless under prefers-reduced-motion).
+  useEffect(() => {
+    const sky = createSkyTintController();
+    sky.start();
+    return () => sky.stop();
+  }, []);
 
   useEffect(() => {
     let mounted = true;

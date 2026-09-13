@@ -58,6 +58,13 @@
 
   /* DESIGN.md Elevation & Depth — static panel inner glow (Issue #41) */
   --shadow-panel-glow: inset 0 0 24px rgba(201, 162, 39, 0.06);
+
+  /* Issue #97: time-of-day sky tint (tokens.json ambient / ADR design).
+     Overridden at runtime by src/app/skyTint.ts every minute. Night
+     (19-5) is the current look: identity transform. */
+  --sky-hue-shift: 0deg;
+  --sky-sat: 1;
+  --sky-bright: 1;
 }
 
 * {
@@ -97,6 +104,15 @@ body {
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Issue #97: the time-of-day tint. skyTint.ts writes
+   --sky-hue-shift/--sky-sat/--sky-bright on <html> once a minute; the
+   decorative scene layers (star fields here, mountains/mist/motes/veil
+   in StageDressing.module.css) filter with them, easing over 60s so
+   the per-minute steps read as a continuous lerp. The body gradient
+   itself is not filtered (it sits behind everything; filtering it
+   would filter the whole app) — the fixed .sky-veil layer carries the
+   tone over the scene instead. */
 
 /* Star/dust field: one 1px dot replicated via box-shadow (CSS only,
    no canvas). Fixed layer below all content; never interactive. */
@@ -138,6 +154,9 @@ body::before {
     74vw 90vh 0 0,
     95vw 82vh 0 0;
   animation: star-drift 180s linear infinite;
+  filter: hue-rotate(var(--sky-hue-shift)) saturate(var(--sky-sat))
+    brightness(var(--sky-bright));
+  transition: filter 60s linear;
 }
 
 /* A few brighter gold motes, sparser */
@@ -162,6 +181,9 @@ body::after {
     67vw 78vh 0 0,
     41vw 91vh 0 0;
   animation: star-drift 240s linear infinite reverse;
+  filter: hue-rotate(var(--sky-hue-shift)) saturate(var(--sky-sat))
+    brightness(var(--sky-bright));
+  transition: filter 60s linear;
 }
 
 @keyframes star-drift {
@@ -903,6 +925,8 @@ label {
   body::before,
   body::after {
     animation: none;
+    /* #97: tint still tracks the clock, just without the 60s fade */
+    transition: none;
   }
 
   .menu-item,
