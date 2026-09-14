@@ -70,9 +70,14 @@ FAIL 例（違反PNGで確認済み）:
 ## 残作業（このIssueを開いたままにする理由）
 
 - [x] 会話画面 NPC 気泡横の2帧「口パタパタ」スプライト（PoC素材で実装）
-- [ ] 生成素材の受け取り → validate-sprite.py 通し → `src/assets/traveler-sheet.png` / `npc-talk-sheet.png` 差し替え
+- [x] traveler 生成素材の受け取り → 差し替え完了（`--columns 8 --pick 0,1,2,3`、
+  ink 266/254/266/254、帧間差 20〜73px で歩行サイクル視認性あり）
+- [ ] npc-talk 生成素材の受け取り（PoC素材のまま。届いたら `--frames 2` で差し替え）
   - 受け取りは `scripts/import-sprite.py` で行う（グリッド崩れのリサイズ→NEAREST、
     alpha二値化、パレット最近隣量子化→同スクリプト内の validate で PASS 時のみ書き込み、
     FAIL 時はバックアップへロールバック。坏素材でデプロイ先が壊れることはない）。
     例: `python3 scripts/import-sprite.py incoming.png src/assets/traveler-sheet.png`
     / `... src/assets/npc-talk-sheet.png --frames 2`
+  - ゆるグリッド素材（生成AIが等幅N列＋余白に小さな絵をfloatさせた出力）は
+    `--columns N --pick i,j,k,l` で列ごと trim → フット基準フィットに変換してから
+    契約サイズ 96x24 に合成する（全シートスクワッシュは画が潰れてFAILになる）。
