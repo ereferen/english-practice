@@ -20,6 +20,14 @@ Usage:
   python3 scripts/import-sprite.py incoming.png src/assets/traveler-sheet.png
   python3 scripts/import-sprite.py incoming.png src/assets/npc-talk-sheet.png --frames 2
 
+  # Loose-grid sheets: image generators often deliver N equal-width columns
+  # with a small sprite floated in big transparent padding. --columns splits
+  # the source into N columns, --pick selects the contract frames, and each
+  # picked frame is alpha-trimmed and NEAREST-fitted (centered) into
+  # width x height instead of a whole-sheet squash (which would lose the art):
+  python3 scripts/import-sprite.py aki-sheet.png src/assets/traveler-sheet.png \
+      --columns 8 --pick 0,1,2,3
+
 Refuses to touch the destination if validation fails, so a bad drop can never
 break the deployed app.
 """
@@ -59,6 +67,10 @@ def main() -> int:
     ap.add_argument("--frames", type=int, default=4)
     ap.add_argument("--width", type=int, default=24, help="frame width px")
     ap.add_argument("--height", type=int, default=24, help="frame height px")
+    ap.add_argument("--columns", type=int, default=0,
+                    help="source is a loose grid of N equal-width columns")
+    ap.add_argument("--pick", default="",
+                    help="comma-separated column indices -> output frames (needs --columns)")
     args = ap.parse_args()
 
     try:
@@ -76,8 +88,42 @@ def main() -> int:
         return 1
 
     img = Image.open(src).convert("RGBA")
+    source_size = img.size
     expect = (args.width * args.frames, args.height)
-    if img.size != expect:
+
+    if args.columns:
+        picks = [int(t) for t in args.pick.split(",") if t.strip() != ""]
+        if len(picks) != args.frames:
+            print(f"FAIL: --pick needs exactly {args.frames} indices (got {len(picks)})")
+            return 1
+        if any(p < 0 or p >= args.columns for p in picks):
+            print(f"FAIL: --pick indices out of range 0..{args.columns - 1}")
+            return 1
+        cw = img.size[0] // args.columns
+        frames = []
+        for p in picks:
+            col = img.crop((p * cw, 0, (p + 1) * cw, img.size[1]))
+            box = col.split()[3].getbbox()
+            if box is None:
+                print(f"FAIL: source column {p} is empty")
+                return 1
+            col = col.crop(box)
+            # fit into width x height preserving aspect (NEAREST), feet on the
+            # ground row, horizontally centered -> walk cycle stays grounded
+            scale = min(args.width / col.size[0], args.height / col.size[1])
+            fw = max(1, round(col.size[0] * scale))
+            fh = max(1, round(col.size[1] * scale))
+            if (fw, fh) != col.size:
+                col = col.resize((fw, fh), Image.Resampling.NEAREST)
+            frame = Image.new("RGBA", (args.width, args.height), (0, 0, 0, 0))
+            frame.paste(col, ((args.width - fw) // 2, args.height - fh))
+            frames.append(frame)
+        img = Image.new("RGBA", expect, (0, 0, 0, 0))
+        for i, f in enumerate(frames):
+            img.paste(f, (i * args.width, 0))
+        print(f"note: loose grid {source_size[0]}x{source_size[1]} -> {expect[0]}x{expect[1]} "
+              f"(picked columns {picks}, trimmed + fitted)")
+    elif img.size != expect:
         print(f"note: resizing {img.size[0]}x{img.size[1]} -> {expect[0]}x{expect[1]} (NEAREST)")
         img = img.resize(expect, Image.Resampling.NEAREST)
 
