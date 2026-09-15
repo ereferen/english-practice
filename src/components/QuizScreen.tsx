@@ -66,47 +66,51 @@ export default function QuizScreen({
     setGenPhase("loading");
     setGenError(null);
     (async () => {
-      const settings = await storage.loadSettings();
-      const providers = providersFromSettings(settings);
-      if (providers.length === 0) {
-        if (!cancelled)
-          setGenError(
-            "LLMが設定されていません。設定画面からAPIエンドポイントとモデルを登録してください。",
-          );
-        if (!cancelled) setGenPhase("idle");
-        return;
-      }
-      // 頻度制御: 同一レッスンの当日生成が上限を超えたら警告
-      const history = await storage.listGeneratedQuizzes(deckId, lessonId);
-      if (!canGenerateToday(history, deckId, lessonId, systemClock.today())) {
-        if (!cancelled)
-          setGenError(
-            "本日の生成回数の上限に達しました。時間をおいてから再試行してください。",
-          );
-        if (!cancelled) setGenPhase("idle");
-        return;
-      }
-      let focusWordIds: string[] | undefined;
-      if (gen === "llm-wrong-focus") {
-        const weak = await storage.loadWeakWords(200);
-        const lessonWordIds = new Set(
-          deck.lessons
-            .find((l) => l.lessonId === lessonId)
-            ?.words.map((w) => w.wordId) ?? [],
-        );
-        focusWordIds = weak
-          .filter((r) => r.deckId === deckId && lessonWordIds.has(r.wordId))
-          .map((r) => r.wordId);
-        if (focusWordIds.length === 0) {
+      // Issue #107: the whole preparation pipeline (settings load, weak-word
+      // query, generation) must be guarded. A throw anywhere below used to
+      // leave genPhase stuck at "loading" → infinite spinner with no way
+      // out but キャンセル.
+      try {
+        const settings = await storage.loadSettings();
+        const providers = providersFromSettings(settings);
+        if (providers.length === 0) {
           if (!cancelled)
             setGenError(
-              "このレッスンに苦手語（誤答2回以上）はまだありません。先に学習・クイズをこなしましょう。",
+              "LLMが設定されていません。設定画面からAPIエンドポイントとモデルを登録してください。",
             );
           if (!cancelled) setGenPhase("idle");
           return;
         }
-      }
-      try {
+        // 頻度制御: 同一レッスンの当日生成が上限を超えたら警告
+        const history = await storage.listGeneratedQuizzes(deckId, lessonId);
+        if (!canGenerateToday(history, deckId, lessonId, systemClock.today())) {
+          if (!cancelled)
+            setGenError(
+              "本日の生成回数の上限に達しました。時間をおいてから再試行してください。",
+            );
+          if (!cancelled) setGenPhase("idle");
+          return;
+        }
+        let focusWordIds: string[] | undefined;
+        if (gen === "llm-wrong-focus") {
+          const weak = await storage.loadWeakWords(200);
+          const lessonWordIds = new Set(
+            deck.lessons
+              .find((l) => l.lessonId === lessonId)
+              ?.words.map((w) => w.wordId) ?? [],
+          );
+          focusWordIds = weak
+            .filter((r) => r.deckId === deckId && lessonWordIds.has(r.wordId))
+            .map((r) => r.wordId);
+          if (focusWordIds.length === 0) {
+            if (!cancelled)
+              setGenError(
+                "このレッスンに苦手語（誤答2回以上）はまだありません。先に学習・クイズをこなしましょう。",
+              );
+            if (!cancelled) setGenPhase("idle");
+            return;
+          }
+        }
         const set = await generateQuizzesWithLlm({
           providers,
           deck,
@@ -167,6 +171,7 @@ export default function QuizScreen({
         deckId,
         lessonId,
         answers,
+        startedAt,
       });
     } else {
       setIndex((i) => i + 1);
@@ -228,13 +233,24 @@ export default function QuizScreen({
         <div className="card">
           <h3>生成に失敗しました</h3>
           <p aria-live="polite">{genError ?? "不明なエラー"}</p>
-          <button
-            onClick={() =>
-              dispatch({ type: "go", screen: { name: "deckHome", deckId } })
-            }
-          >
-            戻る
-          </button>
+          {/* Issue #107: same recovery path as the conversation screen (#73) */}
+          <div className={styles.failureActions}>
+            <button
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+              }
+            >
+              戻る
+            </button>
+            <button
+              className="ghost"
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "settings" } })
+              }
+            >
+              設定を開く
+            </button>
+          </div>
         </div>
       </div>
     );

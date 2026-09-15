@@ -55,6 +55,13 @@ button.choiceWrong :global(.choice-marker) {
   width: 100%;
 }
 
+/* Issue #107: failure card actions (戻る + 設定を開く) */
+.failureActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 /* Issue #94: reduced motion — the success ring stays (it is static
    state, not motion), but the one-shot flash is dropped. */
 @media (prefers-reduced-motion: reduce) {

@@ -42,6 +42,8 @@ export type Screen =
       deckId: string;
       lessonId: string;
       answers: AnswerRecord[];
+      /** Issue #105: wall-clock session start (ISO) from QuizScreen. */
+      startedAt?: string;
     }
   | { name: "progress" }
   | { name: "dashboard" }
@@ -69,6 +71,8 @@ export type Action =
       deckId: string;
       lessonId: string;
       answers: AnswerRecord[];
+      /** Issue #105: ISO timestamp when the quiz session began. */
+      startedAt?: string;
     };
 
 export const initialState: AppState = {
@@ -112,6 +116,7 @@ export function reducer(state: AppState, action: Action): AppState {
           deckId: action.deckId,
           lessonId: action.lessonId,
           answers: action.answers,
+          startedAt: action.startedAt,
         },
       };
     default:

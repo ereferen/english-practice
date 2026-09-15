@@ -35,3 +35,11 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+
+/* Issue #108: caption under stat numerals — defines what the number counts */
+.statCaption {
+  font-size: 0.72rem;
+  opacity: 0.75;
+  margin-top: 0.15rem;
+  letter-spacing: 0.04em;
+}

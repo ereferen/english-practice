@@ -95,4 +95,57 @@ describe("QuizScreen", () => {
     const marked = document.querySelectorAll(".choice-correct");
     expect(marked.length).toBe(1);
   });
+
+  // Issue #107: any throw in the generation-prep pipeline (e.g. the old
+  // unindexed wrongTotal query) used to leave the spinner running forever.
+  it("leaves the loading state with an error when loadWeakWords rejects (#107)", async () => {
+    const deck = makeTestDeck();
+    const storage = makeStorageMock();
+    (storage.loadSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      llmApiEndpoint: "http://localhost:11434/v1",
+      llmModel: "test",
+      llmApiKey: "",
+      llmFallbackApiEndpoint: "",
+    });
+    storage.loadWeakWords = vi.fn(async () => {
+      throw new Error("SchemaError: KeyPath wrongTotal is not indexed");
+    });
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        gen="llm-wrong-focus"
+      />,
+    );
+    expect(await screen.findByText("生成に失敗しました")).toBeTruthy();
+    expect(screen.getByText(/wrongTotal/)).toBeTruthy();
+    // Recovery path: link into Settings (issue #107 expectation 2)
+    expect(screen.getByRole("button", { name: "設定を開く" })).toBeTruthy();
+  });
+
+  it("shows the not-configured error instead of a spinner when LLM is unset (#107)", async () => {
+    const deck = makeTestDeck();
+    const storage = makeStorageMock();
+    (storage.loadSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      llmApiEndpoint: "",
+      llmModel: "",
+      llmApiKey: "",
+      llmFallbackApiEndpoint: "",
+    });
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        gen="llm-wrong-focus"
+      />,
+    );
+    expect(await screen.findByText(/LLMが設定されていません/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "設定を開く" })).toBeTruthy();
+  });
 });

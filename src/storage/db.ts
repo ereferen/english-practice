@@ -49,3 +49,10 @@ db.version(4).stores({
 db.version(5).stores({
   proposals: "id, status, category, createdAt",
 });
+
+// issue #107: review.wrongTotal は index 外のクエリ（loadWeakWords）で
+// SchemaError を投げ、苦手語トレーニングが無限ローディングになっていた。
+// index 追加（既存データの移行は不要、Dexie が onupgradeneeded で自動付与）。
+db.version(6).stores({
+  review: "[deckId+wordId], deckId, dueAt, level, wrongTotal",
+});
