@@ -157,6 +157,7 @@ export default function App() {
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
             answers={state.screen.answers}
+            startedAt={state.screen.startedAt}
           />
         );
       case "progress":

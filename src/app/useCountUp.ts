@@ -48,8 +48,16 @@ export function useCountUp(target: number, durationMs = 600): number {
       }
     };
     frameRef.current = window.requestAnimationFrame(step);
+    // Issue #105: safety settle. rAF stops firing on hidden/background
+    // tabs (and headless automation), which used to freeze the display at
+    // a mid-animation value (6/10 rendered as "9%"). A wall-clock timer
+    // guarantees the final value lands even when no frames arrive.
+    const settle = window.setTimeout(() => {
+      if (!cancelled) setValue(target);
+    }, durationMs + 120);
     return () => {
       cancelled = true;
+      window.clearTimeout(settle);
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
         frameRef.current = null;

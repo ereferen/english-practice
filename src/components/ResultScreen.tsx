@@ -19,6 +19,8 @@ interface Props {
   deckId: string;
   lessonId: string;
   answers: AnswerRecord[];
+  /** Issue #105: ISO timestamp of quiz start (wall-clock session time). */
+  startedAt?: string;
   /** Issue #96: injectable for tests; defaults to the shared store. */
   progress?: LocalProgressStore;
 }
@@ -38,6 +40,7 @@ export default function ResultScreen({
   deckId,
   lessonId,
   answers,
+  startedAt,
   progress = localProgress,
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
@@ -131,9 +134,18 @@ export default function ResultScreen({
     );
   }
 
-  const elapsedSec = Math.round(
-    answers.reduce((sum, a) => sum + a.latencyMs, 0) / 1000,
-  );
+  // Issue #105: real wall-clock session time. The old sum of per-answer
+  // latencies only counted thinking time between options (an 18-question
+  // session shown as "4秒"), ignoring prompt reading and navigation.
+  const elapsedSec = (() => {
+    if (startedAt) {
+      const start = Date.parse(startedAt);
+      if (!Number.isNaN(start)) {
+        return Math.max(0, Math.round((Date.now() - start) / 1000));
+      }
+    }
+    return Math.round(answers.reduce((sum, a) => sum + a.latencyMs, 0) / 1000);
+  })();
   const minutes = Math.floor(elapsedSec / 60);
   const seconds = elapsedSec % 60;
   const sessionTime = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;

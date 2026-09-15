@@ -4,6 +4,7 @@ import type { StorageProvider, ReviewState } from "../storage/types";
 import { allWords } from "../content/loader";
 import { systemClock } from "../domain/srs";
 import { computeProgress } from "../domain/progress";
+import { localProgress } from "../storage/localProgress";
 import styles from "./DeckHome.module.css";
 
 interface Props {
@@ -61,9 +62,17 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
     todayAnswered,
     goal,
   );
+  // Issue #106: 学習率は Dexie の review.level>0 と、localStorage に積まれる
+  // フラッシュ学習済み語（markLearned）の和集合で数える。以前は review 側
+  // だけを見ていたため、SRS 保存が失敗/未完了だとリロード後に 0% へ逆戻りし、
+  // localStorage 側のホーム/ダッシュボード数値と食い違っていた。
+  const flashLearned = localProgress
+    .load()
+    .learnedWords.filter((w) => w.deckId === deckId).length;
+  const learnedWords = Math.max(summary.learnedWords, flashLearned);
   const completion =
     summary.totalWords > 0
-      ? Math.round((summary.learnedWords / summary.totalWords) * 100)
+      ? Math.round((learnedWords / summary.totalWords) * 100)
       : 0;
 
   return (

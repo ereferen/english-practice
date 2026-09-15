@@ -130,11 +130,22 @@ export default function Home({ state, dispatch, storage }: Props) {
           >
             <div className="badge">今日の復習</div>
             <div className={styles.statValue}>{due} 語</div>
+            {/* Issue #108: name the number — SRS due cards vs. today's answers */}
+            <div
+              className={styles.statCaption}
+              title="SRSで復習期限が来ている語の数"
+            >
+              復習期限中の語
+            </div>
           </button>
           <div>
             <div className="badge">目標達成率</div>
             <div className={styles.statValue}>
               {Math.round(dailyGoalRate(summary) * 100)}%
+            </div>
+            {/* Issue #108: show the numerator/denominator so 100% has a meaning */}
+            <div className={styles.statCaption}>
+              今日 {summary.todayAnswered} / 目標 {summary.dailyGoalWords} 回答
             </div>
           </div>
           <div>

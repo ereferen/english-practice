@@ -67,4 +67,28 @@ describe("useCountUp", () => {
     unmount();
     expect(cancel).toHaveBeenCalledTimes(1);
   });
+
+  // Issue #105: rAF never fires on hidden/background tabs. Without the
+  // wall-clock settle the result screen froze at a mid-animation value
+  // (6/10 displayed as "9%"), contradicting the stored score.
+  it("settles on the target even when no animation frames ever arrive", async () => {
+    vi.useFakeTimers();
+    try {
+      mockReducedMotion(false);
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 99);
+      vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+      const clearSpy = vi.spyOn(window, "clearTimeout");
+      const { result, unmount } = renderHook(() => useCountUp(60, 600));
+      expect(result.current).toBe(0);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800); // duration + 120ms margin
+      });
+      expect(result.current).toBe(60);
+      // unmount clears the settle timer (no pending state updates)
+      unmount();
+      expect(clearSpy).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
