@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  friendlyLlmError,
   providersFromSettings,
   requestLlmChat,
   testLlmConnection,
@@ -203,5 +204,31 @@ describe("testLlmConnection", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toContain("refused");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("friendlyLlmError (issue #111)", () => {
+  it("Failed to fetch は行動に紐づく文言へマッピング", () => {
+    const out = friendlyLlmError("Failed to fetch");
+    expect(out).not.toContain("Failed to fetch");
+    expect(out).toContain("CORS");
+    expect(out).toContain("URL");
+  });
+
+  it("timeout はタイムアウト案内へ", () => {
+    expect(friendlyLlmError("timeout")).toContain("タイムアウト");
+  });
+
+  it("HTTPステータス別メッセージ", () => {
+    expect(friendlyLlmError("LLM API error (401): x")).toContain("APIキー");
+    expect(friendlyLlmError("LLM API error (404): x")).toContain("/v1");
+    expect(friendlyLlmError("LLM API error (429): x")).toContain("レート制限");
+    expect(friendlyLlmError("LLM API error (503): x")).toContain(
+      "LLMサーバー側",
+    );
+  });
+
+  it("未知のエラーはそのまま返す", () => {
+    expect(friendlyLlmError("some odd failure")).toBe("some odd failure");
   });
 });

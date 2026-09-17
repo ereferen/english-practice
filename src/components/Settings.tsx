@@ -7,6 +7,7 @@ import type {
 import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   diagnoseFetchFailure,
+  friendlyLlmError,
   providersFromSettings,
   testLlmConnection,
 } from "../domain/llm";
@@ -94,61 +95,66 @@ export default function Settings({ dispatch, storage }: Props) {
     return null;
   };
 
-  const friendlyTestError = (raw: string): string => {
-    if (raw === "Failed to fetch" || raw === "timeout") {
-      return `${raw === "timeout" ? "タイムアウト（15秒応答なし）" : "接続できませんでした（URL誤り・CORS・ネット切れのいずれか）"}`;
-    }
-    return raw;
-  };
+  // Issue #110: the test result used to go through the shared auto-clearing
+  // `message` (8s), which erased itself while a slow test was still running —
+  // the user saw "テスト中..." silently revert. Results now live in a
+  // per-provider, never-auto-cleared status region inside the provider card.
+  const [testResult, setTestResult] = useState<
+    Record<"primary" | "fallback", string | null>
+  >({ primary: null, fallback: null });
 
   const handleTest = async (which: "primary" | "fallback") => {
     const validationError = validateProvider(which);
     if (validationError) {
-      setMessage(
-        `接続テスト失敗（${which === "primary" ? "プライマリ" : "フォールバック"}）: ${validationError}`,
-      );
+      setTestResult((prev) => ({
+        ...prev,
+        [which]: `❌ ${validationError}`,
+      }));
       return;
     }
     const chain = providersFromSettings(settings);
     const provider = which === "primary" ? chain[0] : chain[1];
     if (!provider) {
-      setMessage("接続テスト失敗: エンドポイントが未設定です");
+      setTestResult((prev) => ({
+        ...prev,
+        [which]: "❌ エンドポイントが未設定です",
+      }));
       return;
     }
     setTesting(which);
-    setMessage(null);
+    setTestResult((prev) => ({ ...prev, [which]: null }));
     const result = await testLlmConnection(provider);
-    if (!result.ok) {
-      // Issue #80: separate CORS-blocked from unreachable so the user knows
-      // whether they need a relay/proxy or a URL fix.
-      const raw = result.error ?? "";
-      if (raw.includes("Failed to fetch")) {
-        let origin = "";
-        try {
-          origin = new URL(provider.apiEndpoint).origin;
-        } catch {
-          origin = "";
-        }
-        if (origin) {
-          const diag = await diagnoseFetchFailure(origin);
-          if (diag === "cors-blocked") {
-            result.error =
-              "CORS拒否: サーバーには到達しましたが、このエンドポイントはブラウザ直接接続（fetch）を許可していません。同一オリジンのリレー/リバースプロキシ経由か、CORS対応プロバイダ（OpenRouter等）を使ってください";
-          }
+    if (!result.ok && (result.error ?? "").includes("Failed to fetch")) {
+      let origin = "";
+      try {
+        origin = new URL(provider.apiEndpoint).origin;
+      } catch {
+        origin = "";
+      }
+      if (origin) {
+        const diag = await diagnoseFetchFailure(origin);
+        if (diag === "cors-blocked") {
+          result.error =
+            "CORS拒否: サーバーには到達しましたが、このエンドポイントはブラウザ直接接続（fetch）を許可していません。同一オリジンのリレー/リバースプロキシ経由か、CORS対応プロバイダ（OpenRouter等）を使ってください";
+        } else {
+          result.error =
+            "エンドポイントに到達できません（URLミス or サーバーダウン）。http://192.168.x.x:PORT/v1 の形式・ポート開放を確認してください";
         }
       }
     }
     setTesting(null);
+    const secs = (result.latencyMs / 1000).toFixed(1);
     if (result.ok) {
-      setMessage(
-        `接続OK（${provider.label} / ${provider.model}）: ${result.latencyMs}ms`,
-      );
+      setTestResult((prev) => ({
+        ...prev,
+        [which]: `✅ 接続OK（model: ${provider.model}、往復 ${secs}s）`,
+      }));
     } else {
-      setMessage(
-        `接続テスト失敗（${provider.label}）: ${friendlyTestError(result.error ?? "不明なエラー")}（${result.latencyMs}ms）`,
-      );
+      setTestResult((prev) => ({
+        ...prev,
+        [which]: `❌ 接続テスト失敗: ${friendlyLlmError(result.error ?? "不明なエラー")}（${secs}s）`,
+      }));
     }
-    setTimeout(() => setMessage(null), 8000);
   };
 
   return (
@@ -298,6 +304,19 @@ export default function Settings({ dispatch, storage }: Props) {
           >
             {testing === "primary" ? "テスト中..." : "接続テスト（プライマリ）"}
           </button>
+          {/* Issue #110: persistent, never auto-cleared test result */}
+          {testResult.primary && (
+            <p
+              className={`${styles.testStatus} ${
+                testResult.primary.startsWith("✅")
+                  ? styles.testStatusOk
+                  : styles.testStatusFail
+              }`}
+              role="status"
+            >
+              {testResult.primary}
+            </p>
+          )}
         </div>
 
         <div className="card">
@@ -347,6 +366,19 @@ export default function Settings({ dispatch, storage }: Props) {
               ? "テスト中..."
               : "接続テスト（フォールバック）"}
           </button>
+          {/* Issue #110: persistent, never auto-cleared test result */}
+          {testResult.fallback && (
+            <p
+              className={`${styles.testStatus} ${
+                testResult.fallback.startsWith("✅")
+                  ? styles.testStatusOk
+                  : styles.testStatusFail
+              }`}
+              role="status"
+            >
+              {testResult.fallback}
+            </p>
+          )}
           <p className={styles.hintFooter}>
             OpenAI互換APIに対応。別PCのローカルLLM（Ollama / vLLM / llama.cpp
             など）を指定できます。

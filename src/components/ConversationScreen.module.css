@@ -96,6 +96,22 @@
   font-weight: 400;
 }
 
+/* Issue #111: error cards read as system warnings, not NPC dialogue —
+   no speaker marker, danger rim, body font. Declared after .bubbleNpc
+   so the same-specificity overrides win by order. */
+:global(.card).bubbleError {
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: normal;
+  border-color: var(--color-danger);
+  background: var(--color-surface-raised);
+  color: var(--color-danger);
+}
+
+:global(.card).bubbleError::before {
+  content: none;
+}
+
 /* Issue #85: while read-aloud, the row gains the talk sprite next to the
    bubble column. chat-bubble-wrap is a block by default; flex only here. */
 .speakingRow {
