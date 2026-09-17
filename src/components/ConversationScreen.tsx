@@ -48,6 +48,9 @@ export default function ConversationScreen({
   const [loading, setLoading] = useState(false);
   const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
   const [configError, setConfigError] = useState<string | null>(null);
+  // Issue #111: banner shown ⇒ sending is pointless; gate the composer on it
+  // so the user goes to Settings *before* wasting a round-trip.
+  const [needsConfig, setNeedsConfig] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   // Issue #73: last failed user text + flag so the error card can offer 再送/設定へ
   const [failedSendText, setFailedSendText] = useState<string | null>(null);
@@ -80,8 +83,11 @@ export default function ConversationScreen({
         setConfigError(
           "⚠ APIエンドポイントが未設定です。設定画面からLLMのエンドポイントを指定してください。",
         );
+        // Issue #111: while this banner is up, sending can only fail.
+        setNeedsConfig(true);
       } else {
         setConfigError(null);
+        setNeedsConfig(false);
       }
       setProviders(chain);
     })();
@@ -106,7 +112,7 @@ export default function ConversationScreen({
   const sendMessage = useCallback(
     async (overrideText?: string) => {
       const text = (overrideText ?? input).trim();
-      if (!text || providers.length === 0) return;
+      if (!text || providers.length === 0 || needsConfig) return;
 
       const userMsg = createUserMessage(text);
       const updated = [...messages, userMsg];
@@ -143,17 +149,19 @@ export default function ConversationScreen({
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") return;
         const rawMsg = e instanceof Error ? e.message : String(e);
-        // Issue #73: "Failed to fetch" is developer-speak; tell the user
-        // what it plausibly means and what to do next.
+        // Issue #111: requestLlmChat failures are already mapped to
+        // action-linked wording in domain/llm (friendlyLlmError); keep the
+        // local Failed-to-fetch mapping for errors thrown elsewhere.
         const errMsg = rawMsg.includes("Failed to fetch")
-          ? `${rawMsg}\nエンドポイントに到達できませんでした。URL・CORS設定・ネットワークを確認するか、[設定を確認] からやり直してください。`
+          ? "プライマリ: 応答がありません。ブラウザからエンドポイントに届きません（CORS設定 or URLミス most likely）。[設定を確認] からURL・CORSを点検してください。"
           : rawMsg;
         setStreamingContent("");
         // Issue #73: remember the failed text so 再送 works without retyping.
         setFailedSendText(text);
+        // Issue #111: kind="error" renders the card without read-aloud.
         setMessages((prev) => [
           ...prev,
-          createAssistantMessage(`⚠ エラー: ${errMsg}`),
+          createAssistantMessage(errMsg, "error"),
         ]);
       } finally {
         setLoading(false);
@@ -161,7 +169,7 @@ export default function ConversationScreen({
         inputRef.current?.focus();
       }
     },
-    [input, providers, messages],
+    [input, providers, messages, needsConfig],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -298,6 +306,7 @@ export default function ConversationScreen({
         ...prev,
         createAssistantMessage(
           "⚠ このブラウザは音声未対応です（TTSボイスがありません）",
+          "error",
         ),
       ]);
       return;
@@ -373,11 +382,12 @@ export default function ConversationScreen({
                   msg.role === "assistant" ? styles.bubbleNpc : ""
                 } ${msg.role === "user" ? styles.bubbleUser : ""} ${
                   speakingId === msg.id ? styles.speaking : ""
-                }`}
+                } ${msg.kind === "error" ? styles.bubbleError : ""}`}
               >
                 {msg.content}
               </div>
-              {msg.role === "assistant" && (
+              {/* Issue #111: error cards are not conversation — no TTS. */}
+              {msg.role === "assistant" && msg.kind !== "error" && (
                 <button
                   className={`ghost ${styles.speakButton}`}
                   onClick={() => handleSpeak(msg.id, msg.content)}
@@ -532,8 +542,12 @@ export default function ConversationScreen({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="英語でメッセージを入力..."
-          disabled={loading || providers.length === 0}
+          placeholder={
+            needsConfig
+              ? "⚠ 先に設定（APIエンドポイント）が必要です"
+              : "英語でメッセージを入力..."
+          }
+          disabled={loading || providers.length === 0 || needsConfig}
           className={styles.chatInput}
         />
         {loading ? (
@@ -544,7 +558,12 @@ export default function ConversationScreen({
           <button
             className={`primary ${styles.sendButton}`}
             onClick={() => sendMessage()}
-            disabled={!input.trim() || providers.length === 0}
+            disabled={!input.trim() || providers.length === 0 || needsConfig}
+            title={
+              needsConfig
+                ? "設定画面でAPIエンドポイントを指定してください"
+                : undefined
+            }
           >
             送信
           </button>

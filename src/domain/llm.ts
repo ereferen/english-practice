@@ -153,6 +153,42 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/**
+ * Issue #111: map raw browser/API error strings to action-linked Japanese
+ * wording so users see "what to fix" instead of "Failed to fetch".
+ */
+export function friendlyLlmError(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "不明なエラー";
+  if (s === "Failed to fetch" || s.includes("Failed to fetch")) {
+    return "ブラウザからエンドポイントに届きません（CORS設定 or URLミス most likely）。URLの末尾が /v1 になっているか、サーバー側でブラウザ接続（CORS）が許可されているかを確認してください";
+  }
+  if (s === "timeout" || s.includes("timeout")) {
+    return "タイムアウト（応答がありません）。サーバーが高負荷かモデルのロード中です";
+  }
+  const status = s.match(/LLM API error \((\d+)\)/);
+  if (status) {
+    const code = Number(status[1]);
+    if (code === 401 || code === 403) {
+      return `${code} Unauthorized — APIキーの設定を確認してください`;
+    }
+    if (code === 404) {
+      return "404 Not Found — エンドポイントのパスが違います（例: http://host:port/v1 のように /v1 まで必要）";
+    }
+    if (code === 429) {
+      return "429 Too Many Requests — レート制限に達しました。少し待って再試行してください";
+    }
+    if (code >= 500) {
+      return `サーバーエラー（${code}）— LLMサーバー側で問題が発生しています`;
+    }
+    return `APIエラー（${code}）`;
+  }
+  if (s.includes("unexpected response format")) {
+    return "応答形式が OpenAI 互換ではありません — /v1/chat/completions に対応したサーバーを指定してください";
+  }
+  return s;
+}
+
 // Issue #80: a bare "Failed to fetch" conflates two very different problems:
 // the server replied but withheld CORS headers (browser direct-connect is
 // impossible → needs a same-origin relay), vs. the host is unreachable at
@@ -339,7 +375,9 @@ export async function requestLlmChat(
       };
     } catch (e) {
       if (e instanceof LlmUserAbortError) throw e;
-      failures.push(`${provider.label}: ${errorMessage(e)}`);
+      // Issue #111: the combined error text lands verbatim in the chat error
+      // card, so map it here once for every caller.
+      failures.push(`${provider.label}: ${friendlyLlmError(errorMessage(e))}`);
     }
   }
 

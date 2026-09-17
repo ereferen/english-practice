@@ -3,6 +3,8 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
+  /** Issue #111: error cards render without the read-aloud button. */
+  kind?: "error";
 }
 
 export interface ConversationConfig {
@@ -42,12 +44,16 @@ export function createUserMessage(content: string): ChatMessage {
   };
 }
 
-export function createAssistantMessage(content: string): ChatMessage {
+export function createAssistantMessage(
+  content: string,
+  kind?: "error",
+): ChatMessage {
   return {
     id: createMessageId(),
     role: "assistant",
     content,
     createdAt: new Date().toISOString(),
+    ...(kind ? { kind } : {}),
   };
 }
 
