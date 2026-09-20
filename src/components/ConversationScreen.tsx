@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
+import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   type ChatMessage,
   SYSTEM_PROMPT,
@@ -76,14 +77,21 @@ export default function ConversationScreen({
       const settings = await storage.loadSettings();
       if (!mounted) return;
       const chain = providersFromSettings(settings);
-      if (
-        chain.length === 0 ||
-        chain[0].apiEndpoint === "http://localhost:11434/v1"
-      ) {
+      if (chain.length === 0) {
         setConfigError(
           "⚠ APIエンドポイントが未設定です。設定画面からLLMのエンドポイントを指定してください。",
         );
         // Issue #111: while this banner is up, sending can only fail.
+        setNeedsConfig(true);
+      } else if (
+        // Issue #113: the saved value equals the placeholder default
+        // (localhost:11434) — the user "saved" without actually configuring.
+        // Say so honestly instead of the generic 未設定 message.
+        chain[0].apiEndpoint.trim() === DEFAULT_SETTINGS.llmApiEndpoint.trim()
+      ) {
+        setConfigError(
+          "⚠ 保存されているエンドポイントが初期値（http://localhost:11434/v1）のままです。これはこのPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: http://192.168.x.x:11434/v1 や OpenRouter 等）を入力してください。",
+        );
         setNeedsConfig(true);
       } else {
         setConfigError(null);

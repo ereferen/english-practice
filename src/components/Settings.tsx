@@ -267,6 +267,13 @@ export default function Settings({ dispatch, storage }: Props) {
 
         <div className="card">
           <h3>英会話 AI 設定</h3>
+          {/* Issue #115: inputs auto-save on every change (to IndexedDB, not
+              localStorage) — make that visible so users stop hunting for a
+              保存 button and stop trusting localStorage keys. */}
+          <p className={styles.hint}>
+            入力は自動保存されます（この端末のブラウザ内DBに保存。保存済み:{" "}
+            {settings.llmApiEndpoint.trim() ? "✓ エンドポイント記録" : "—"}）
+          </p>
           <label>
             API エンドポイント
             <input
@@ -277,6 +284,20 @@ export default function Settings({ dispatch, storage }: Props) {
               className={styles.fieldSpaced}
             />
           </label>
+          {/* Issue #113: warn at save-time when the value is still the
+              localhost placeholder default — silently unusable remotely. */}
+          {settings.llmApiEndpoint.trim() ===
+            DEFAULT_SETTINGS.llmApiEndpoint.trim() && (
+            <p
+              className={`${styles.testStatus} ${styles.testStatusFail}`}
+              role="status"
+            >
+              ⚠ 初期値（localhost）のままです。このPC上のローカルサーバを指す
+              プレースホルダのため、このアプリを開いている端末からは接続できません。
+              LAN IP（例:
+              http://192.168.68.52:11434/v1）や外部エンドポイントを指定してください。
+            </p>
+          )}
           <label>
             モデル名
             <input

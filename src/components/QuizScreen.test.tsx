@@ -148,4 +148,34 @@ describe("QuizScreen", () => {
     expect(await screen.findByText(/LLMが設定されていません/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "設定を開く" })).toBeTruthy();
   });
+
+  // Issue #116: zero weak words is a normal empty state — neutral heading,
+  // no "生成に失敗しました" face, no 設定を開く CTA.
+  it("shows a neutral empty card (not a failure) when no weak words exist (#116)", async () => {
+    const deck = makeTestDeck();
+    const storage = makeStorageMock();
+    (storage.loadSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      llmApiEndpoint: "https://api.example.com/v1",
+      llmModel: "test",
+      llmApiKey: "",
+      llmFallbackApiEndpoint: "",
+    });
+    // loadWeakWords defaults to [] → no weak words in this lesson
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        gen="llm-wrong-focus"
+      />,
+    );
+    expect(await screen.findByText("まだ苦手語はありません")).toBeTruthy();
+    expect(
+      screen.getByText(/苦手語（誤答2回以上）はまだありません/),
+    ).toBeTruthy();
+    expect(screen.queryByText("生成に失敗しました")).toBeNull();
+    expect(screen.queryByRole("button", { name: "設定を開く" })).toBeNull();
+  });
 });
