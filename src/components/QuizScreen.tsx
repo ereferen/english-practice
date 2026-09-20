@@ -46,6 +46,9 @@ export default function QuizScreen({
     gen ? "loading" : "ready",
   );
   const [genError, setGenError] = useState<string | null>(null);
+  // Issue #116: empty-condition (no weak words yet) is a normal state, not a
+  // generation failure — it gets a neutral card without the 設定を開く CTA.
+  const [genNeutral, setGenNeutral] = useState(false);
   const [genQuizzes, setGenQuizzes] = useState<
     ReturnType<typeof buildSessionQuizItems>
   >([]);
@@ -65,6 +68,7 @@ export default function QuizScreen({
     let cancelled = false;
     setGenPhase("loading");
     setGenError(null);
+    setGenNeutral(false);
     (async () => {
       // Issue #107: the whole preparation pipeline (settings load, weak-word
       // query, generation) must be guarded. A throw anywhere below used to
@@ -107,6 +111,8 @@ export default function QuizScreen({
               setGenError(
                 "このレッスンに苦手語（誤答2回以上）はまだありません。先に学習・クイズをこなしましょう。",
               );
+            // Issue #116: normal empty state, not a failure.
+            if (!cancelled) setGenNeutral(true);
             if (!cancelled) setGenPhase("idle");
             return;
           }
@@ -228,6 +234,26 @@ export default function QuizScreen({
   }
 
   if (gen && genPhase === "idle") {
+    if (genNeutral) {
+      // Issue #116: "no weak words yet" is the normal empty state. Neutral
+      // heading, no red error face, no 設定を開く CTA.
+      return (
+        <div className="container">
+          <div className="card">
+            <h3>まだ苦手語はありません</h3>
+            <p aria-live="polite">{genError}</p>
+            <button
+              className="primary"
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+              }
+            >
+              戻る
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="container">
         <div className="card">
