@@ -22,6 +22,7 @@ const SCREEN_DEPTH: Record<string, number> = {
   settings: 1,
   progress: 1,
   dashboard: 1,
+  review: 2,
   deckHome: 2,
   flash: 3,
   quiz: 4,

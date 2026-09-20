@@ -46,6 +46,8 @@ export type Screen =
       startedAt?: string;
     }
   | { name: "progress" }
+  /** Issue #114: 期限切れ語横断の復習セッション（deckId 指定ならそのデッキのみ） */
+  | { name: "review"; deckId?: string }
   | { name: "dashboard" }
   | { name: "settings" }
   | { name: "conversation" };

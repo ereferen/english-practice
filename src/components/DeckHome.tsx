@@ -93,6 +93,19 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
           <span className="badge">{deck.level}</span>
           <span className="badge-gold">学習率 {completion}%</span>
         </div>
+        {/* Issue #114: direct entry into a review session for this deck's
+            due words — previously the only path was per-lesson 学習・クイズ. */}
+        {summary.dueToday > 0 && (
+          <button
+            className="primary"
+            data-testid="deck-review-button"
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "review", deckId } })
+            }
+          >
+            このデッキの復習（{summary.dueToday}語）
+          </button>
+        )}
         {/* Issue #48: DESIGN.md progress-track (amber fill on inset rail) */}
         <div
           className="progress-track"

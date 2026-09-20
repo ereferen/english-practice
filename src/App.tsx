@@ -11,6 +11,7 @@ import FlashScreen from "./components/FlashScreen";
 import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
 import ProgressScreen from "./components/ProgressScreen";
+import ReviewSession from "./components/ReviewSession";
 import Dashboard from "./components/Dashboard";
 import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
@@ -165,6 +166,15 @@ export default function App() {
           <ProgressScreen
             dispatch={dispatchTransitioned}
             localProgress={localProgress}
+          />
+        );
+      case "review":
+        return (
+          <ReviewSession
+            state={state}
+            dispatch={dispatchTransitioned}
+            storage={storage}
+            deckId={state.screen.deckId}
           />
         );
       case "dashboard":
