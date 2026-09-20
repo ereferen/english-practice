@@ -14,7 +14,10 @@ interface Props {
 
 export default function Home({ state, dispatch, storage }: Props) {
   const [due, setDue] = useState(0);
-  const [dueDeckId, setDueDeckId] = useState<string | null>(null);
+  // Issue #114: deck-by breakdown of due reviews ("どのデッキに何語溜まってるか")
+  const [dueBreakdown, setDueBreakdown] = useState<
+    { deckId: string; count: number }[]
+  >([]);
   const [todayAnswered, setTodayAnswered] = useState(0);
   const [goal, setGoal] = useState(10);
   const [streak, setStreak] = useState(0);
@@ -43,15 +46,13 @@ export default function Home({ state, dispatch, storage }: Props) {
       for (const r of reviews) {
         byDeck.set(r.deckId, (byDeck.get(r.deckId) ?? 0) + 1);
       }
-      let topDeck: string | null = null;
-      let topCount = 0;
-      for (const [id, n] of byDeck) {
-        if (n > topCount) {
-          topCount = n;
-          topDeck = id;
-        }
-      }
-      setDueDeckId(topDeck);
+      // Issue #114: keep the per-deck breakdown (sorted desc) so the card can
+      // show which deck holds the most due words.
+      setDueBreakdown(
+        Array.from(byDeck.entries())
+          .map(([deckId, count]) => ({ deckId, count }))
+          .sort((a, b) => b.count - a.count),
+      );
       setTodayAnswered(count);
       setGoal(settings.dailyGoalWords);
       let streakCount = 0;
@@ -86,16 +87,23 @@ export default function Home({ state, dispatch, storage }: Props) {
     goal,
   );
 
-  // Issue #82: the "今日の復習" card is the answer to "what next?" —
-  // clicking it goes straight to the deck with due reviews (or the deck
-  // list when nothing is due).
+  // Issue #82/#114: the "今日の復習" card is the answer to "what next?" —
+  // when reviews are due, clicking it starts the cross-deck review session
+  // directly (previously it only jumped to the top due deck's detail page,
+  // which left aki stuck at the lesson list). With nothing due it goes to
+  // the deck list as before.
   const handleReviewShortcut = () => {
-    if (dueDeckId && state.decks.some((d) => d.deckId === dueDeckId)) {
-      dispatch({ type: "go", screen: { name: "deckHome", deckId: dueDeckId } });
+    if (due > 0) {
+      dispatch({ type: "go", screen: { name: "review" } });
     } else {
       dispatch({ type: "go", screen: { name: "deckList" } });
     }
   };
+  const topDeckTitle = (() => {
+    const top = dueBreakdown[0];
+    if (!top) return null;
+    return state.decks.find((d) => d.deckId === top.deckId)?.title ?? null;
+  })();
 
   return (
     <div className="container">
@@ -124,7 +132,7 @@ export default function Home({ state, dispatch, storage }: Props) {
             onClick={handleReviewShortcut}
             title={
               due > 0
-                ? "復習デッキへジャンプ"
+                ? "期限切れ語だけの復習セッションをすぐ開始"
                 : "本日の復習はありません — デッキ一覧へ"
             }
           >
@@ -137,6 +145,18 @@ export default function Home({ state, dispatch, storage }: Props) {
             >
               復習期限中の語
             </div>
+            {/* Issue #114: breakdown — which deck holds the due words */}
+            {due > 0 && topDeckTitle && (
+              <div
+                className={styles.statCaption}
+                data-testid="review-breakdown"
+              >
+                押すと復習開始 — 最多: {topDeckTitle} {dueBreakdown[0]?.count}語
+                {dueBreakdown.length > 1
+                  ? ` ほか ${dueBreakdown.length - 1} デッキ`
+                  : ""}
+              </div>
+            )}
           </button>
           <div>
             <div className="badge">目標達成率</div>
