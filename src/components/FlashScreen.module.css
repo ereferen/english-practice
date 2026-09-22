@@ -160,6 +160,43 @@
   flex: 2;
 }
 
+/* Issue #124: pressing 「次の語」 without flipping shakes the card. */
+@keyframes cardShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.flipCard[data-shake="true"] {
+  animation: cardShake 420ms ease;
+}
+
+.flipGate {
+  margin-top: 0.75rem;
+  color: var(--color-border-gold);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipCard[data-shake="true"] {
+    animation: none;
+  }
+}
+
 /* Issue #83: inline feedback when TTS has no voices */
 .ttsNotice {
   align-self: center;

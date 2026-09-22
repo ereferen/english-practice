@@ -12,6 +12,7 @@ const SHORTCUTS: { section: string; items: [string, string][] }[] = [
     items: [
       ["Space / Enter", "カードをめくる"],
       ["→ / n", "次の語"],
+      ["←", "前の語に戻る"],
       ["s", "音声再生"],
       ["Esc", "戻る"],
     ],
