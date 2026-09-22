@@ -29,6 +29,11 @@ export default function FlashScreen({
   // Issue #45: brief gold-rim pulse while the card face changes.
   const [flipping, setFlipping] = useState(false);
   const learnedRef = useRef<Set<string>>(new Set());
+  // Issue #124: which words in this lesson session were already revealed,
+  // so navigating 前へ/次へ restores the correct face; also drives the
+  // flip-gate on 「次の語」.
+  const flippedRef = useRef<Set<string>>(new Set());
+  const [shake, setShake] = useState(false);
   // Issue #83: when the environment has no TTS voices, the audio button
   // must say so instead of silently doing nothing.
   const speechAvail = useSpeechSupport();
@@ -47,7 +52,9 @@ export default function FlashScreen({
     // learned immediately. Previously only 「次の語」 recorded it, so
     // pressing 戻る lost all visible progress (学習率 0% complaint).
     if (!flipped) markCurrentLearned();
-    setFlipped((f) => !f);
+    const next = !flipped;
+    if (next && word) flippedRef.current.add(word.wordId);
+    setFlipped(next);
     setFlipping(true);
     // Issue #94: matches the paperFlip animation (320ms) so the rim glow
     // persists for the full sweep.
@@ -58,6 +65,7 @@ export default function FlashScreen({
     setIndex(0);
     setFlipped(false);
     learnedRef.current = new Set();
+    flippedRef.current = new Set();
   }, [deckId, lessonId]);
 
   const lesson = lessonWithDeck?.lesson;
@@ -78,22 +86,56 @@ export default function FlashScreen({
     });
   };
 
+  /** Jump to a word index, restoring the face (front/back) it had earlier
+   *  in this session (issue #124: 前へ/次へ navigation). */
+  const goTo = (nextIndex: number) => {
+    setIndex(nextIndex);
+    const target = words[nextIndex];
+    const wasFlipped = target ? flippedRef.current.has(target.wordId) : false;
+    setFlipped(wasFlipped);
+  };
+
+  // Issue #124: 「次の語」 requires the card to have been flipped at least
+  // once — otherwise users could consume a whole lesson without ever
+  // seeing a meaning. An unflipped card shakes and says why.
+  const requestFlipFirst = () => {
+    setShake(true);
+    window.setTimeout(() => setShake(false), 500);
+  };
+
   const handleNext = () => {
     if (!lesson) return;
+    if (!flipped && !(word && flippedRef.current.has(word.wordId))) {
+      requestFlipFirst();
+      return;
+    }
     markCurrentLearned();
     if (isLast) {
       dispatch({ type: "go", screen: { name: "quiz", deckId, lessonId } });
     } else {
-      setIndex((i) => i + 1);
-      setFlipped(false);
+      goTo(index + 1);
     }
   };
 
-  // Keyboard shortcuts (issue #9): flip, next, audio, abort.
+  const handlePrev = () => {
+    if (index === 0) return;
+    goTo(index - 1);
+  };
+
+  // Issue #124: 「最初からやり直す」 on the last card restarts the pass so
+  // the lesson doubles as a quick morning review.
+  const handleRestart = () => {
+    flippedRef.current = new Set();
+    setIndex(0);
+    setFlipped(false);
+  };
+
+  // Keyboard shortcuts (issue #9, #124: ← goes back).
   useKeyboardShortcuts({
     " ": toggleFlip,
     Enter: toggleFlip,
     ArrowRight: handleNext,
+    ArrowLeft: handlePrev,
     n: handleNext,
     N: handleNext,
     s: () => word && handleSpeak(word.term),
@@ -147,6 +189,7 @@ export default function FlashScreen({
         tabIndex={0}
         aria-label="カードをめくる"
         data-flipping={flipping ? "true" : undefined}
+        data-shake={shake ? "true" : undefined}
         className={`card flash-card ${styles.flipCard}`}
       >
         {!flipped ? (
@@ -182,6 +225,14 @@ export default function FlashScreen({
 
       <div className={`flash-actions ${styles.actions}`}>
         <button
+          className="ghost"
+          onClick={handlePrev}
+          disabled={index === 0}
+          title="前へ (←)"
+        >
+          ← 前へ
+        </button>
+        <button
           className={styles.audioButton}
           onClick={() => handleSpeak(word.term)}
           title={
@@ -197,10 +248,20 @@ export default function FlashScreen({
             このブラウザは音声未対応です（TTSボイスがありません）
           </span>
         )}
+        {isLast && (
+          <button className="ghost" onClick={handleRestart}>
+            最初からやり直す
+          </button>
+        )}
         <button className={`primary ${styles.nextButton}`} onClick={handleNext}>
           {isLast ? "クイズへ" : "次の語"}
         </button>
       </div>
+      {shake && (
+        <p className={styles.flipGate} role="alert">
+          ⚠ 先にカードをめくって意味を確認しましょう（クリック / Space）
+        </p>
+      )}
     </div>
   );
 }

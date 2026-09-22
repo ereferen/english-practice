@@ -171,22 +171,87 @@ describe("FlashScreen", () => {
     expect(screen.getByRole("button", { name: "次の語" })).toBeTruthy();
   });
 
-  it("advances to the next word when 次の語 is clicked", async () => {
+  // Issue #124: advancing requires flipping the card first (gate).
+  async function flipCard(user: ReturnType<typeof userEvent.setup>) {
+    const card = screen.getByRole("button", { name: /カードをめくる/ });
+    await user.click(card);
+  }
+
+  it("advances to the next word when 次の語 is clicked after flipping", async () => {
+    const user = userEvent.setup();
     renderFlashScreen(makeState(deck));
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
     const word1 = deck.lessons[0].words[1];
     expect(screen.getByText(word1.term)).toBeTruthy();
     expect(screen.getByText(/2\/3/)).toBeTruthy();
   });
 
+  it("blocks 「次の語」 on an unflipped card and shakes (issue #124)", async () => {
+    const user = userEvent.setup();
+    renderFlashScreen(makeState(deck));
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    // still on word 1
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+    expect(screen.getByRole("alert")).toBeTruthy();
+    const card = screen.getByRole("button", { name: /カードをめくる/ });
+    expect(card.getAttribute("data-shake")).toBe("true");
+  });
+
+  it("前へ returns to the previous word with its revealed face (issue #124)", async () => {
+    const user = userEvent.setup();
+    renderFlashScreen(makeState(deck));
+    // word0: flip, advance
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    expect(screen.getByText(/2\/3/)).toBeTruthy();
+    // word1 front is unflipped
+    expect(screen.queryByText(deck.lessons[0].words[1].meaning)).toBeNull();
+    // go back → word0 should still show its revealed side
+    await user.click(screen.getByRole("button", { name: /前へ/ }));
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+    expect(screen.getByText(word0.meaning)).toBeTruthy();
+  });
+
+  it("前へ is disabled on the first card (issue #124)", () => {
+    renderFlashScreen(makeState(deck));
+    const prev = screen.getByRole("button", { name: /前へ/ });
+    expect(prev.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("ArrowLeft goes back a word (issue #124)", async () => {
+    const user = userEvent.setup();
+    renderFlashScreen(makeState(deck));
+    await flipCard(user);
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByText(/2\/3/)).toBeTruthy();
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+  });
+
+  it("最初からやり直す restarts the pass on the last card (issue #124)", async () => {
+    const user = userEvent.setup();
+    renderFlashScreen(makeState(deck));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    expect(screen.getByText(/3\/3/)).toBeTruthy();
+    const restart = screen.getByRole("button", { name: "最初からやり直す" });
+    await user.click(restart);
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+    // word0 face is reset to front after restart
+    expect(screen.queryByText(word0.meaning)).toBeNull();
+  });
+
   it("resets flip state when advancing to next word", async () => {
+    const user = userEvent.setup();
     renderFlashScreen(makeState(deck));
     // Flip the card first
-    const card = screen.getByRole("button", { name: /カードをめくる/ });
-    await userEvent.click(card);
+    await flipCard(user);
     expect(screen.getByText(word0.meaning)).toBeTruthy();
     // Advance
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
+    await user.click(screen.getByRole("button", { name: "次の語" }));
     const word1 = deck.lessons[0].words[1];
     // Should show front (term, not meaning)
     expect(screen.getByText(word1.term)).toBeTruthy();
@@ -196,12 +261,13 @@ describe("FlashScreen", () => {
   it('shows "クイズへ" on the last word', async () => {
     const threeWordDeck = makeTestDeck();
     const state = makeState(threeWordDeck);
+    const user = userEvent.setup();
     renderFlashScreen(state);
-    // Advance twice to reach last word
-    const nextBtn = screen.getByRole("button", { name: "次の語" });
-    await userEvent.click(nextBtn); // word 0 → 1
-    // Now last card: index 2
-    await userEvent.click(screen.getByRole("button", { name: "次の語" })); // word 1 → 2
+    // Advance twice to reach last word (flip each time — issue #124 gate)
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // word 0 → 1
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // word 1 → 2
     expect(screen.getByText(/3\/3/)).toBeTruthy();
     // Button text should be クイズへ
     const quizBtn = screen.getByRole("button", { name: "クイズへ" });
@@ -211,12 +277,16 @@ describe("FlashScreen", () => {
   it("dispatches quiz navigation when clicking クイズへ on the last word", async () => {
     const threeWordDeck = makeTestDeck();
     const state = makeState(threeWordDeck);
+    const user = userEvent.setup();
     const { dispatch } = renderFlashScreen(state);
     // Advance to last word
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
-    // Click クイズへ
-    await userEvent.click(screen.getByRole("button", { name: "クイズへ" }));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
+    // Flip the last card too (issue #124 gate applies to クイズへ), then click
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "クイズへ" }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "go",
       screen: { name: "quiz", deckId: "test-deck", lessonId: "lesson-1" },
@@ -225,8 +295,10 @@ describe("FlashScreen", () => {
 
   it("marks the current word as learned when navigating to the next word", async () => {
     const progress = makeMockProgress();
+    const user = userEvent.setup();
     renderFlashScreen(makeState(deck), undefined, progress);
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
     expect(progress.markLearned).toHaveBeenCalledWith({
       deckId: "test-deck",
       wordId: word0.wordId,
@@ -238,13 +310,17 @@ describe("FlashScreen", () => {
     const progress = makeMockProgress();
     const threeWordDeck = makeTestDeck();
     const state = makeState(threeWordDeck);
+    const user = userEvent.setup();
     renderFlashScreen(state, undefined, progress);
-    // Advance to last word (index 2)
-    await userEvent.click(screen.getByRole("button", { name: "次の語" })); // marks word 0
-    await userEvent.click(screen.getByRole("button", { name: "次の語" })); // marks word 1
-    // Now on last word; clicking クイズへ marks word 2
+    // Advance to last word (index 2), flipping each card
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // marks word 0
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // marks word 1
+    // Now on last word; flip it (gate), then クイズへ marks word 2
     const lastWord = threeWordDeck.lessons[0].words[2];
-    await userEvent.click(screen.getByRole("button", { name: "クイズへ" })); // marks word 2
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "クイズへ" })); // marks word 2
     expect(progress.markLearned).toHaveBeenCalledWith({
       deckId: "test-deck",
       wordId: lastWord.wordId,
@@ -255,11 +331,15 @@ describe("FlashScreen", () => {
 
   it("marks every word as learned when advancing through all words", async () => {
     const progress = makeMockProgress();
+    const user = userEvent.setup();
     renderFlashScreen(makeState(deck), undefined, progress);
-    // Advance through 3 words (need to click "next" 3 times — from word0→1, 1→2, 2→quiz)
-    await userEvent.click(screen.getByRole("button", { name: "次の語" })); // word0 learned
-    await userEvent.click(screen.getByRole("button", { name: "次の語" })); // word1 learned
-    await userEvent.click(screen.getByRole("button", { name: "クイズへ" })); // word2 learned
+    // Flip + advance through 3 words (word0→1, 1→2, 2→quiz)
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // word0 learned
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" })); // word1 learned
+    await flipCard(user); // gate applies to クイズへ too
+    await user.click(screen.getByRole("button", { name: "クイズへ" })); // word2 learned
     expect(progress.markLearned).toHaveBeenCalledTimes(3);
     const words = deck.lessons[0].words;
     expect(progress.markLearned).toHaveBeenCalledWith(
@@ -275,9 +355,11 @@ describe("FlashScreen", () => {
 
   it("does not mark a word twice if already marked", async () => {
     const progress = makeMockProgress();
+    const user = userEvent.setup();
     renderFlashScreen(makeState(deck), undefined, progress);
-    // Advance from word0 to word1 — word0 gets marked once
-    await userEvent.click(screen.getByRole("button", { name: "次の語" }));
+    // Flip (marks word0), then advance (word0 already marked — no second call)
+    await flipCard(user);
+    await user.click(screen.getByRole("button", { name: "次の語" }));
     expect(progress.markLearned).toHaveBeenCalledTimes(1);
   });
 
@@ -367,6 +449,8 @@ describe("FlashScreen", () => {
 
   it("window-level ArrowRight advances to the next word", async () => {
     renderFlashScreen(makeState(deck));
+    // flip first (issue #124 gate), then advance
+    await userEvent.keyboard(" ");
     await userEvent.keyboard("{ArrowRight}");
     const word1 = deck.lessons[0].words[1];
     expect(screen.getByText(word1.term)).toBeTruthy();
@@ -375,6 +459,7 @@ describe("FlashScreen", () => {
 
   it("window-level n key advances to the next word", async () => {
     renderFlashScreen(makeState(deck));
+    await userEvent.keyboard(" "); // flip (gate)
     await userEvent.keyboard("n");
     expect(screen.getByText(/2\/3/)).toBeTruthy();
   });
