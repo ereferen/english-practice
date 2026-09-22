@@ -44,6 +44,10 @@ export interface Settings {
   // issue #20: Self-Improve 承認UX。デフォルト = オフ（明示的に有効化する）
   selfImproveEnabled: boolean;
   autoApplyLevel: AutoApplyLevel;
+  // issue #122/#123: 最後に接続テストが成功したプライマリエンドポイント。
+  // 現在の llmApiEndpoint と一致しない間は「未検証」扱い（会話送信ゲート）。
+  // DEFAULT_SETTINGS スプレッドで補完されるため IndexedDB マイグレーション不要。
+  llmVerifiedEndpoint: string;
 }
 
 /**
@@ -224,6 +228,7 @@ export const DEFAULT_SETTINGS: Settings = {
   srsParams: DEFAULT_SRS_PARAMS,
   selfImproveEnabled: false,
   autoApplyLevel: "none",
+  llmVerifiedEndpoint: "",
 };
 
 export function progressKey(deckId: string, wordId: string): string {

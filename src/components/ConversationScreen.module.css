@@ -162,6 +162,35 @@
   margin-top: 0.25rem;
 }
 
+/* Issue #122: timeout expectation under the thinking indicator */
+.loadingHint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+/* Issue #122: raw diagnostics behind a disclosure inside error cards */
+.errorDetails {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.errorDetails > summary {
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.errorDetailsText {
+  margin: 0.4rem 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+}
+
 :global(.card).loadingBubble {
   margin: 0;
   padding: 0.75rem 1rem;

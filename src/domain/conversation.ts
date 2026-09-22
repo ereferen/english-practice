@@ -5,6 +5,8 @@ export interface ChatMessage {
   createdAt: string;
   /** Issue #111: error cards render without the read-aloud button. */
   kind?: "error";
+  /** Issue #122: raw diagnostics for error cards, shown behind 詳しく. */
+  details?: string;
 }
 
 export interface ConversationConfig {

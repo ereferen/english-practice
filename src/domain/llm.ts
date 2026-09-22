@@ -161,7 +161,7 @@ export function friendlyLlmError(raw: string): string {
   const s = raw.trim();
   if (!s) return "不明なエラー";
   if (s === "Failed to fetch" || s.includes("Failed to fetch")) {
-    return "ブラウザからエンドポイントに届きません（CORS設定 or URLミス most likely）。URLの末尾が /v1 になっているか、サーバー側でブラウザ接続（CORS）が許可されているかを確認してください";
+    return "ブラウザからエンドポイントに届きません。URLが正しいか（末尾が /v1 になっているか）、サーバー側でブラウザからの接続（CORS）が許可されているかを確認してください";
   }
   if (s === "timeout" || s.includes("timeout")) {
     return "タイムアウト（応答がありません）。サーバーが高負荷かモデルのロード中です";
@@ -391,6 +391,48 @@ export interface LlmConnectionTestResult {
   ok: boolean;
   error?: string;
   latencyMs: number;
+}
+
+/**
+ * Issue #123: transport-level failures (server unreachable / CORS / timeout)
+ * mean the endpoint itself can no longer be trusted → the saved
+ * "verified endpoint" marker should be cleared so the conversation tab
+ * re-warns. Auth/rate-limit/API errors keep the marker (the pipe works,
+ * the credentials don't).
+ */
+export function isTransportFailure(errText: string): boolean {
+  const s = errText.toLowerCase();
+  return (
+    s.includes("failed to fetch") ||
+    s.includes("timeout") ||
+    s.includes("cors") ||
+    s.includes("到達できません") ||
+    s.includes("リレー")
+  );
+}
+
+/**
+ * Issue #122: the combined send-failure string was engineer-facing raw
+ * text dumped into the chat. Split it into a short user-facing summary
+ * and a details block (rendered behind 詳しく).
+ */
+export function splitSendError(raw: string): {
+  summary: string;
+  details: string;
+} {
+  const marker = "設定を確認してください。";
+  const idx = raw.indexOf(marker);
+  if (idx === -1) {
+    return {
+      summary: "送信できませんでした。少し待ってからもう一度お試しください。",
+      details: raw,
+    };
+  }
+  const n = raw.match(/（(\d+)件/);
+  return {
+    summary: `送信できませんでした（接続先 ${n ? n[1] : "1"} 件で失敗）。設定画面でエンドポイントを確認してください。`,
+    details: raw.slice(idx + marker.length).trim(),
+  };
 }
 
 /** 接続テスト (issue #21): 最小リクエストで疎通確認する。 */
