@@ -10,8 +10,10 @@ import {
 } from "../domain/conversation";
 import {
   type LlmProviderConfig,
+  friendlyLlmError,
   providersFromSettings,
   requestLlmChat,
+  splitSendError,
 } from "../domain/llm";
 import {
   type ExtractedContent,
@@ -93,6 +95,16 @@ export default function ConversationScreen({
           "⚠ 保存されているエンドポイントが初期値（http://localhost:11434/v1）のままです。これはこのPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: http://192.168.x.x:11434/v1 や OpenRouter 等）を入力してください。",
         );
         setNeedsConfig(true);
+      } else if (
+        // Issue #123: banner keyed on the last connection-test result, not
+        // just "is it the default" — an endpoint that was saved but never
+        // tested (or failed a test) must keep warning the user.
+        settings.llmVerifiedEndpoint.trim() !== chain[0].apiEndpoint.trim()
+      ) {
+        setConfigError(
+          "⚠ このエンドポイントはまだ接続確認が済んでいません。設定画面の「接続テスト（プライマリ）」に成功すると、この警告は消えます。",
+        );
+        setNeedsConfig(true);
       } else {
         setConfigError(null);
         setNeedsConfig(false);
@@ -160,16 +172,20 @@ export default function ConversationScreen({
         // Issue #111: requestLlmChat failures are already mapped to
         // action-linked wording in domain/llm (friendlyLlmError); keep the
         // local Failed-to-fetch mapping for errors thrown elsewhere.
-        const errMsg = rawMsg.includes("Failed to fetch")
-          ? "プライマリ: 応答がありません。ブラウザからエンドポイントに届きません（CORS設定 or URLミス most likely）。[設定を確認] からURL・CORSを点検してください。"
+        // Issue #122: the raw combined string was engineer-facing; show a
+        // short summary card and tuck the diagnostics behind 詳しく.
+        const mapped = rawMsg.includes("Failed to fetch")
+          ? `LLM応答がありません（1件のプロバイダに失敗）。設定を確認してください。\n${friendlyLlmError(rawMsg)}`
           : rawMsg;
+        const { summary, details } = splitSendError(mapped);
         setStreamingContent("");
         // Issue #73: remember the failed text so 再送 works without retyping.
         setFailedSendText(text);
         // Issue #111: kind="error" renders the card without read-aloud.
+        // Issue #122: details go on the message for the 詳しく disclosure.
         setMessages((prev) => [
           ...prev,
-          createAssistantMessage(errMsg, "error"),
+          { ...createAssistantMessage(summary, "error"), details },
         ]);
       } finally {
         setLoading(false);
@@ -393,6 +409,13 @@ export default function ConversationScreen({
                 } ${msg.kind === "error" ? styles.bubbleError : ""}`}
               >
                 {msg.content}
+                {/* Issue #122: raw diagnostics tucked behind a disclosure */}
+                {msg.kind === "error" && msg.details && (
+                  <details className={styles.errorDetails}>
+                    <summary>詳しく（技術情報）</summary>
+                    <pre className={styles.errorDetailsText}>{msg.details}</pre>
+                  </details>
+                )}
               </div>
               {/* Issue #111: error cards are not conversation — no TTS. */}
               {msg.role === "assistant" && msg.kind !== "error" && (
@@ -432,6 +455,10 @@ export default function ConversationScreen({
           <div className="chat-bubble-wrap">
             <div className={`card ${styles.loadingBubble}`}>
               <span className="loading-dots">考え中...</span>
+              {/* Issue #122: users could not tell how long to wait */}
+              <span className={styles.loadingHint} role="status">
+                応答に数秒かかることがあります（30秒前後でタイムアウト）
+              </span>
             </div>
           </div>
         )}

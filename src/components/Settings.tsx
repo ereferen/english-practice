@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   diagnoseFetchFailure,
   friendlyLlmError,
+  isTransportFailure,
   providersFromSettings,
   testLlmConnection,
 } from "../domain/llm";
@@ -149,11 +150,29 @@ export default function Settings({ dispatch, storage }: Props) {
         ...prev,
         [which]: `✅ 接続OK（model: ${provider.model}、往復 ${secs}s）`,
       }));
+      // Issue #123: remember that THIS primary endpoint passed a live
+      // test — the conversation tab gates sending on this marker.
+      if (which === "primary") {
+        await storage.saveSettings({
+          llmVerifiedEndpoint: settings.llmApiEndpoint,
+        });
+      }
     } else {
       setTestResult((prev) => ({
         ...prev,
         [which]: `❌ 接続テスト失敗: ${friendlyLlmError(result.error ?? "不明なエラー")}（${secs}s）`,
       }));
+      // Issue #123: a transport-level failure invalidates the previous
+      // verification — clear the marker so stale "verified" state never
+      // survives a proven-dead endpoint.
+      if (
+        which === "primary" &&
+        isTransportFailure(result.error ?? "") &&
+        settings.llmVerifiedEndpoint.trim() === settings.llmApiEndpoint.trim()
+      ) {
+        await storage.saveSettings({ llmVerifiedEndpoint: "" });
+        setSettings((prev) => ({ ...prev, llmVerifiedEndpoint: "" }));
+      }
     }
   };
 
@@ -274,6 +293,26 @@ export default function Settings({ dispatch, storage }: Props) {
             入力は自動保存されます（この端末のブラウザ内DBに保存。保存済み:{" "}
             {settings.llmApiEndpoint.trim() ? "✓ エンドポイント記録" : "—"}）
           </p>
+          {/* Issue #123: 「記録済み」と「接続確認済み」は別物 — show which
+              endpoint passed the last live test, badge when unverified. */}
+          {settings.llmApiEndpoint.trim() &&
+            (settings.llmVerifiedEndpoint.trim() ===
+            settings.llmApiEndpoint.trim() ? (
+              <p
+                className={`${styles.testStatus} ${styles.testStatusOk}`}
+                role="status"
+              >
+                ✓ 接続確認済み（このエンドポイントで接続テスト成功）
+              </p>
+            ) : (
+              <p
+                className={`${styles.testStatus} ${styles.testStatusFail}`}
+                role="status"
+              >
+                ⚠ 未検証: 接続テストに成功していません。下の
+                「接続テスト（プライマリ）」を実行してください。
+              </p>
+            ))}
           <label>
             API エンドポイント
             <input

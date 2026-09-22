@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   friendlyLlmError,
+  isTransportFailure,
   providersFromSettings,
   requestLlmChat,
+  splitSendError,
   testLlmConnection,
   type LlmProviderConfig,
 } from "./llm";
@@ -230,5 +232,41 @@ describe("friendlyLlmError (issue #111)", () => {
 
   it("未知のエラーはそのまま返す", () => {
     expect(friendlyLlmError("some odd failure")).toBe("some odd failure");
+  });
+
+  it("Failed to fetch 文言はエンジニア向け生文字列を避ける（issue #122）", () => {
+    const out = friendlyLlmError("Failed to fetch");
+    expect(out).not.toContain("most likely");
+    expect(out).not.toMatch(/[A-Za-z]+ or [A-Za-z]+/);
+  });
+});
+
+describe("isTransportFailure (issue #123)", () => {
+  it("到達不能・タイムアウト・CORSは輸送系失敗", () => {
+    expect(isTransportFailure("Failed to fetch")).toBe(true);
+    expect(isTransportFailure("timeout of 15000ms exceeded")).toBe(true);
+    expect(isTransportFailure("CORS拒否: ...")).toBe(true);
+    expect(isTransportFailure("エンドポイントに到達できません")).toBe(true);
+  });
+  it("認証・レート制限は輸送系失敗ではない（検証マーカーは残る）", () => {
+    expect(isTransportFailure("LLM API error (401): bad key")).toBe(false);
+    expect(isTransportFailure("LLM API error (429): slow down")).toBe(false);
+  });
+});
+
+describe("splitSendError (issue #122)", () => {
+  it(" combines文字列をユーザー向け要約と技術詳細に分離する", () => {
+    const raw =
+      "LLM応答がありません（1件のプロバイダに失敗）。設定を確認してください。\nprimary: ブラウザからエンドポイントに届きません。";
+    const { summary, details } = splitSendError(raw);
+    expect(summary).toContain("送信できませんでした");
+    expect(summary).toContain("1");
+    expect(summary).not.toContain("LLM応答がありません");
+    expect(details).toContain("primary:");
+  });
+  it("想定外の文字列は汎用要約＋全文を詳細に回す", () => {
+    const { summary, details } = splitSendError("weird crash");
+    expect(summary).toContain("送信できませんでした");
+    expect(details).toBe("weird crash");
   });
 });
