@@ -18,6 +18,7 @@ import Settings from "./components/Settings";
 import ShortcutHelp from "./components/ShortcutHelp";
 import StageDressing from "./components/StageDressing";
 import EndpointRibbon from "./components/EndpointRibbon";
+import SetupWizard from "./components/SetupWizard";
 import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
 import {
   actionScreenName,
@@ -232,6 +233,18 @@ export default function App() {
       <main id="main-content" key={state.screen.name} className={styles.scene}>
         {screen}
       </main>
+      {/* Issue #121: 初回（エンドポイントが初期値のまま）は入力→接続テストを
+          ホーム表示前に挟む。スキップ可。 */}
+      <SetupWizard
+        storage={storage}
+        screenName={state.screen.name}
+        onGoConversation={() =>
+          dispatchTransitioned({ type: "go", screen: { name: "conversation" } })
+        }
+        onGoSettings={() =>
+          dispatchTransitioned({ type: "go", screen: { name: "settings" } })
+        }
+      />
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
     </>
   );

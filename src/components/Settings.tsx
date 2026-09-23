@@ -6,12 +6,11 @@ import type {
 } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import {
-  diagnoseFetchFailure,
   friendlyLlmError,
   isTransportFailure,
   providersFromSettings,
-  testLlmConnection,
 } from "../domain/llm";
+import { runConnectionTest } from "../domain/connectionTest";
 import styles from "./Settings.module.css";
 
 interface Props {
@@ -124,25 +123,9 @@ export default function Settings({ dispatch, storage }: Props) {
     }
     setTesting(which);
     setTestResult((prev) => ({ ...prev, [which]: null }));
-    const result = await testLlmConnection(provider);
-    if (!result.ok && (result.error ?? "").includes("Failed to fetch")) {
-      let origin = "";
-      try {
-        origin = new URL(provider.apiEndpoint).origin;
-      } catch {
-        origin = "";
-      }
-      if (origin) {
-        const diag = await diagnoseFetchFailure(origin);
-        if (diag === "cors-blocked") {
-          result.error =
-            "CORS拒否: サーバーには到達しましたが、このエンドポイントはブラウザ直接接続（fetch）を許可していません。同一オリジンのリレー/リバースプロキシ経由か、CORS対応プロバイダ（OpenRouter等）を使ってください";
-        } else {
-          result.error =
-            "エンドポイントに到達できません（URLミス or サーバーダウン）。http://192.168.x.x:PORT/v1 の形式・ポート開放を確認してください";
-        }
-      }
-    }
+    // Issue #121: 失敗理由の切り分け（CORS拒否 / 到達不可）は共通モジュールに
+    // 抽出し、初回セットアップウィザードと同じ文言・判定を使う。
+    const result = await runConnectionTest(provider);
     setTesting(null);
     const secs = (result.latencyMs / 1000).toFixed(1);
     if (result.ok) {

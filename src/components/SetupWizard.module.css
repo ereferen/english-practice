@@ -1,0 +1,117 @@
+/* Issue #121: 初回セットアップウィザード（scrim/フェードは global の
+   .modal-overlay を再利用。パネルは .card の panel-frame） */
+
+:global(.card).panel {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 85vh;
+  margin: 0;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.hint {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.field {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-size: 0.85rem;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-xs);
+}
+
+.note {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.note code {
+  font-family: var(--font-rune);
+  letter-spacing: 0.04em;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.primary {
+  padding: var(--space-xs) var(--space-md);
+  font: inherit;
+  color: var(--color-bg-night);
+  cursor: pointer;
+  background: var(--color-accent-gold);
+  border: 1px solid var(--color-border-gold);
+  border-radius: var(--radius);
+}
+
+.primary:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.primary:hover:not(:disabled),
+.primary:focus-visible {
+  background: var(--color-text-parchment);
+}
+
+.result {
+  padding: var(--space-sm);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  border: 1px solid var(--color-border-gold-dim);
+  border-radius: var(--radius);
+}
+
+.resultOk {
+  border-color: var(--color-border-gold);
+  background: rgba(217, 150, 63, 0.12);
+}
+
+.resultFail {
+  border-color: var(--color-danger);
+  background: rgba(255, 143, 143, 0.12);
+}
+
+.resultMessage {
+  margin: 0 0 var(--space-xs);
+  white-space: pre-wrap;
+}
+
+.checkTitle {
+  margin: var(--space-xs) 0;
+  font-weight: 600;
+}
+
+.checkList {
+  margin: 0 0 var(--space-xs);
+  padding-left: 1.1rem;
+}
+
+.checkList li {
+  margin-bottom: 0.2rem;
+}

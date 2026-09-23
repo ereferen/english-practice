@@ -48,6 +48,10 @@ export interface Settings {
   // 現在の llmApiEndpoint と一致しない間は「未検証」扱い（会話送信ゲート）。
   // DEFAULT_SETTINGS スプレッドで補完されるため IndexedDB マイグレーション不要。
   llmVerifiedEndpoint: string;
+  // issue #121: 初回セットアップウィザードを「スキップ/完了」したか。
+  // false かつ llmApiEndpoint が初期値の間だけ、初回起動時にウィザードを出す。
+  // これも DEFAULT_SETTINGS スプレッドで補完される（マイグレーション不要）。
+  llmSetupDismissed: boolean;
 }
 
 /**
@@ -229,6 +233,7 @@ export const DEFAULT_SETTINGS: Settings = {
   selfImproveEnabled: false,
   autoApplyLevel: "none",
   llmVerifiedEndpoint: "",
+  llmSetupDismissed: false,
 };
 
 export function progressKey(deckId: string, wordId: string): string {
