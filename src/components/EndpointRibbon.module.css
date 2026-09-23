@@ -1,0 +1,53 @@
+/* Issue #121: 全画面常設のエンドポイント警告リボン */
+.ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-parchment);
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-gold-dim);
+  background: linear-gradient(
+    180deg,
+    rgba(217, 150, 63, 0.22),
+    rgba(3, 6, 14, 0.92)
+  );
+}
+
+.message {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.action {
+  flex: 0 0 auto;
+  padding: var(--space-xs) var(--space-md);
+  font: inherit;
+  color: var(--color-bg-night);
+  cursor: pointer;
+  background: var(--color-accent-gold);
+  border: 1px solid var(--color-border-gold);
+  border-radius: var(--radius);
+}
+
+.action:hover,
+.action:focus-visible {
+  background: var(--color-text-parchment);
+}
+
+/* 未設定は赤系、初期値/未検証は琥珀系で強さを分ける */
+.missing {
+  border-bottom-color: var(--color-danger);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 143, 143, 0.22),
+    rgba(3, 6, 14, 0.92)
+  );
+}
