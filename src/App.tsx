@@ -17,6 +17,7 @@ import ConversationScreen from "./components/ConversationScreen";
 import Settings from "./components/Settings";
 import ShortcutHelp from "./components/ShortcutHelp";
 import StageDressing from "./components/StageDressing";
+import EndpointRibbon from "./components/EndpointRibbon";
 import { useKeyboardShortcuts } from "./app/useKeyboardShortcuts";
 import {
   actionScreenName,
@@ -219,6 +220,14 @@ export default function App() {
       </a>
       {/* Issue #84: gutter life (mountains + walking traveler) */}
       <StageDressing />
+      {/* Issue #121: エンドポイント未設定/未検証の間は全画面に常設警告リボン */}
+      <EndpointRibbon
+        storage={storage}
+        screenName={state.screen.name}
+        onOpenSettings={() =>
+          dispatchTransitioned({ type: "go", screen: { name: "settings" } })
+        }
+      />
       {/* Issue #84: scene-change dip — remount animation on screen switch */}
       <main id="main-content" key={state.screen.name} className={styles.scene}>
         {screen}
