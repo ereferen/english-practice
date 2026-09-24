@@ -6,6 +6,7 @@ import { scoreRate, wrongWordIds } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
+import { useSpeechSupport } from "../domain/useSpeechSupport";
 import { uuid } from "../domain/uuid";
 import { localProgress } from "../storage/localProgress";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -46,6 +47,16 @@ export default function ResultScreen({
   const deck = state.decks.find((d) => d.deckId === deckId);
   const rate = scoreRate(answers);
   const displayRate = useCountUp(Math.round(rate * 100), 600);
+  // Issue #131: 音声が使えない環境で誤答語の ▶ が無反応だと「押せたのか
+  // どうか」すら分からない。フラッシュカード／英会話と同じ案内を出す。
+  const speechAvail = useSpeechSupport();
+  const [ttsNotice, setTtsNotice] = useState(false);
+
+  const handleSpeak = (text: string) => {
+    if (speak(text)) return;
+    setTtsNotice(true);
+    window.setTimeout(() => setTtsNotice(false), 2500);
+  };
 
   // Issue #96: compare against the previous best BEFORE this session is
   // recorded (the effect below writes it). No past sessions => no badge.
@@ -177,6 +188,11 @@ export default function ResultScreen({
       {wrongWords.length > 0 && (
         <div className="card">
           <h3>誤答した語</h3>
+          {speechAvail !== "ready" && (
+            <p className={styles.ttsNotice} role="status" aria-live="polite">
+              このブラウザは音声未対応です（TTSボイスがありません）
+            </p>
+          )}
           <ul className="wrong-words-grid">
             {wrongWords.map((w) => (
               <li key={w.wordId} className="wrong-word">
@@ -185,13 +201,23 @@ export default function ResultScreen({
                 <button
                   className="ghost"
                   aria-label={`${w.term} の発音を再生`}
-                  onClick={() => speak(w.term)}
+                  title={
+                    speechAvail === "ready"
+                      ? "発音再生"
+                      : "このブラウザは音声未対応（TTSボイス0個）"
+                  }
+                  onClick={() => handleSpeak(w.term)}
                 >
-                  ▶
+                  {speechAvail === "ready" ? "▶" : "🔇"}
                 </button>
               </li>
             ))}
           </ul>
+          {ttsNotice && (
+            <span className={styles.ttsNotice} role="status" aria-live="polite">
+              このブラウザは音声未対応です（TTSボイスがありません）
+            </span>
+          )}
         </div>
       )}
 

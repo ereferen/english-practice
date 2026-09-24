@@ -48,6 +48,17 @@ describe("buildExtractPrompt", () => {
     expect(p).not.toContain("ignore all rules");
   });
 
+  it("アプリ由来の通知 (kind:error) を transcript から除外する", () => {
+    // Issue #133: TTS未対応などのアプリ通知が PARTNER 発言として混入していた
+    const notice: ChatMessage = {
+      ...msg("m9", "assistant", "⚠ このブラウザは音声未対応です（TTSボイスがありません）"),
+      kind: "error",
+    };
+    const p = buildExtractPrompt([...CONVO, notice]);
+    expect(p).not.toContain("音声未対応");
+    expect(p).toContain("PARTNER: Lucky you!");
+  });
+
   it("長い会話は中央を端折る", () => {
     const long = Array.from({ length: 60 }, (_, i) =>
       msg(`x${i}`, i % 2 === 0 ? "user" : "assistant", `turn ${i}`),
