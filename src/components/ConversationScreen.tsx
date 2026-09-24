@@ -505,6 +505,15 @@ export default function ConversationScreen({
         {extractError && (
           <div className={`card ${styles.configWarning}`}>
             <span>⚠ {extractError}</span>
+            {/* Issue #133: 失敗の文言が「もう一度試行してください」なのに
+                戻るしか無かった。その場で再試行できるようにする。 */}
+            <button
+              className="primary"
+              onClick={() => void handleExtract()}
+              disabled={extracting}
+            >
+              {extracting ? "抽出中..." : "再試行"}
+            </button>
           </div>
         )}
 

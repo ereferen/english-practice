@@ -77,7 +77,9 @@ function trimTranscript(messages: ChatMessage[]): ChatMessage[] {
 
 export function buildExtractPrompt(messages: ChatMessage[]): string {
   const transcript = trimTranscript(messages)
-    .filter((m) => m.role !== "system")
+    // Issue #133: アプリ自身が出した通知（TTS未対応・送信失敗など kind:"error"）は
+    // PARTNER の発言ではない。transcript に混ざると抽出語彙がその警告文に引っ張られる。
+    .filter((m) => m.role !== "system" && m.kind !== "error")
     .map(
       (m, i) =>
         `[${i}] ${m.role === "user" ? "LEARNER" : "PARTNER"}: ${m.content.slice(0, MAX_TEXT_LEN)}`,

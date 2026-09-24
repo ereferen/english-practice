@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { AppState } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -182,6 +182,68 @@ describe("ResultScreen (#96 celebration)", () => {
     clearInterval(iv);
     for (let i = 1; i < seen.length; i++) {
       expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #131: 誤答語の ▶ が無反応だった（TTS未対応の案内が出ない）
+// ---------------------------------------------------------------------------
+
+const VOICE = {} as unknown as SpeechSynthesisVoice;
+
+function stubVoices(voices: SpeechSynthesisVoice[]) {
+  const original = Object.getOwnPropertyDescriptor(window, "speechSynthesis");
+  Object.defineProperty(window, "speechSynthesis", {
+    configurable: true,
+    writable: true,
+    value: {
+      getVoices: () => voices,
+      speak: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    },
+  });
+  return () => {
+    if (original) Object.defineProperty(window, "speechSynthesis", original);
+    else Reflect.deleteProperty(window, "speechSynthesis");
+  };
+}
+
+describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
+  it("no-voices環境では案内を出し、ボタンを 🔇 にする", () => {
+    const restore = stubVoices([]);
+    try {
+      renderResult(answers([false]), []);
+      expect(
+        screen.getAllByText(
+          "このブラウザは音声未対応です（TTSボイスがありません）",
+        ).length,
+      ).toBeGreaterThan(0);
+      const btn = screen.getByLabelText("apple の発音を再生");
+      expect(btn.textContent).toContain("🔇");
+    } finally {
+      // unmount while the stub is still installed: the hook removes its
+      // voiceschanged listener on cleanup
+      cleanup();
+      restore();
+    }
+  });
+
+  it("ボイスがあれば ▶ を出し、案内は出さない", async () => {
+    const restore = stubVoices([VOICE]);
+    try {
+      renderResult(answers([false]), []);
+      const btn = await screen.findByLabelText("apple の発音を再生");
+      expect(btn.textContent).toContain("▶");
+      expect(
+        screen.queryByText(
+          "このブラウザは音声未対応です（TTSボイスがありません）",
+        ),
+      ).toBeNull();
+    } finally {
+      cleanup();
+      restore();
     }
   });
 });
