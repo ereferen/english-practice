@@ -42,6 +42,7 @@ export async function runConnectionTest(
   return {
     ...result,
     diagnosis,
-    error: diagnosis === "cors-blocked" ? CORS_BLOCKED_MESSAGE : UNREACHABLE_MESSAGE,
+    error:
+      diagnosis === "cors-blocked" ? CORS_BLOCKED_MESSAGE : UNREACHABLE_MESSAGE,
   };
 }

@@ -79,7 +79,9 @@ describe("SetupWizard (issue #121)", () => {
     );
     await userEvent.click(await screen.findByTestId("setup-wizard-skip"));
     expect(saveSettings).toHaveBeenCalledWith({ llmSetupDismissed: true });
-    await waitFor(() => expect(screen.queryByTestId("setup-wizard")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByTestId("setup-wizard")).toBeNull(),
+    );
   });
 
   it("接続テスト成功で検証マーカーを保存し、英会話へ誘導する", async () => {
