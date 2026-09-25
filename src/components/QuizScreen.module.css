@@ -62,6 +62,41 @@ button.choiceWrong :global(.choice-marker) {
   flex-wrap: wrap;
 }
 
+/* Issue #134: auxiliary explanation inside the empty-quiz card */
+.hint {
+  opacity: 0.8;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Issue #132: in-session progress panel */
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-color: var(--color-gold, #d4a72c);
+}
+
+.sessionInfoTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sessionInfoList {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.sessionInfoWarn {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 /* Issue #94: reduced motion — the success ring stays (it is static
    state, not motion), but the one-shot flash is dropped. */
 @media (prefers-reduced-motion: reduce) {

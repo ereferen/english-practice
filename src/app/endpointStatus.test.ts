@@ -54,4 +54,24 @@ describe("endpointWarning (issue #121)", () => {
     );
     expect(w).toBeNull();
   });
+
+  it("初期値 localhost でも接続テスト成功済みなら警告なし (issue #130)", () => {
+    const w = endpointWarning(
+      settings({
+        llmApiEndpoint: DEFAULT_SETTINGS.llmApiEndpoint,
+        llmVerifiedEndpoint: DEFAULT_SETTINGS.llmApiEndpoint,
+      }),
+    );
+    expect(w).toBeNull();
+  });
+
+  it("初期値 localhost が未検証なら default 警告のまま (issue #130)", () => {
+    const w = endpointWarning(
+      settings({
+        llmApiEndpoint: DEFAULT_SETTINGS.llmApiEndpoint,
+        llmVerifiedEndpoint: "",
+      }),
+    );
+    expect(w?.kind).toBe("default");
+  });
 });

@@ -493,4 +493,82 @@ describe("FlashScreen", () => {
     // First fixture word is "ability" which is "noun"
     expect(screen.getByText(word0.partOfSpeech!)).toBeTruthy();
   });
+
+  // Issue #132: 進捗 used to navigate away and destroy the session.
+  it("進捗 shows the in-session panel instead of leaving the card (#132)", async () => {
+    const { dispatch } = renderFlashScreen(makeState(deck));
+    await userEvent.click(screen.getByTestId("flash-progress-button"));
+    expect(screen.getByText("このセッションの進み具合")).toBeTruthy();
+    expect(screen.getByText(/フラッシュカード 1\/3 枚目/)).toBeTruthy();
+    // The session screen is still mounted — no navigation happened.
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("学習の記録を開く asks first, and このセッションを続ける keeps the card (#132)", async () => {
+    const { dispatch } = renderFlashScreen(makeState(deck));
+    await userEvent.click(screen.getByTestId("flash-progress-button"));
+    await userEvent.click(screen.getByTestId("flash-open-record"));
+    expect(screen.getByText(/このフラッシュカードは閉じます/)).toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "このセッションを続ける" }),
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(screen.getAllByText(/1\/3/).length).toBeGreaterThan(0);
+  });
+
+  it("それでも記録を見る navigates to the global progress screen (#132)", async () => {
+    const { dispatch } = renderFlashScreen(makeState(deck));
+    await userEvent.click(screen.getByTestId("flash-progress-button"));
+    await userEvent.click(screen.getByTestId("flash-open-record"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "それでも記録を見る" }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "progress" },
+    });
+  });
+
+  // Issue #134: warn about the impossible quiz BEFORE the click, not after.
+  it("warns next to クイズへ when the lesson is too small for a quiz (#134)", async () => {
+    const tiny = makeTestDeck(); // 3 words → no auto-generated quiz
+    renderFlashScreen(makeState(tiny));
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    expect(screen.getByTestId("flash-next-button").textContent).toContain(
+      "クイズへ",
+    );
+    expect(screen.getByTestId("quiz-unavailable").textContent).toContain(
+      "4語以上必要",
+    );
+    expect(screen.getByTestId("quiz-unavailable").textContent).toContain(
+      "LLMで補充問題を生成",
+    );
+  });
+
+  it("does not show the quiz warning when the lesson can build quizzes (#134)", async () => {
+    const deck6 = makeTestDeck();
+    deck6.lessons[0].words = [
+      ...deck6.lessons[0].words,
+      ...fixtureWords.slice(3, 6),
+    ];
+    renderFlashScreen(makeState(deck6));
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    expect(screen.queryByTestId("quiz-unavailable")).toBeNull();
+  });
 });

@@ -178,4 +178,99 @@ describe("QuizScreen", () => {
     expect(screen.queryByText("生成に失敗しました")).toBeNull();
     expect(screen.queryByRole("button", { name: "設定を開く" })).toBeNull();
   });
+
+  // Issue #134: < 4 words used to be a dead end ("クイズがありません" + 戻る).
+  it("empty-quiz screen explains the 4-word rule and points at LLM generation (#134)", () => {
+    const deck = makeTestDeck();
+    deck.lessons[0].words = fixtureWords.slice(0, 3); // too few for a quiz
+    const { container } = render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    expect(screen.getByText("クイズがありません")).toBeTruthy();
+    expect(screen.getByText(/クイズには4語以上必要です/)).toBeTruthy();
+    expect(screen.getByText(/このレッスンは現在\s*3\s*語です/)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /デッキ画面で補充問題を生成する/ }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "戻る" })).toBeTruthy();
+    expect(container.textContent).toContain("LLMで補充問題を生成");
+  });
+
+  it("補充問題を生成する CTA returns to the deck screen (#134)", async () => {
+    const deck = makeTestDeck();
+    deck.lessons[0].words = fixtureWords.slice(0, 3);
+    const dispatch = vi.fn();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /デッキ画面で補充問題を生成する/ }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "deckHome", deckId: "test-deck" },
+    });
+  });
+
+  // Issue #132: 進捗 must not throw the quiz session away.
+  it("進捗 opens an in-session panel instead of navigating away (#132)", async () => {
+    const deck = makeTestDeck();
+    const dispatch = vi.fn();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    await userEvent.click(screen.getByTestId("quiz-progress-button"));
+    expect(screen.getByText("このセッションの進み具合")).toBeTruthy();
+    expect(containerText(/クイズ 1\//)).toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("学習の記録を開く warns before discarding, then navigates on confirm (#132)", async () => {
+    const deck = makeTestDeck();
+    const dispatch = vi.fn();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    await userEvent.click(screen.getByTestId("quiz-progress-button"));
+    await userEvent.click(screen.getByTestId("quiz-open-record"));
+    expect(screen.getByText(/このクイズは閉じます/)).toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "それでも記録を見る" }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "progress" },
+    });
+  });
 });
+
+/** Text search over the whole rendered document (helpers above use screen). */
+function containerText(pattern: RegExp): boolean {
+  return pattern.test(document.body.textContent ?? "");
+}

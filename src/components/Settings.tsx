@@ -136,9 +136,14 @@ export default function Settings({ dispatch, storage }: Props) {
       // Issue #123: remember that THIS primary endpoint passed a live
       // test — the conversation tab gates sending on this marker.
       if (which === "primary") {
+        const verified = settings.llmApiEndpoint;
         await storage.saveSettings({
-          llmVerifiedEndpoint: settings.llmApiEndpoint,
+          llmVerifiedEndpoint: verified,
         });
+        // Issue #130: reflect the success in the SAME screen immediately —
+        // the ⚠ 未検証 badge used to survive until the user left settings,
+        // contradicting the ✅ 接続OK a few pixels below it.
+        setSettings((prev) => ({ ...prev, llmVerifiedEndpoint: verified }));
       }
     } else {
       setTestResult((prev) => ({
@@ -307,19 +312,23 @@ export default function Settings({ dispatch, storage }: Props) {
             />
           </label>
           {/* Issue #113: warn at save-time when the value is still the
-              localhost placeholder default — silently unusable remotely. */}
+              localhost placeholder default — silently unusable remotely.
+              Issue #130: suppressed once a live test proved the value works
+              (e.g. a local LLM actually listening on this PC). */}
           {settings.llmApiEndpoint.trim() ===
-            DEFAULT_SETTINGS.llmApiEndpoint.trim() && (
-            <p
-              className={`${styles.testStatus} ${styles.testStatusFail}`}
-              role="status"
-            >
-              ⚠ 初期値（localhost）のままです。このPC上のローカルサーバを指す
-              プレースホルダのため、このアプリを開いている端末からは接続できません。
-              LAN IP（例:
-              http://192.168.68.52:11434/v1）や外部エンドポイントを指定してください。
-            </p>
-          )}
+            DEFAULT_SETTINGS.llmApiEndpoint.trim() &&
+            settings.llmVerifiedEndpoint.trim() !==
+              settings.llmApiEndpoint.trim() && (
+              <p
+                className={`${styles.testStatus} ${styles.testStatusFail}`}
+                role="status"
+              >
+                ⚠ 初期値（localhost）のままです。このPC上のローカルサーバを指す
+                プレースホルダのため、このアプリを開いている端末からは接続できません。
+                LAN IP（例:
+                http://192.168.68.52:11434/v1）や外部エンドポイントを指定してください。
+              </p>
+            )}
           <label>
             モデル名
             <input

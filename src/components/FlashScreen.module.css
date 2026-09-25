@@ -204,3 +204,39 @@
   font-size: 0.8rem;
   white-space: nowrap;
 }
+
+/* Issue #132: session progress panel (進捗 no longer discards the session) */
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-color: var(--color-gold, #d4a72c);
+}
+
+.sessionInfoTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sessionInfoList {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.sessionInfoWarn {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Issue #134: pre-flight notice when クイズへ would land on an empty quiz */
+.quizUnavailable {
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}

@@ -51,7 +51,11 @@ describe("buildExtractPrompt", () => {
   it("アプリ由来の通知 (kind:error) を transcript から除外する", () => {
     // Issue #133: TTS未対応などのアプリ通知が PARTNER 発言として混入していた
     const notice: ChatMessage = {
-      ...msg("m9", "assistant", "⚠ このブラウザは音声未対応です（TTSボイスがありません）"),
+      ...msg(
+        "m9",
+        "assistant",
+        "⚠ このブラウザは音声未対応です（TTSボイスがありません）",
+      ),
       kind: "error",
     };
     const p = buildExtractPrompt([...CONVO, notice]);
