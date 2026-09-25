@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
-import { pickLesson } from "../content/loader";
+import { generateQuizzesForLesson, pickLesson } from "../content/loader";
+import { buildSessionQuizItems } from "../domain/session";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -24,6 +25,14 @@ export default function FlashScreen({
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
+  // Issue #134: tell the user BEFORE they press 「クイズへ」 when the lesson
+  // yields no quiz items — finding out after the click is a dead end.
+  const quizItemCount = useMemo(() => {
+    if (!deck) return 0;
+    return buildSessionQuizItems(generateQuizzesForLesson(deck, lessonId), {
+      shuffle: false,
+    }).length;
+  }, [deck, lessonId]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   // Issue #45: brief gold-rim pulse while the card face changes.
@@ -38,6 +47,11 @@ export default function FlashScreen({
   // must say so instead of silently doing nothing.
   const speechAvail = useSpeechSupport();
   const [ttsNotice, setTtsNotice] = useState(false);
+  // Issue #132: the header 進捗 button used to navigate away and destroy the
+  // session. It now opens an in-place panel: current position + words seen
+  // in THIS session, with the global record reachable explicitly.
+  const [showSessionInfo, setShowSessionInfo] = useState(false);
+  const [pendingProgressNav, setPendingProgressNav] = useState(false);
 
   const handleSpeak = (text: string) => {
     const played = speak(text);
@@ -177,11 +191,81 @@ export default function FlashScreen({
         </button>
         <button
           className="ghost"
-          onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
+          onClick={() => {
+            setShowSessionInfo((v) => !v);
+            setPendingProgressNav(false);
+          }}
+          aria-expanded={showSessionInfo}
+          aria-controls="session-info"
+          data-testid="flash-progress-button"
         >
           進捗
         </button>
       </div>
+
+      {/* Issue #132: session-scoped progress, shown without leaving the card */}
+      {showSessionInfo && (
+        <div
+          className={`card ${styles.sessionInfo}`}
+          id="session-info"
+          role="status"
+          aria-live="polite"
+        >
+          <h3 className={styles.sessionInfoTitle}>このセッションの進み具合</h3>
+          <ul className={styles.sessionInfoList}>
+            <li>
+              フラッシュカード {index + 1}/{lesson.words.length} 枚目
+            </li>
+            <li>
+              このセッションで意味を確認した語: {learnedRef.current.size} 語
+            </li>
+          </ul>
+          {pendingProgressNav ? (
+            <>
+              <p className={styles.sessionInfoWarn} role="alert">
+                ⚠ 「学習の記録」を開くとこのフラッシュカードは閉じます（
+                {index + 1}/{lesson.words.length}
+                から再開はできません）。このセッションを続けますか？
+              </p>
+              <div className={styles.actions}>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setPendingProgressNav(false);
+                    setShowSessionInfo(false);
+                  }}
+                >
+                  このセッションを続ける
+                </button>
+                <button
+                  className="ghost"
+                  onClick={() =>
+                    dispatch({ type: "go", screen: { name: "progress" } })
+                  }
+                >
+                  それでも記録を見る
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className={styles.actions}>
+              <button
+                className="primary"
+                onClick={() => setShowSessionInfo(false)}
+              >
+                カードに戻る
+              </button>
+              <button
+                className="ghost"
+                onClick={() => setPendingProgressNav(true)}
+                data-testid="flash-open-record"
+              >
+                学習の記録を開く
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         onClick={toggleFlip}
@@ -253,10 +337,28 @@ export default function FlashScreen({
             最初からやり直す
           </button>
         )}
-        <button className={`primary ${styles.nextButton}`} onClick={handleNext}>
+        <button
+          className={`primary ${styles.nextButton}`}
+          onClick={handleNext}
+          data-testid="flash-next-button"
+        >
           {isLast ? "クイズへ" : "次の語"}
         </button>
       </div>
+      {/* Issue #134: pressing クイズへ used to land on a bare "クイズがありません"
+          dead end. Say it up front, with the one action that unlocks a quiz. */}
+      {isLast && quizItemCount === 0 && (
+        <p
+          className={styles.quizUnavailable}
+          role="status"
+          data-testid="quiz-unavailable"
+        >
+          ⚠ このレッスンはクイズを作れる語数に足りていません（4語以上必要）。
+          デッキ画面の「✨
+          LLMで補充問題を生成」で語と問題を足すと、そのままクイズを
+          始められます。
+        </p>
+      )}
       {shake && (
         <p className={styles.flipGate} role="alert">
           ⚠ 先にカードをめくって意味を確認しましょう（クリック / Space）

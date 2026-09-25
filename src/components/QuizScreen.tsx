@@ -40,6 +40,10 @@ export default function QuizScreen({
   const [showFeedback, setShowFeedback] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const askedAtRef = useRef<number>(Date.now());
+  // Issue #132: 進捗 in the header must answer "where am I in this session?"
+  // without tearing the session down.
+  const [showSessionInfo, setShowSessionInfo] = useState(false);
+  const [pendingProgressNav, setPendingProgressNav] = useState(false);
 
   // LLM生成モード用の状態
   const [genPhase, setGenPhase] = useState<"idle" | "loading" | "ready">(
@@ -283,16 +287,41 @@ export default function QuizScreen({
   }
 
   if (activeItems.length === 0) {
+    // Issue #134: this used to be a dead end ("クイズがありません" + 戻る).
+    // Say WHY, and point at the one action that actually unlocks a quiz:
+    // generating supplemental items from the deck screen.
     return (
       <div className="container">
-        <p>クイズがありません。デッキに4語以上必要です。</p>
-        <button
-          onClick={() =>
-            dispatch({ type: "go", screen: { name: "deckHome", deckId } })
-          }
-        >
-          戻る
-        </button>
+        <div className="card">
+          <h3>クイズがありません</h3>
+          <p aria-live="polite">
+            クイズには4語以上必要です。このレッスンは現在
+            {lessonWithDeck?.lesson.words.length ?? 0}
+            語です。
+          </p>
+          <p className={styles.hint}>
+            「✨ LLMで補充問題を生成」を使うと、このデッキに語と問題を追加でき、
+            少ない語数のデッキでもそのままクイズを始められます。
+          </p>
+          <div className={styles.failureActions}>
+            <button
+              className="primary"
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+              }
+            >
+              ✨ デッキ画面で補充問題を生成する
+            </button>
+            <button
+              className="ghost"
+              onClick={() =>
+                dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+              }
+            >
+              戻る
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -317,11 +346,83 @@ export default function QuizScreen({
         </button>
         <button
           className="ghost"
-          onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
+          onClick={() => {
+            setShowSessionInfo((v) => !v);
+            setPendingProgressNav(false);
+          }}
+          aria-expanded={showSessionInfo}
+          aria-controls="session-info"
+          data-testid="quiz-progress-button"
         >
           進捗
         </button>
       </div>
+
+      {/* Issue #132: quiz progress is answered right here — leaving the
+          screen used to throw away the whole session. */}
+      {showSessionInfo && (
+        <div
+          className={`card ${styles.sessionInfo}`}
+          id="session-info"
+          role="status"
+          aria-live="polite"
+        >
+          <h3 className={styles.sessionInfoTitle}>このセッションの進み具合</h3>
+          <ul className={styles.sessionInfoList}>
+            <li>
+              クイズ {index + 1}/{activeItems.length} 問目
+            </li>
+            <li>
+              正答 {answers.filter((a) => a.correct).length}/{answers.length}{" "}
+              問（回答済み）
+            </li>
+          </ul>
+          {pendingProgressNav ? (
+            <>
+              <p className={styles.sessionInfoWarn} role="alert">
+                ⚠ 「学習の記録」を開くとこのクイズは閉じます（
+                {index + 1}/{activeItems.length}
+                問目から再開はできません）。このセッションを続けますか？
+              </p>
+              <div className={styles.failureActions}>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setPendingProgressNav(false);
+                    setShowSessionInfo(false);
+                  }}
+                >
+                  このセッションを続ける
+                </button>
+                <button
+                  className="ghost"
+                  onClick={() =>
+                    dispatch({ type: "go", screen: { name: "progress" } })
+                  }
+                >
+                  それでも記録を見る
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className={styles.failureActions}>
+              <button
+                className="primary"
+                onClick={() => setShowSessionInfo(false)}
+              >
+                クイズに戻る
+              </button>
+              <button
+                className="ghost"
+                onClick={() => setPendingProgressNav(true)}
+                data-testid="quiz-open-record"
+              >
+                学習の記録を開く
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <p className={`quiz-prompt ${styles.prompt}`}>{current.prompt}</p>

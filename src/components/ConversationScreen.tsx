@@ -86,28 +86,32 @@ export default function ConversationScreen({
         // Issue #111: while this banner is up, sending can only fail.
         setNeedsConfig(true);
       } else if (
+        // Issue #130: gate on "did this endpoint actually answer a test?",
+        // not on matching the placeholder string. A local LLM behind
+        // http://localhost:11434/v1 is a valid setup — once a live test
+        // passed, sending must be unlocked.
+        settings.llmVerifiedEndpoint.trim() === chain[0].apiEndpoint.trim()
+      ) {
+        setConfigError(null);
+        setNeedsConfig(false);
+      } else if (
         // Issue #113: the saved value equals the placeholder default
         // (localhost:11434) — the user "saved" without actually configuring.
         // Say so honestly instead of the generic 未設定 message.
         chain[0].apiEndpoint.trim() === DEFAULT_SETTINGS.llmApiEndpoint.trim()
       ) {
         setConfigError(
-          "⚠ 保存されているエンドポイントが初期値（http://localhost:11434/v1）のままです。これはこのPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: http://192.168.x.x:11434/v1 や OpenRouter 等）を入力してください。",
+          "⚠ 保存されているエンドポイントが初期値（http://localhost:11434/v1）のままです。このPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: http://192.168.x.x:11434/v1 や OpenRouter 等）を入力するか、この端末のローカルサーバ相手に「接続テスト（プライマリ）」を成功させてください。",
         );
         setNeedsConfig(true);
-      } else if (
+      } else {
         // Issue #123: banner keyed on the last connection-test result, not
         // just "is it the default" — an endpoint that was saved but never
         // tested (or failed a test) must keep warning the user.
-        settings.llmVerifiedEndpoint.trim() !== chain[0].apiEndpoint.trim()
-      ) {
         setConfigError(
           "⚠ このエンドポイントはまだ接続確認が済んでいません。設定画面の「接続テスト（プライマリ）」に成功すると、この警告は消えます。",
         );
         setNeedsConfig(true);
-      } else {
-        setConfigError(null);
-        setNeedsConfig(false);
       }
       setProviders(chain);
     })();

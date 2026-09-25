@@ -40,6 +40,13 @@ export function endpointWarning(
     };
   }
   const primary = chain[0].apiEndpoint.trim();
+  // Issue #130: a live connection test is the strongest possible evidence.
+  // When this exact endpoint passed one, stop warning — even if the URL is
+  // still the localhost placeholder (a local-LLM setup on this PC is a
+  // legitimate configuration and the default value is simply correct).
+  if ((settings.llmVerifiedEndpoint ?? "").trim() === primary) {
+    return null;
+  }
   if (primary === DEFAULT_SETTINGS.llmApiEndpoint.trim()) {
     return {
       kind: "default",
@@ -48,13 +55,10 @@ export function endpointWarning(
       actionLabel: "設定を開く",
     };
   }
-  if ((settings.llmVerifiedEndpoint ?? "").trim() !== primary) {
-    return {
-      kind: "unverified",
-      message:
-        "⚠ LLMエンドポイントの接続確認がまだ成功していません。設定画面で「接続テスト」を実行してください。",
-      actionLabel: "設定を開く",
-    };
-  }
-  return null;
+  return {
+    kind: "unverified",
+    message:
+      "⚠ LLMエンドポイントの接続確認がまだ成功していません。設定画面で「接続テスト」を実行してください。",
+    actionLabel: "設定を開く",
+  };
 }
