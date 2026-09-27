@@ -459,6 +459,10 @@ export default function QuizScreen({
             );
           })}
         </div>
+        {/* Issue #142: 1-4 キーで選べることは画面のどこにも書かれていなかった */}
+        <p className={styles.keyHint}>
+          1 - 4 キーでも選べます（? でショートカット一覧）
+        </p>
       </div>
 
       {showFeedback && (

@@ -96,6 +96,24 @@ describe("QuizScreen", () => {
     expect(marked.length).toBe(1);
   });
 
+  // Issue #142: 1-4 キーで選べることは画面のどこにも書かれておらず、
+  // 知らないと存在しないのと同じだった。
+  it("shows the 1-4 key hint next to the choices (#142)", async () => {
+    const deck = makeTestDeck();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    expect(
+      await screen.findByText(/1 - 4 キーでも選べます/),
+    ).toBeTruthy();
+  });
+
   // Issue #107: any throw in the generation-prep pipeline (e.g. the old
   // unindexed wrongTotal query) used to leave the spinner running forever.
   it("leaves the loading state with an error when loadWeakWords rejects (#107)", async () => {

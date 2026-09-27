@@ -120,6 +120,43 @@ describe("SetupWizard (issue #121)", () => {
     });
     await userEvent.click(screen.getByTestId("setup-wizard-start"));
     expect(onGoConversation).toHaveBeenCalledTimes(1);
+    // Issue #139: 遷移後もモーダルが被さったままだった → 閉じる
+    await waitFor(() =>
+      expect(screen.queryByTestId("setup-wizard")).toBeNull(),
+    );
+  });
+
+  it("接続OK後に✕で閉じても完了状態（llmSetupDismissed）を上書きしない", async () => {
+    const { storage, saveSettings } = makeStorage();
+    runConnectionTest.mockResolvedValue({
+      ok: true,
+      latencyMs: 120,
+      diagnosis: null,
+    });
+    render(
+      <SetupWizard
+        storage={storage}
+        screenName="home"
+        onGoConversation={vi.fn()}
+        onGoSettings={vi.fn()}
+      />,
+    );
+    await userEvent.type(
+      await screen.findByTestId("setup-wizard-endpoint"),
+      "http://192.168.68.52:11434/v1",
+    );
+    await userEvent.click(screen.getByTestId("setup-wizard-test"));
+    await waitFor(() =>
+      expect(screen.getByTestId("setup-wizard-result").textContent).toContain(
+        "接続OK",
+      ),
+    );
+    saveSettings.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    expect(saveSettings).not.toHaveBeenCalledWith({ llmSetupDismissed: true });
+    await waitFor(() =>
+      expect(screen.queryByTestId("setup-wizard")).toBeNull(),
+    );
   });
 
   it("到達不可の失敗ではセルフチェック（LAN待ち受け/CORS）を出す", async () => {

@@ -15,7 +15,7 @@
         {
           "wordId": "schedule",
           "term": "schedule",
-          "reading": "スキジュール",
+          "reading": "スケジュール",
           "meaning": "予定; 計画を立てる",
           "partOfSpeech": "noun",
           "examples": [
@@ -29,7 +29,7 @@
         {
           "wordId": "colleague",
           "term": "colleague",
-          "reading": "カリーグ",
+          "reading": "コリーグ",
           "meaning": "同僚",
           "partOfSpeech": "noun",
           "examples": [
@@ -131,7 +131,7 @@
         {
           "wordId": "probably",
           "term": "probably",
-          "reading": "プロバブリィ",
+          "reading": "プロバブリー",
           "meaning": "おそらく",
           "partOfSpeech": "adverb",
           "examples": [
@@ -171,7 +171,7 @@
         {
           "wordId": "decide",
           "term": "decide",
-          "reading": "デサイド",
+          "reading": "ディサイド",
           "meaning": "決める; 決定する",
           "partOfSpeech": "verb",
           "examples": [

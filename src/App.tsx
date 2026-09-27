@@ -246,6 +246,17 @@ export default function App() {
         }
       />
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+      {/* Issue #142: ショートカット一覧の存在と開き方を画面に常設で示す。
+          一覧自体は良いのに、開き方が分からないと存在しないのと同じ。 */}
+      <button
+        type="button"
+        className={`ghost ${styles.shortcutButton}`}
+        onClick={() => setShowHelp(true)}
+        aria-label="キーボードショートカット一覧を開く"
+        data-testid="shortcut-help-open"
+      >
+        ? ショートカット
+      </button>
     </>
   );
 }
