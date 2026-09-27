@@ -51,7 +51,13 @@ export default function SetupWizard({
       try {
         const s: Settings = await storage.loadSettings();
         if (!mounted) return;
-        if (!shouldOfferSetupWizard(s)) return;
+        // Issue #139: 設定済みに変わったら（＝接続テスト成功などで
+        // 表示条件が false になったら）モーダルを閉じる。早期 return だけだと
+        // screenName 変更で effect が再実行されても開いたままになる。
+        if (!shouldOfferSetupWizard(s)) {
+          setVisible(false);
+          return;
+        }
         const stored = s.llmApiEndpoint.trim();
         setEndpoint(
           stored && stored !== DEFAULT_SETTINGS.llmApiEndpoint.trim()
@@ -95,7 +101,19 @@ export default function SetupWizard({
 
   const skip = async () => {
     setVisible(false);
+    // Issue #139: 接続テスト成功済み（＝完了）なら「スキップ」で
+    // 完了状態を上書きしない。閉じるだけで十分。
+    if (result?.ok) return;
     await persist({ llmSetupDismissed: true });
+  };
+
+  /**
+   * Issue #139: 「英会話を始める」はモーダルを閉じてから遷移する。
+   * 以前は遷移後もモーダルが被さり、入力欄が隠れたままだった。
+   */
+  const startConversation = () => {
+    setVisible(false);
+    onGoConversation();
   };
 
   const runTest = async () => {
@@ -276,7 +294,7 @@ export default function SetupWizard({
             )}
             {result.ok && (
               <button
-                onClick={onGoConversation}
+                onClick={startConversation}
                 className={styles.primary}
                 data-testid="setup-wizard-start"
               >

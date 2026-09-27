@@ -69,6 +69,14 @@ button.choiceWrong :global(.choice-marker) {
   line-height: 1.6;
 }
 
+/* Issue #142: 選択肢が 1-4 キーでも選べることの案内 */
+.keyHint {
+  margin: 0.75rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
 /* Issue #132: in-session progress panel */
 .sessionInfo {
   display: flex;
