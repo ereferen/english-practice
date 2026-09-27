@@ -67,6 +67,12 @@ export default function ConversationScreen({
   const [extractError, setExtractError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  // Issue #141: 追加直後にそのまま学習へ入れるようにする（デッキを探し直す4タップを無くす）
+  const [savedDeck, setSavedDeck] = useState<{
+    deckId: string;
+    lessonId: string;
+    count: number;
+  } | null>(null);
   const extractControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -222,6 +228,7 @@ export default function ConversationScreen({
       setExtracted(null);
       setExtractError(null);
       setSavedMessage(null);
+      setSavedDeck(null);
     }
   };
 
@@ -232,6 +239,7 @@ export default function ConversationScreen({
     setExtracting(true);
     setExtractError(null);
     setSavedMessage(null);
+    setSavedDeck(null);
     const controller = new AbortController();
     extractControllerRef.current = controller;
     try {
@@ -318,6 +326,17 @@ export default function ConversationScreen({
       dispatch({ type: "setDecks", decks: updatedDecks });
       setSavedMessage(
         `✓ ${approved.length} 件を「${parsed.data.title}」に追加しました。`,
+      );
+      // Issue #141: 追加した語にその場で入れるよう、遷移先（デッキ/レッスン）を覚えておく
+      const firstLessonId = parsed.data.lessons[0]?.lessonId;
+      setSavedDeck(
+        firstLessonId
+          ? {
+              deckId: parsed.data.deckId,
+              lessonId: firstLessonId,
+              count: approved.length,
+            }
+          : null,
       );
       setExtracted(null);
       setExtractError(null);
@@ -502,6 +521,26 @@ export default function ConversationScreen({
             </button>
             {savedMessage && (
               <span className={styles.savedHint}>{savedMessage}</span>
+            )}
+            {/* Issue #141: 追加した直後にそのまま学習へ。以前はここから
+                デッキ一覧を探し直す4タップが必要だった。 */}
+            {savedDeck && (
+              <button
+                className="primary"
+                data-testid="conversation-study-now"
+                onClick={() =>
+                  dispatch({
+                    type: "go",
+                    screen: {
+                      name: "quiz",
+                      deckId: savedDeck.deckId,
+                      lessonId: savedDeck.lessonId,
+                    },
+                  })
+                }
+              >
+                この {savedDeck.count} 語を今すぐ学習
+              </button>
             )}
           </div>
         )}
