@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { db } from "./db";
 import { DexieStorageProvider } from "./dexieProvider";
 import { makeReviewState } from "../domain/srs";
+import { CONVERSATION_RECORD_ID } from "./types";
 
 // Issue #107: loadWeakWords() queried review.wrongTotal, which was not an
 // indexed field — the query threw SchemaError inside the generation-prep
@@ -42,5 +43,39 @@ describe("Dexie schema (issue #107)", () => {
     expect(r?.level).toBe(1);
     await storage2.loadWeakWords(10); // must not throw after reopen either
     await db.review.delete("durable-1");
+  });
+});
+
+// Issue #138: 会話ログは ConversationScreen のローカル state だけだったため、
+// タブ離脱・リロードで丸ごと消えていた。新しい conversations テーブル
+// （db.version(7)）が実 IndexedDB 上で開けて往復できることをここで担保する。
+describe("Dexie conversations table (issue #138)", () => {
+  const storage = new DexieStorageProvider();
+
+  it("saves and restores the latest conversation across a reload", async () => {
+    await storage.saveConversation({
+      id: CONVERSATION_RECORD_ID,
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content: "Hi! How are you?",
+          createdAt: "2026-09-27T12:00:00.000Z",
+        },
+      ],
+      draft: "half typed",
+      updatedAt: "2026-09-27T12:00:05.000Z",
+    });
+
+    db.close();
+    await db.open();
+    const storage2 = new DexieStorageProvider();
+    const saved = await storage2.loadConversation();
+
+    expect(saved?.messages.map((m) => m.content)).toEqual(["Hi! How are you?"]);
+    expect(saved?.draft).toBe("half typed");
+
+    await storage2.deleteConversation();
+    expect(await storage2.loadConversation()).toBeUndefined();
   });
 });
