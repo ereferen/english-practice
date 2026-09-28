@@ -16,6 +16,9 @@ pnpm-debug.log*
 .env
 .env.*.local
 
+# Local scratch helpers (not part of the app)
+scripts_tmp/
+
 # Editor/IDE
 .vscode/
 .idea/
