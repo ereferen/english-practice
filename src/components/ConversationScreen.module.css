@@ -279,6 +279,19 @@
   white-space: nowrap;
 }
 
+/* Issue #138: 復元を知らせるカード（会話ログは黙って消えない） */
+.restoreNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0.5rem 0.5rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
 /* Issue #19: conversation extraction panel */
 .extractBar {
   display: flex;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { AppState, Action } from "../app/types";
-import type { StorageProvider } from "../storage/types";
+import { CONVERSATION_RECORD_ID, type StorageProvider } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   type ChatMessage,
@@ -77,6 +77,50 @@ export default function ConversationScreen({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  // Issue #138: 復元が終わるまで保存を止める（空ログで上書きしないため）
+  const hydratedRef = useRef(false);
+  const [restoreNotice, setRestoreNotice] = useState(false);
+
+  // Issue #138: タブ離脱・リロードで会話ログが丸ごと消えていた（messages が
+  // このコンポーネントのローカル state だけだった）。直近1セッションを
+  // IndexedDB から戻し、続きから話せるようにする。
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const saved = await storage.loadConversation();
+        if (!mounted) return;
+        if (saved && saved.messages.length > 0) {
+          setMessages(saved.messages);
+          setRestoreNotice(true);
+        }
+        if (saved?.draft) setInput(saved.draft);
+      } catch {
+        // 復元できなくても会話自体は続けられる（致命ではない）
+      } finally {
+        if (mounted) hydratedRef.current = true;
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [storage]);
+
+  // Issue #138: 会話ログと下書きを退避する。入力のキーストロークごとに
+  // 書かないよう軽くデバウンスする。
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const timer = setTimeout(() => {
+      void storage.saveConversation({
+        id: CONVERSATION_RECORD_ID,
+        // エラーカードは会話ではないので残さない（issue #111 と同じ扱い）
+        messages: messages.filter((m) => m.kind !== "error"),
+        draft: input,
+        updatedAt: new Date().toISOString(),
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [messages, input, storage]);
 
   // Load config on mount
   useEffect(() => {
@@ -224,11 +268,15 @@ export default function ConversationScreen({
   const handleClear = () => {
     if (confirm("会話履歴を削除しますか？")) {
       setMessages([]);
+      setInput("");
       setStreamingContent("");
       setExtracted(null);
       setExtractError(null);
       setSavedMessage(null);
       setSavedDeck(null);
+      setRestoreNotice(false);
+      // Issue #138: 退避したログも消す（次に開いたときに復活させない）
+      void storage.deleteConversation();
     }
   };
 
@@ -395,6 +443,19 @@ export default function ConversationScreen({
             }
           >
             設定を開く
+          </button>
+        </div>
+      )}
+
+      {/* Issue #138: 復元したことを黙ってやらない（何が残っているか分かるように） */}
+      {restoreNotice && (
+        <div className={`card ${styles.restoreNotice}`} role="status">
+          <span>
+            💾
+            前回の会話を復元しました（直近1セッション分をこの端末に保存しています）
+          </span>
+          <button className="ghost" onClick={() => setRestoreNotice(false)}>
+            閉じる
           </button>
         </div>
       )}

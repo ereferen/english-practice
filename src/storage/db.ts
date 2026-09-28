@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
   AnswerEvent,
+  ConversationRecord,
   GeneratedQuizSet,
   ImprovementAction,
   ProposalRecord,
@@ -19,6 +20,7 @@ export interface DexieSchema {
   userDecks: EntityTable<UserDeckRecord, "deckId">;
   improvementActions: EntityTable<ImprovementAction, "id">;
   proposals: EntityTable<ProposalRecord, "id">;
+  conversations: EntityTable<ConversationRecord, "id">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -55,4 +57,10 @@ db.version(5).stores({
 // index 追加（既存データの移行は不要、Dexie が onupgradeneeded で自動付与）。
 db.version(6).stores({
   review: "[deckId+wordId], deckId, dueAt, level, wrongTotal",
+});
+
+// issue #138: 英会話の会話ログ（直近1セッション）をタブ離脱・リロードを跨いで保持する。
+// 追加テーブルのみで既存データの移行は不要。
+db.version(7).stores({
+  conversations: "id, updatedAt",
 });

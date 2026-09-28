@@ -1,3 +1,5 @@
+import type { ChatMessage } from "../domain/conversation";
+
 export interface ReviewState {
   deckId: string;
   wordId: string;
@@ -124,10 +126,33 @@ export interface StorageProvider {
   saveProposal(record: ProposalRecord): Promise<void>;
   listProposals(status?: ProposalStatus): Promise<ProposalRecord[]>;
 
+  // 会話ログの退避（issue #138: タブ離脱・リロードで会話が消える）
+  saveConversation(record: ConversationRecord): Promise<void>;
+  loadConversation(id?: string): Promise<ConversationRecord | undefined>;
+  deleteConversation(id?: string): Promise<void>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
 }
+
+/**
+ * issue #138: 英会話の会話ログ。`ConversationScreen` のローカル state だけだと
+ * タブ離脱（＝アンマウント）で丸ごと消えていた。直近1セッション分を退避し、
+ * 戻ってきたときに続きから話せるようにする。
+ * ※ 追加テーブルのみで既存データの移行は不要（db.version(7)）。
+ */
+export interface ConversationRecord {
+  /** 直近1セッションのみ保持する固定キー（"latest"） */
+  id: string;
+  messages: ChatMessage[];
+  /** 送信前に入力していた下書き（issue #138: 下書きも消えていた） */
+  draft: string;
+  updatedAt: string;
+}
+
+/** issue #138: 保持するのは直近1セッションのみ（無制限に貯めない） */
+export const CONVERSATION_RECORD_ID = "latest";
 
 export interface UserDeckMeta {
   id: string;

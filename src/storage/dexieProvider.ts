@@ -1,6 +1,7 @@
 import { db } from "./db";
 import type {
   AnswerEvent,
+  ConversationRecord,
   GeneratedQuizSet,
   ImprovementAction,
   ProposalRecord,
@@ -11,7 +12,7 @@ import type {
   StorageProvider,
   UserDeckRecord,
 } from "./types";
-import { DEFAULT_SETTINGS } from "./types";
+import { CONVERSATION_RECORD_ID, DEFAULT_SETTINGS } from "./types";
 
 export class DexieStorageProvider implements StorageProvider {
   async loadSettings(): Promise<Settings> {
@@ -147,6 +148,21 @@ export class DexieStorageProvider implements StorageProvider {
     return rows.reverse();
   }
 
+  // issue #138: 会話ログ（直近1セッション）の退避・復元
+  async saveConversation(record: ConversationRecord): Promise<void> {
+    await db.conversations.put(record);
+  }
+
+  async loadConversation(
+    id = CONVERSATION_RECORD_ID,
+  ): Promise<ConversationRecord | undefined> {
+    return db.conversations.get(id);
+  }
+
+  async deleteConversation(id = CONVERSATION_RECORD_ID): Promise<void> {
+    await db.conversations.delete(id);
+  }
+
   async exportAll(): Promise<unknown> {
     return {
       settings: await db.settings.toArray(),
@@ -157,6 +173,7 @@ export class DexieStorageProvider implements StorageProvider {
       userDecks: await db.userDecks.toArray(),
       improvementActions: await db.improvementActions.toArray(),
       proposals: await db.proposals.toArray(),
+      conversations: await db.conversations.toArray(),
     };
   }
 
@@ -170,6 +187,7 @@ export class DexieStorageProvider implements StorageProvider {
       userDecks?: UserDeckRecord[];
       improvementActions?: ImprovementAction[];
       proposals?: ProposalRecord[];
+      conversations?: ConversationRecord[];
     };
     await db.transaction(
       "rw",
@@ -182,6 +200,7 @@ export class DexieStorageProvider implements StorageProvider {
         db.userDecks,
         db.improvementActions,
         db.proposals,
+        db.conversations,
       ],
       async () => {
         await db.settings.clear();
@@ -192,6 +211,7 @@ export class DexieStorageProvider implements StorageProvider {
         await db.userDecks.clear();
         await db.improvementActions.clear();
         await db.proposals.clear();
+        await db.conversations.clear();
         if (payload.settings?.length)
           await db.settings.bulkAdd(payload.settings);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
@@ -206,6 +226,8 @@ export class DexieStorageProvider implements StorageProvider {
           await db.improvementActions.bulkAdd(payload.improvementActions);
         if (payload.proposals?.length)
           await db.proposals.bulkAdd(payload.proposals);
+        if (payload.conversations?.length)
+          await db.conversations.bulkAdd(payload.conversations);
       },
     );
   }
