@@ -117,9 +117,15 @@ export default function FlashScreen({
     window.setTimeout(() => setShake(false), 500);
   };
 
+  // Issue #149: the gate itself is right, but the button used to look fully
+  // enabled while the hint vanished after 0.5s — it read as "broken". The
+  // button now renders disabled/unavailable until the card is revealed, and
+  // the hint stays on screen instead of timing out.
+  const canAdvance = flipped || (word ? flippedRef.current.has(word.wordId) : false);
+
   const handleNext = () => {
     if (!lesson) return;
-    if (!flipped && !(word && flippedRef.current.has(word.wordId))) {
+    if (!canAdvance) {
       requestFlipFirst();
       return;
     }
@@ -340,6 +346,7 @@ export default function FlashScreen({
         <button
           className={`primary ${styles.nextButton}`}
           onClick={handleNext}
+          disabled={!canAdvance}
           data-testid="flash-next-button"
         >
           {isLast ? "クイズへ" : "次の語"}
@@ -359,8 +366,12 @@ export default function FlashScreen({
           始められます。
         </p>
       )}
-      {shake && (
-        <p className={styles.flipGate} role="alert">
+      {!canAdvance && (
+        <p
+          className={styles.flipGate}
+          role={shake ? "alert" : "status"}
+          data-testid="flip-gate-hint"
+        >
           ⚠ 先にカードをめくって意味を確認しましょう（クリック / Space）
         </p>
       )}
