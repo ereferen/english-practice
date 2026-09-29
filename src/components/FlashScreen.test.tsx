@@ -187,15 +187,37 @@ describe("FlashScreen", () => {
     expect(screen.getByText(/2\/3/)).toBeTruthy();
   });
 
-  it("blocks 「次の語」 on an unflipped card and shakes (issue #124)", async () => {
+  it("blocks 「次の語」 on an unflipped card and shakes (issue #124/#149)", async () => {
     const user = userEvent.setup();
     renderFlashScreen(makeState(deck));
-    await user.click(screen.getByRole("button", { name: "次の語" }));
+    const next = screen.getByTestId("flash-next-button") as HTMLButtonElement;
+    // Issue #149: the button must LOOK unavailable before the flip, so a
+    // swallowed click can't read as "the app is broken".
+    expect(next.disabled).toBe(true);
+    await user.click(next);
     // still on word 1
+    expect(screen.getByText(/1\/3/)).toBeTruthy();
+    // Keyboard advances are still gated by the shake + alert.
+    await user.keyboard("{ArrowRight}");
     expect(screen.getByText(/1\/3/)).toBeTruthy();
     expect(screen.getByRole("alert")).toBeTruthy();
     const card = screen.getByRole("button", { name: /カードをめくる/ });
     expect(card.getAttribute("data-shake")).toBe("true");
+  });
+
+  it("keeps the flip-gate hint on screen instead of flashing it for 0.5s (#149)", async () => {
+    renderFlashScreen(makeState(deck));
+    const hint = screen.getByTestId("flip-gate-hint");
+    expect(hint.textContent).toContain("先にカードをめくって");
+    await new Promise((r) => setTimeout(r, 800));
+    expect(screen.getByTestId("flip-gate-hint")).toBeTruthy();
+    // Flipping clears the hint and re-enables the button.
+    const user = userEvent.setup();
+    await flipCard(user);
+    expect(screen.queryByTestId("flip-gate-hint")).toBeNull();
+    expect(
+      (screen.getByTestId("flash-next-button") as HTMLButtonElement).disabled,
+    ).toBe(false);
   });
 
   it("前へ returns to the previous word with its revealed face (issue #124)", async () => {
