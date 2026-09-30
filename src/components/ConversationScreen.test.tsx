@@ -10,6 +10,16 @@ import {
   type StorageProvider,
 } from "../storage/types";
 
+// Issue #147: 話題プリセットを押したときに「LLM へ何を送ったか」を検証したいので
+// requestLlmChat だけ差し替える（providersFromSettings 等は本物を使う）。
+const { requestLlmChatMock } = vi.hoisted(() => ({
+  requestLlmChatMock: vi.fn(),
+}));
+vi.mock("../domain/llm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../domain/llm")>();
+  return { ...actual, requestLlmChat: requestLlmChatMock };
+});
+
 /**
  * issue #138: 会話ログが ConversationScreen のローカル state だけだったため、
  * タブ離脱（アンマウント）やリロードで丸ごと消えていた。直近1セッションを
@@ -40,6 +50,7 @@ function makeState(): AppState {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  requestLlmChatMock.mockReset();
   // jsdom には scrollIntoView が無い（ConversationScreen が自動スクロールする）
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -185,5 +196,132 @@ describe("ConversationScreen (issue #138)", () => {
 
     expect(deleteConversation).not.toHaveBeenCalled();
     expect(screen.getByText("Hi!")).toBeTruthy();
+  });
+});
+
+/**
+ * Issue #147: 会話の入口がフリーチャットだけだと毎回ネタを自分で振ることになる
+ * （ペルソナ aki）。話題プリセットから「相手がリードする」会話を始められること、
+ * 会話中でも話題を切り替えられることをここで固定する。
+ */
+describe("ConversationScreen (issue #147 話題の入口)", () => {
+  const savedLog: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "Hi!",
+        createdAt: "2026-09-27T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Hello!",
+        createdAt: "2026-09-27T12:00:01.000Z",
+      },
+    ],
+    draft: "",
+    updatedAt: "2026-09-27T12:00:02.000Z",
+  };
+
+  it("空状態に話題プリセットが出て、押すと相手役つきで会話が始まる", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content: "Nice! What places have you been to?",
+      providerId: "primary",
+      providerLabel: "プライマリ",
+    });
+    const { storage } = makeStorage(undefined, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("今日は何を話す？")).toBeTruthy();
+    // ペルソナが名指しした 4 つの入口
+    for (const id of ["gaming", "travel", "work", "selfintro"]) {
+      expect(screen.getByTestId(`topic-preset-${id}`)).toBeTruthy();
+    }
+
+    await user.click(screen.getByTestId("topic-preset-travel"));
+
+    // 学習者役の最初のひと言がログに残り、相手の返事が来る
+    expect(
+      await screen.findByText(/I'm thinking about my next trip/),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText("Nice! What places have you been to?"),
+    ).toBeTruthy();
+
+    // system プロンプトに選んだ話題（相手役・進め方）が載っている
+    const call = requestLlmChatMock.mock.calls[0][0];
+    const system = call.messages.find(
+      (m: { role: string }) => m.role === "system",
+    );
+    expect(system.content).toContain("Topic mode: 旅行");
+    expect(system.content).toContain("well-travelled friend");
+  });
+
+  it("会話中でも話題を切り替えられる（切替の一言を送る）", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content: "Sure, how's your week going?",
+      providerId: "primary",
+      providerLabel: "プライマリ",
+    });
+    const { storage } = makeStorage(savedLog, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi!")).toBeTruthy();
+    const workChip = await screen.findByTestId("topic-switch-work");
+    expect(workChip.getAttribute("aria-pressed")).toBe("false");
+
+    await user.click(workChip);
+
+    await waitFor(() =>
+      expect(workChip.getAttribute("aria-pressed")).toBe("true"),
+    );
+    expect(await screen.findByText(/switch to work small talk/)).toBeTruthy();
+    expect(
+      screen.getByText(/話題: 💼 仕事の雑談/),
+    ).toBeTruthy();
+    const call = requestLlmChatMock.mock.calls[0][0];
+    const system = call.messages.find(
+      (m: { role: string }) => m.role === "system",
+    );
+    expect(system.content).toContain("Topic mode: 仕事の雑談");
+  });
+
+  it("設定が未完了なら話題を選んでも送信はしない（話題だけ選択状態になる）", async () => {
+    const { storage } = makeStorage(savedLog, false);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    await user.click(gamingChip);
+
+    await waitFor(() =>
+      expect(gamingChip.getAttribute("aria-pressed")).toBe("true"),
+    );
+    expect(requestLlmChatMock).not.toHaveBeenCalled();
   });
 });
