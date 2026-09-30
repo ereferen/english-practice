@@ -11,6 +11,7 @@ import {
   providersFromSettings,
 } from "../domain/llm";
 import { runConnectionTest } from "../domain/connectionTest";
+import ConfirmDialog from "./ConfirmDialog";
 import styles from "./Settings.module.css";
 
 interface Props {
@@ -71,9 +72,15 @@ export default function Settings({ dispatch, storage }: Props) {
     }
   };
 
-  const handleClear = async () => {
-    if (!confirm("すべてのデータを削除しますか？この操作は元に戻せません。"))
-      return;
+  // Issue #150: 破壊的操作もアプリ内モーダルで確認する。
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
+  const handleClear = () => {
+    setConfirmingClear(true);
+  };
+
+  const handleClearConfirmed = async () => {
+    setConfirmingClear(false);
     await storage.clearAll();
     setSettings(DEFAULT_SETTINGS);
     setMessage("データを削除しました");
@@ -437,6 +444,25 @@ export default function Settings({ dispatch, storage }: Props) {
           </p>
         </div>
       </div>
+
+      {/* Issue #150: 何が消えるかを示してから実行する */}
+      {confirmingClear && (
+        <ConfirmDialog
+          title="すべてのデータを削除しますか？"
+          confirmLabel="すべて削除する"
+          onConfirm={() => void handleClearConfirmed()}
+          onCancel={() => setConfirmingClear(false)}
+        >
+          <p>この端末に保存されている以下がすべて消えます:</p>
+          <ul>
+            <li>語彙（登録した単語・SRSの復習間隔）</li>
+            <li>学習セッションの履歴</li>
+            <li>会話から抽出したデッキ（抽出元の会話ログを含む）</li>
+            <li>設定（APIエンドポイント・目標語数など）</li>
+          </ul>
+          <p>この操作は元に戻せません。</p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

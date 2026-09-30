@@ -129,7 +129,6 @@ describe("ConversationScreen (issue #138)", () => {
       draft: "",
       updatedAt: "2026-09-27T12:00:00.000Z",
     });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
 
     render(
@@ -143,9 +142,48 @@ describe("ConversationScreen (issue #138)", () => {
     expect(await screen.findByText("Hi!")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "クリア" }));
 
+    // Issue #150: 標準 confirm をやめてアプリ内モーダルで確認するようになった。
+    // モーダルが出るまでは何も消えない。
+    expect(deleteConversation).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "削除する" }));
+
     expect(deleteConversation).toHaveBeenCalledWith();
     expect(
       await screen.findByText("英語でメッセージを送って会話を始めましょう！"),
     ).toBeTruthy();
+  });
+
+  it("クリアの確認をキャンセルしたらログは消えない（#150）", async () => {
+    const { storage, deleteConversation } = makeStorage({
+      id: CONVERSATION_RECORD_ID,
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          content: "Hi!",
+          createdAt: "2026-09-27T12:00:00.000Z",
+        },
+      ],
+      draft: "",
+      updatedAt: "2026-09-27T12:00:00.000Z",
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi!")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "クリア" }));
+    await user.click(screen.getByRole("button", { name: "キャンセル" }));
+
+    expect(deleteConversation).not.toHaveBeenCalled();
+    expect(screen.getByText("Hi!")).toBeTruthy();
   });
 });

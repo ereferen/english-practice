@@ -1,0 +1,38 @@
+/* Issue #150: 破壊的な確認ダイアログ。オーバーレイ（scrim-vignette）は
+   共通のグローバル .modal-overlay を使い、パネルだけ .card に載せる。
+   ShortcutHelp.module.css の modal と同じ寸法感に揃えている。 */
+
+:global(.card).modal {
+  max-width: 26rem;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.modalTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.body :global(ul) {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.body :global(li) {
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
