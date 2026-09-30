@@ -27,6 +27,7 @@ import { deckSchema } from "../content/schema";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import TalkSprite from "./TalkSprite";
+import ConfirmDialog from "./ConfirmDialog";
 import styles from "./ConversationScreen.module.css";
 
 interface Props {
@@ -265,19 +266,28 @@ export default function ConversationScreen({
     setStreamingContent("");
   };
 
+  // Issue #150: 「何が消えるか」を往復数で示す（user の発話数 = 往復数）
+  const userTurns = messages.filter((m) => m.role === "user").length;
+
+  // Issue #150: 削除確認はブラウザ標準 confirm ではなくアプリ内モーダルで行う。
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
   const handleClear = () => {
-    if (confirm("会話履歴を削除しますか？")) {
-      setMessages([]);
-      setInput("");
-      setStreamingContent("");
-      setExtracted(null);
-      setExtractError(null);
-      setSavedMessage(null);
-      setSavedDeck(null);
-      setRestoreNotice(false);
-      // Issue #138: 退避したログも消す（次に開いたときに復活させない）
-      void storage.deleteConversation();
-    }
+    setConfirmingClear(true);
+  };
+
+  const handleClearConfirmed = () => {
+    setConfirmingClear(false);
+    setMessages([]);
+    setInput("");
+    setStreamingContent("");
+    setExtracted(null);
+    setExtractError(null);
+    setSavedMessage(null);
+    setSavedDeck(null);
+    setRestoreNotice(false);
+    // Issue #138: 退避したログも消す（次に開いたときに復活させない）
+    void storage.deleteConversation();
   };
 
   // --- Issue #19: 会話ログから学習コンテンツを抽出（提案→承認でデッキ保存） ---
@@ -717,6 +727,21 @@ export default function ConversationScreen({
           </button>
         )}
       </div>
+
+      {/* Issue #150: 削除確認はアプリ内モーダル（標準 confirm をやめた） */}
+      {confirmingClear && (
+        <ConfirmDialog
+          title="会話履歴を削除しますか？"
+          confirmLabel="削除する"
+          onConfirm={handleClearConfirmed}
+          onCancel={() => setConfirmingClear(false)}
+        >
+          <p>
+            会話履歴（{userTurns}往復）を削除します。抽出済みの語はデッキに残ります。
+          </p>
+          <p>この操作は元に戻せません。</p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }
