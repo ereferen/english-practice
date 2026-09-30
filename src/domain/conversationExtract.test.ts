@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   assertEnoughConversationMessages,
+  buildConversationDeck,
   buildExtractPrompt,
   dedupeExtracted,
   extractedToWord,
+  mergeIntoConversationDeck,
   normalizeTermKey,
   parseExtractionResult,
   termToWordId,
   ExtractionError,
   type ExtractedContent,
 } from "./conversationExtract";
-import { deckSchema, wordSchema } from "../content/schema";
+import { deckSchema, wordSchema, type Deck } from "../content/schema";
 import type { ChatMessage } from "./conversation";
 
 function msg(
@@ -238,5 +240,58 @@ describe("deckSchema 互換（ユーザーデッキ全体の組み立て）", ()
       ],
     };
     expect(() => deckSchema.parse(deck)).not.toThrow();
+  });
+});
+
+describe("buildConversationDeck / mergeIntoConversationDeck のレベル（#151）", () => {
+  const items: ExtractedContent[] = [
+    {
+      type: "vocabulary",
+      term: "loot",
+      meaning: "戦利品",
+      example: "a rare item dropped",
+      sourceMessageId: "m2",
+      sourceText: "yes a rare item dropped",
+    },
+  ];
+
+  it("buildConversationDeck は指定したレベルを使う（既定は intermediate）", () => {
+    const now = "2026-09-29T10:00:00.000Z";
+    expect(buildConversationDeck(items, { now, level: "beginner" }).level).toBe(
+      "beginner",
+    );
+    expect(buildConversationDeck(items, { now }).level).toBe("intermediate");
+  });
+
+  it("mergeIntoConversationDeck は指定レベルを反映し、未指定なら既存を維持する", () => {
+    const base: Deck = buildConversationDeck(items, {
+      now: "2026-09-29T10:00:00.000Z",
+      level: "intermediate",
+    });
+    const extra: ExtractedContent[] = [
+      {
+        type: "expression",
+        term: "once in a blue moon",
+        meaning: "ごくたまに",
+        example: "a once-in-a-blue-moon event",
+        sourceMessageId: "m3",
+        sourceText: "That is a once-in-a-blue-moon event.",
+      },
+    ];
+
+    const promoted = mergeIntoConversationDeck(base, extra, {
+      now: "2026-09-30T10:00:00.000Z",
+      level: "advanced",
+    });
+    expect(promoted.added).toBe(1);
+    expect(promoted.deck.level).toBe("advanced");
+    // タイトルの日付は最新の抽出日に更新される
+    expect(promoted.deck.title).toContain("2026-09-30");
+    expect(() => deckSchema.parse(promoted.deck)).not.toThrow();
+
+    const kept = mergeIntoConversationDeck(base, extra, {
+      now: "2026-09-30T10:00:00.000Z",
+    });
+    expect(kept.deck.level).toBe("intermediate");
   });
 });

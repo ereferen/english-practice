@@ -372,3 +372,16 @@
 .saveAllButton {
   white-space: nowrap;
 }
+
+/* Issue #151: 抽出デッキのレベル選択 */
+.levelPicker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.levelPicker select {
+  font-size: 0.85rem;
+}
