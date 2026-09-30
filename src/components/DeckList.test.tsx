@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { AppState } from "../app/types";
 import type { Deck } from "../content/schema";
 import { loadBundledDecks } from "../content/loader";
+import { CONVERSATION_DECK_ID } from "../domain/conversationExtract";
 import DeckList from "./DeckList";
 
 // ---------------------------------------------------------------------------
@@ -58,5 +59,40 @@ describe("DeckList menu-item rows (issue #42)", () => {
     await user.tab(); // 戻る button
     await user.tab(); // deck row
     expect(document.activeElement).toBe(row);
+  });
+});
+
+describe("DeckList の並び（issue #151）", () => {
+  it("会話から抽出したデッキはサンプルより上に出す", async () => {
+    const { decks } = await loadBundledDecks();
+    const sample: Deck = decks[0].deck;
+    const mine: Deck = {
+      ...sample,
+      deckId: CONVERSATION_DECK_ID,
+      source: "conversation",
+      level: "beginner",
+      title: "会話から抽出 (2026-09-29)",
+    };
+
+    // state ではサンプルが先（追加順のまま）でも、表示は自分のデッキが先頭
+    render(<DeckList state={makeState([sample, mine])} dispatch={vi.fn()} />);
+
+    const rows = screen.getAllByRole("button");
+    expect(rows[0].textContent).toContain("戻る");
+    expect(rows[1].textContent).toContain("会話から抽出 (2026-09-29)");
+    expect(rows[2].textContent).toContain(sample.title);
+    expect(rows[1].textContent).toContain("beginner");
+
+    // まとまりの見出し（複数たまったときにここへ集まる）
+    expect(screen.getByText("自分の会話から")).toBeTruthy();
+    expect(screen.getByText("サンプル")).toBeTruthy();
+  });
+
+  it("自分のデッキが無いときは見出しを増やさない", async () => {
+    const { decks } = await loadBundledDecks();
+    render(<DeckList state={makeState([decks[0].deck])} dispatch={vi.fn()} />);
+
+    expect(screen.queryByText("自分の会話から")).toBeNull();
+    expect(screen.getByText("デッキ")).toBeTruthy();
   });
 });

@@ -374,7 +374,7 @@ export function buildConversationDeck(
 export function mergeIntoConversationDeck(
   existing: Deck,
   items: ExtractedContent[],
-  opts: { now: string },
+  opts: { now: string; level?: Deck["level"] },
 ): { deck: Deck; added: number } {
   const lesson = existing.lessons[0];
   if (!lesson) return { deck: existing, added: 0 };
@@ -398,8 +398,10 @@ export function mergeIntoConversationDeck(
   }
   const deck: Deck = {
     ...existing,
+    // Issue #151: 追加時に選んだレベルを反映する（未指定なら既存を維持）
+    level: opts.level ?? existing.level,
     title: existing.title.replace(
-      /\(\d{4}-\d{2}-\d{2}\)$/,
+      /\((\d{4}-\d{2}-\d{2})\)$/,
       `(${opts.now.slice(0, 10)})`,
     ),
     lessons: [

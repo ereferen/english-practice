@@ -24,6 +24,7 @@ import {
   mergeIntoConversationDeck,
 } from "../domain/conversationExtract";
 import { deckSchema } from "../content/schema";
+import type { Deck } from "../content/schema";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import TalkSprite from "./TalkSprite";
@@ -41,6 +42,13 @@ const TYPE_LABELS: Record<ExtractedContent["type"], string> = {
   expression: "表現",
   "grammar-correction": "文法訂正",
 };
+
+// Issue #151: 抽出デッキのレベルを追加時に選べるようにした
+const LEVEL_OPTIONS: { value: Deck["level"]; label: string }[] = [
+  { value: "beginner", label: "初級" },
+  { value: "intermediate", label: "中級" },
+  { value: "advanced", label: "上級" },
+];
 
 export default function ConversationScreen({
   state,
@@ -272,6 +280,17 @@ export default function ConversationScreen({
   // Issue #150: 削除確認はブラウザ標準 confirm ではなくアプリ内モーダルで行う。
   const [confirmingClear, setConfirmingClear] = useState(false);
 
+  // Issue #151: 抽出デッキのレベルを追加時に選ぶ。null の間は既存デッキの
+  // レベル（無ければ intermediate）を選択中として扱う。
+  const [selectedLevel, setSelectedLevel] = useState<Deck["level"] | null>(
+    null,
+  );
+  const existingConversationDeck = state.decks.find(
+    (d) => d.deckId === CONVERSATION_DECK_ID,
+  );
+  const deckLevel =
+    selectedLevel ?? existingConversationDeck?.level ?? "intermediate";
+
   const handleClear = () => {
     setConfirmingClear(true);
   };
@@ -346,17 +365,18 @@ export default function ConversationScreen({
     if (approved.length === 0) return;
     try {
       const now = new Date().toISOString();
-      const existingRecord = state.decks.find(
-        (d) => d.deckId === CONVERSATION_DECK_ID,
-      );
+      const existingRecord = existingConversationDeck;
+      // Issue #151: 追加時に選んだレベル（未選択なら既存デッキのレベル）
+      const level = deckLevel;
       let deck;
       if (existingRecord) {
         const merged = mergeIntoConversationDeck(existingRecord, approved, {
           now,
+          level,
         });
         deck = merged.deck;
       } else {
-        deck = buildConversationDeck(approved, { now });
+        deck = buildConversationDeck(approved, { now, level });
       }
       // 保存前にスキーマ再検証（LLM由来データを決して素で入れない）
       const parsed = deckSchema.safeParse(deck);
@@ -398,10 +418,19 @@ export default function ConversationScreen({
       );
       setExtracted(null);
       setExtractError(null);
+      setSelectedLevel(null);
     } catch (e: unknown) {
       setExtractError(e instanceof Error ? e.message : String(e));
     }
-  }, [extracted, checked, state.decks, messages, storage, dispatch]);
+  }, [
+    extracted,
+    checked,
+    existingConversationDeck,
+    deckLevel,
+    messages,
+    storage,
+    dispatch,
+  ]);
 
   const handleSpeak = (id: string, text: string) => {
     // Issue #47: gold rune-caption indicator while the utterance plays
@@ -669,6 +698,22 @@ export default function ConversationScreen({
               ))}
             </ul>
             <div className={styles.extractActions}>
+              {/* Issue #151: レベルは intermediate 固定だった。追加時に選ばせる。 */}
+              <label className={styles.levelPicker}>
+                デッキのレベル
+                <select
+                  value={deckLevel}
+                  onChange={(e) =>
+                    setSelectedLevel(e.target.value as Deck["level"])
+                  }
+                >
+                  {LEVEL_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 className={`primary ${styles.saveAllButton}`}
                 onClick={handleSaveExtracted}
@@ -681,6 +726,7 @@ export default function ConversationScreen({
                 onClick={() => {
                   setExtracted(null);
                   setExtractError(null);
+                  setSelectedLevel(null);
                 }}
               >
                 却下
@@ -737,7 +783,8 @@ export default function ConversationScreen({
           onCancel={() => setConfirmingClear(false)}
         >
           <p>
-            会話履歴（{userTurns}往復）を削除します。抽出済みの語はデッキに残ります。
+            会話履歴（{userTurns}
+            往復）を削除します。抽出済みの語はデッキに残ります。
           </p>
           <p>この操作は元に戻せません。</p>
         </ConfirmDialog>

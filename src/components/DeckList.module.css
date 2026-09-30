@@ -16,6 +16,13 @@
   font-size: 0.875rem;
 }
 
+/* Issue #151: 「自分の会話から」/「サンプル」のまとまり見出し */
+.groupTitle {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
 /* muted stays muted on hover — DESIGN.md: text-muted is 補足専用,
    the gold signal belongs to the title + caret */
 :global(.menu-item):hover:not(:disabled) .deckMeta,
