@@ -4,7 +4,9 @@ import { CONVERSATION_RECORD_ID, type StorageProvider } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   type ChatMessage,
-  SYSTEM_PROMPT,
+  type ConversationTopic,
+  CONVERSATION_TOPICS,
+  buildSystemPrompt,
   createUserMessage,
   createAssistantMessage,
 } from "../domain/conversation";
@@ -58,6 +60,8 @@ export default function ConversationScreen({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // Issue #147: 選択中の話題（null = 従来のフリーチャット）
+  const [topic, setTopic] = useState<ConversationTopic | null>(null);
   const [providers, setProviders] = useState<LlmProviderConfig[]>([]);
   const [configError, setConfigError] = useState<string | null>(null);
   // Issue #111: banner shown ⇒ sending is pointless; gate the composer on it
@@ -193,9 +197,15 @@ export default function ConversationScreen({
   }, []);
 
   const sendMessage = useCallback(
-    async (overrideText?: string) => {
+    // Issue #147: topicOverride を渡せるようにした理由 — 話題ボタンの押下で
+    // setTopic と送信を同じ tick で行うと、この useCallback が掴んでいる
+    // topic はまだ古い値。system プロンプトに新しい話題を確実に載せるため、
+    // 押した話題をそのまま渡す。
+    async (overrideText?: string, topicOverride?: ConversationTopic | null) => {
       const text = (overrideText ?? input).trim();
       if (!text || providers.length === 0 || needsConfig) return;
+
+      const activeTopic = topicOverride ?? topic;
 
       const userMsg = createUserMessage(text);
       const updated = [...messages, userMsg];
@@ -212,7 +222,7 @@ export default function ConversationScreen({
         const result = await requestLlmChat({
           providers,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: buildSystemPrompt(activeTopic) },
             ...updated.map((m) => ({ role: m.role, content: m.content })),
           ],
           onChunk: (chunk) => {
@@ -256,8 +266,20 @@ export default function ConversationScreen({
         inputRef.current?.focus();
       }
     },
-    [input, providers, messages, needsConfig],
+    [input, providers, messages, needsConfig, topic],
   );
+
+  /**
+   * Issue #147: 話題ボタン。空ログなら相手に振ってもらう最初のひと言を送り、
+   * 会話中なら「話題を変えたい」と伝える。設定未完了のときは送らずに話題だけ
+   * 選択状態にする（設定後にその話題で始められる）。
+   */
+  const startTopic = (t: ConversationTopic) => {
+    setTopic(t);
+    if (providers.length === 0 || needsConfig || loading) return;
+    const line = messages.length === 0 ? t.opener : t.switchLine;
+    void sendMessage(line, t);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -507,6 +529,31 @@ export default function ConversationScreen({
             <p className={styles.emptyHint}>
               例: "Hi! How are you?", "What did you do today?"
             </p>
+            {/* Issue #147: 話題の入口が無いと毎回ネタを自分で振ることになる。
+                押すと相手役＋進め方を決めた状態で相手から話を振ってもらう。 */}
+            <div className={styles.topicPicker}>
+              <p className={styles.topicIntro}>今日は何を話す？</p>
+              <div className={styles.topicButtons}>
+                {CONVERSATION_TOPICS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    data-testid={`topic-preset-${t.id}`}
+                    aria-pressed={topic?.id === t.id}
+                    className={`ghost ${styles.topicButton} ${
+                      topic?.id === t.id ? styles.topicButtonActive : ""
+                    }`}
+                    onClick={() => startTopic(t)}
+                  >
+                    <span className={styles.topicEmoji}>{t.emoji}</span>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <p className={styles.topicNote}>
+                選ぶと相手から話を振ります。自分で始めたいときは下の入力欄へどうぞ。
+              </p>
+            </div>
           </div>
         )}
 
@@ -737,6 +784,33 @@ export default function ConversationScreen({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Issue #147: 会話中の話題スイッチ。「海外雑談 → 仕事英語」のように
+          進めたい方向を自分で選べるようにする（ペルソナのゴール）。 */}
+      {messages.length > 0 && (
+        <div className={styles.topicBar}>
+          <span className={styles.topicBarLabel}>
+            {topic ? `話題: ${topic.emoji} ${topic.label}` : "話題: フリー"}
+          </span>
+          <div className={styles.topicButtons}>
+            {CONVERSATION_TOPICS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                data-testid={`topic-switch-${t.id}`}
+                aria-pressed={topic?.id === t.id}
+                className={`ghost ${styles.topicChip} ${
+                  topic?.id === t.id ? styles.topicChipActive : ""
+                }`}
+                disabled={loading}
+                onClick={() => startTopic(t)}
+              >
+                {t.emoji} {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       <div className={styles.inputBar}>

@@ -220,6 +220,74 @@
   background: var(--color-bg);
 }
 
+/* Issue #147: 話題プリセット（空状態の入口） */
+.topicPicker {
+  margin-top: 1.25rem;
+}
+
+.topicIntro {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-parchment);
+  font-weight: 600;
+}
+
+.topicButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.topicButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+}
+
+.topicButtonActive,
+.topicChipActive {
+  border-color: var(--color-border-gold);
+  color: var(--color-accent-gold);
+}
+
+.topicEmoji {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.topicNote {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+/* Issue #147: 会話中の話題スイッチ（入力欄の上に常設） */
+.topicBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem 0;
+  background: var(--color-bg);
+}
+
+.topicBarLabel {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.topicBar .topicButtons {
+  justify-content: flex-start;
+  gap: 0.35rem;
+}
+
+.topicChip {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.6rem;
+}
+
 /* Issue #44: DESIGN.md text-input well (inset + hairline, gold on focus) */
 .chatInput {
   flex: 1;
