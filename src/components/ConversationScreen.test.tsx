@@ -325,3 +325,82 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     expect(requestLlmChatMock).not.toHaveBeenCalled();
   });
 });
+
+describe("ConversationScreen (issue #157)", () => {
+  const savedLog: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "Hi! How are you?",
+        createdAt: "2026-09-27T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Doing great — you?",
+        createdAt: "2026-09-27T12:00:01.000Z",
+      },
+    ],
+    draft: "",
+    updatedAt: "2026-09-27T12:00:02.000Z",
+  };
+
+  it("Enter送信の後も入力欄は有効でフォーカスが残る（クリックし直し不要）", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: "Nice!" });
+    const { storage } = makeStorage(savedLog, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const input = await screen.findByRole("textbox");
+    await waitFor(() => expect(input).not.toBeDisabled());
+    await user.click(input);
+    await user.type(input, "Let's talk about games{Enter}");
+
+    await waitFor(() => expect(requestLlmChatMock).toHaveBeenCalledTimes(1));
+    // 返事が返った後も入力欄は有効のまま（disabled になるとフォーカスが外れる）
+    await waitFor(() => expect(input).not.toBeDisabled());
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("送信中に Enter を連打しても二重送信しない", async () => {
+    let resolveChat: ((v: { content: string }) => void) | undefined;
+    requestLlmChatMock.mockImplementation(
+      () =>
+        new Promise<{ content: string }>((resolve) => {
+          resolveChat = resolve;
+        }),
+    );
+    const { storage } = makeStorage(savedLog, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const input = await screen.findByRole("textbox");
+    await waitFor(() => expect(input).not.toBeDisabled());
+    await user.click(input);
+    await user.type(input, "Hello{Enter}");
+    await waitFor(() => expect(requestLlmChatMock).toHaveBeenCalledTimes(1));
+
+    // 送信中の Enter は無視される（入力欄は有効なままだが多重送信しない）
+    await user.type(input, "second{Enter}");
+    expect(requestLlmChatMock).toHaveBeenCalledTimes(1);
+
+    resolveChat?.({ content: "ok" });
+    await waitFor(() => expect(input).not.toBeDisabled());
+  });
+});
