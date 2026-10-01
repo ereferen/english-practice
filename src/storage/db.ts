@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type {
   AnswerEvent,
   ConversationRecord,
+  ConversationSessionRecord,
   GeneratedQuizSet,
   ImprovementAction,
   ProposalRecord,
@@ -21,6 +22,7 @@ export interface DexieSchema {
   improvementActions: EntityTable<ImprovementAction, "id">;
   proposals: EntityTable<ProposalRecord, "id">;
   conversations: EntityTable<ConversationRecord, "id">;
+  conversationSessions: EntityTable<ConversationSessionRecord, "id">;
 }
 
 export const db = new Dexie("EnglishPracticeDB") as Dexie & DexieSchema;
@@ -63,4 +65,11 @@ db.version(6).stores({
 // 追加テーブルのみで既存データの移行は不要。
 db.version(7).stores({
   conversations: "id, updatedAt",
+});
+
+// issue #148: 会話セッションを複数（直近 MAX_CONVERSATION_SESSIONS 件）保持する。
+// 追加テーブルのみ。既存 `conversations`（固定キー "latest"）はそのまま残すため、
+// 既存データの移行・削除は発生しない。
+db.version(8).stores({
+  conversationSessions: "id, updatedAt, createdAt",
 });
