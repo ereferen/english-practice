@@ -263,6 +263,9 @@ export default function ConversationScreen({
       } finally {
         setLoading(false);
         controllerRef.current = null;
+        // Issue #157: 入力欄は loading 中も disabled にしないので、ここでの
+        // フォーカスは基本そのまま残る。念のため（モバイルのキーボードなどで
+        // 外れた場合の）復帰として残しておく。
         inputRef.current?.focus();
       }
     },
@@ -284,6 +287,10 @@ export default function ConversationScreen({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      // Issue #157: 送信中は Enter を無視する。入力欄を disabled にすると
+      // ブラウザがフォーカスを外してしまい、毎回クリックし直す羽目になる。
+      // 入力欄は有効のまま残し、送信の多重実行だけをここで止める。
+      if (loading) return;
       sendMessage();
     } else if (e.key === "Escape") {
       setInput("");
@@ -825,7 +832,7 @@ export default function ConversationScreen({
               ? "⚠ 先に設定（APIエンドポイント）が必要です"
               : "英語でメッセージを入力..."
           }
-          disabled={loading || providers.length === 0 || needsConfig}
+          disabled={providers.length === 0 || needsConfig}
           className={styles.chatInput}
         />
         {loading ? (
