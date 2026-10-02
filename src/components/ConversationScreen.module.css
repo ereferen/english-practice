@@ -112,6 +112,30 @@
   content: none;
 }
 
+/* Issue #159: 話題の開始・切替を示す system の注記行。学習者の発言ではないので
+   user 側に寄せず、中央の薄い一行として出す（吹き出しに見せない）。 */
+.noteRow {
+  align-self: center;
+  max-width: 100%;
+}
+
+:global(.card).bubbleNote {
+  background: transparent;
+  border-color: var(--color-border-gold-dim);
+  border-style: dashed;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: normal;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  text-align: center;
+}
+
+:global(.card).bubbleNote::before {
+  content: none;
+}
+
 /* Issue #85: while read-aloud, the row gains the talk sprite next to the
    bubble column. chat-bubble-wrap is a block by default; flex only here. */
 .speakingRow {

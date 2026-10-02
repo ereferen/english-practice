@@ -9,6 +9,9 @@ import {
   buildSystemPrompt,
   createUserMessage,
   createAssistantMessage,
+  createNoteMessage,
+  topicNoteContent,
+  topicNoteInstruction,
 } from "../domain/conversation";
 import {
   type LlmProviderConfig,
@@ -201,16 +204,26 @@ export default function ConversationScreen({
     // setTopic と送信を同じ tick で行うと、この useCallback が掴んでいる
     // topic はまだ古い値。system プロンプトに新しい話題を確実に載せるため、
     // 押した話題をそのまま渡す。
-    async (overrideText?: string, topicOverride?: ConversationTopic | null) => {
+    // Issue #159: note を渡したときは学習者の発言ではなく system の注記行を
+    // 積む（話題の開始・切替）。user バブルとして積むと、打っていない英語が
+    // 保存ログ・抽出・往復数に混ざる。
+    async (
+      overrideText?: string,
+      topicOverride?: ConversationTopic | null,
+      note?: { content: string; instruction: string },
+    ) => {
       const text = (overrideText ?? input).trim();
-      if (!text || providers.length === 0 || needsConfig) return;
+      if (!note && !text) return;
+      if (providers.length === 0 || needsConfig) return;
 
       const activeTopic = topicOverride ?? topic;
 
-      const userMsg = createUserMessage(text);
-      const updated = [...messages, userMsg];
+      const nextMsg = note
+        ? createNoteMessage(note.content, note.instruction)
+        : createUserMessage(text);
+      const updated = [...messages, nextMsg];
       setMessages(updated);
-      setInput("");
+      if (!note) setInput("");
       setFailedSendText(null);
       setLoading(true);
       setStreamingContent("");
@@ -223,7 +236,12 @@ export default function ConversationScreen({
           providers,
           messages: [
             { role: "system", content: buildSystemPrompt(activeTopic) },
-            ...updated.map((m) => ({ role: m.role, content: m.content })),
+            ...updated.map((m) =>
+              // Issue #159: 注記行は表示用の日本語ではなく、LLM への英語指示を送る
+              m.kind === "note" && m.details
+                ? { role: "system" as const, content: m.details }
+                : { role: m.role, content: m.content },
+            ),
           ],
           onChunk: (chunk) => {
             setStreamingContent((prev) => prev + chunk);
@@ -280,8 +298,13 @@ export default function ConversationScreen({
   const startTopic = (t: ConversationTopic) => {
     setTopic(t);
     if (providers.length === 0 || needsConfig || loading) return;
-    const line = messages.length === 0 ? t.opener : t.switchLine;
-    void sendMessage(line, t);
+    // Issue #159: 開始も切替も「学習者が打った発言」ではないので、user バブルでは
+    // なく system の注記行を積み、LLM には英語の指示として渡す。
+    const starting = !messages.some((m) => m.kind !== "note");
+    void sendMessage(undefined, t, {
+      content: topicNoteContent(t, starting),
+      instruction: topicNoteInstruction(t, starting),
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -569,6 +592,7 @@ export default function ConversationScreen({
             key={msg.id}
             className={
               "chat-bubble-wrap" +
+              (msg.kind === "note" ? ` ${styles.noteRow}` : "") +
               (msg.role === "user" ? " user" : "") +
               (speakingId === msg.id ? ` ${styles.speakingRow}` : "")
             }
@@ -583,7 +607,9 @@ export default function ConversationScreen({
                   msg.role === "assistant" ? styles.bubbleNpc : ""
                 } ${msg.role === "user" ? styles.bubbleUser : ""} ${
                   speakingId === msg.id ? styles.speaking : ""
-                } ${msg.kind === "error" ? styles.bubbleError : ""}`}
+                } ${msg.kind === "error" ? styles.bubbleError : ""} ${
+                  msg.kind === "note" ? styles.bubbleNote : ""
+                }`}
               >
                 {msg.content}
                 {/* Issue #122: raw diagnostics tucked behind a disclosure */}

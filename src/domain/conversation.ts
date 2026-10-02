@@ -3,9 +3,12 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
-  /** Issue #111: error cards render without the read-aloud button. */
-  kind?: "error";
-  /** Issue #122: raw diagnostics for error cards, shown behind 詳しく. */
+  /** Issue #111: error cards render without the read-aloud button.
+   *  Issue #159: "note" は話題の開始・切替を示す system の注記行で、学習者の
+   *  発言ではない（user バブルとして描画しない・数えない）。 */
+  kind?: "error" | "note";
+  /** Issue #122: raw diagnostics for error cards, shown behind 詳しく.
+   *  Issue #159: note のときは LLM に渡す英語の指示文（本文は日本語の注記）。 */
   details?: string;
 }
 
@@ -153,6 +156,51 @@ export function createAssistantMessage(
     createdAt: new Date().toISOString(),
     ...(kind ? { kind } : {}),
   };
+}
+
+/**
+ * Issue #159: 話題の開始・切替は「学習者が打った発言」ではない。user バブルとして
+ * 積むと、打っていない英語が保存ログ・抽出（この会話から学ぶ）・往復数に混ざる
+ * （ペルソナ aki の指摘）。system の注記行として残し、LLM には details に入れた
+ * 英語の指示として渡す。
+ */
+export function createNoteMessage(
+  content: string,
+  llmInstruction: string,
+): ChatMessage {
+  return {
+    id: createMessageId(),
+    role: "system",
+    content,
+    createdAt: new Date().toISOString(),
+    kind: "note",
+    details: llmInstruction,
+  };
+}
+
+/** Issue #159: ログに出す注記（日本語・発言ではないことが一目で分かる形） */
+export function topicNoteContent(
+  t: ConversationTopic,
+  starting: boolean,
+): string {
+  return starting
+    ? `— 話題「${t.emoji} ${t.label}」で会話を開始 —`
+    : `— 話題を「${t.emoji} ${t.label}」に切り替え —`;
+}
+
+/** Issue #159: LLM には「学習者の発言」ではなく system 指示として渡す */
+export function topicNoteInstruction(
+  t: ConversationTopic,
+  starting: boolean,
+): string {
+  return starting
+    ? `[Topic start] The learner selected the topic "${t.label}". Start the ` +
+        `conversation yourself: open with ONE short natural line as the partner ` +
+        `(for example: "${t.opener}"), then stop and let the learner answer. ` +
+        `Never wait for them to invent a topic.`
+    : `[Topic switch] The learner wants to change the topic to "${t.label}". ` +
+        `Acknowledge it in ONE short line as the partner, then ask exactly ONE ` +
+        `open question about the new topic.`;
 }
 
 function buildPayload(messages: ChatMessage[], config: ConversationConfig) {
