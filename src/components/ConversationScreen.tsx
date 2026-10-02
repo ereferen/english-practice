@@ -95,7 +95,8 @@ export default function ConversationScreen({
   const controllerRef = useRef<AbortController | null>(null);
   // Issue #138: 復元が終わるまで保存を止める（空ログで上書きしないため）
   const hydratedRef = useRef(false);
-  const [restoreNotice, setRestoreNotice] = useState(false);
+  // Issue #158: 復元したことを黙ってやらない。話題まで戻ったならその名前も出す。
+  const [restoreNotice, setRestoreNotice] = useState<string | null>(null);
 
   // Issue #138: タブ離脱・リロードで会話ログが丸ごと消えていた（messages が
   // このコンポーネントのローカル state だけだった）。直近1セッションを
@@ -108,7 +109,17 @@ export default function ConversationScreen({
         if (!mounted) return;
         if (saved && saved.messages.length > 0) {
           setMessages(saved.messages);
-          setRestoreNotice(true);
+          // Issue #158: 話題も会話と一緒に戻す。ここを戻さないと、画面を
+          // 離れて戻るたびに「フリー」へ戻り、また自分でネタを振ることになる。
+          const restoredTopic = saved.topicId
+            ? (CONVERSATION_TOPICS.find((t) => t.id === saved.topicId) ?? null)
+            : null;
+          setTopic(restoredTopic);
+          setRestoreNotice(
+            restoredTopic
+              ? `💾 前回の会話を復元しました（話題: ${restoredTopic.emoji} ${restoredTopic.label}／直近1セッション分をこの端末に保存しています）`
+              : "💾 前回の会話を復元しました（直近1セッション分をこの端末に保存しています）",
+          );
         }
         if (saved?.draft) setInput(saved.draft);
       } catch {
@@ -132,11 +143,14 @@ export default function ConversationScreen({
         // エラーカードは会話ではないので残さない（issue #111 と同じ扱い）
         messages: messages.filter((m) => m.kind !== "error"),
         draft: input,
+        // Issue #158: 話題は画面を離れると消えるローカル state だった。
+        // 会話ログと一緒に退避し、戻ったときに同じ話題から続けられるようにする。
+        topicId: topic?.id ?? null,
         updatedAt: new Date().toISOString(),
       });
     }, 300);
     return () => clearTimeout(timer);
-  }, [messages, input, storage]);
+  }, [messages, input, topic, storage]);
 
   // Load config on mount
   useEffect(() => {
@@ -356,7 +370,9 @@ export default function ConversationScreen({
     setExtractError(null);
     setSavedMessage(null);
     setSavedDeck(null);
-    setRestoreNotice(false);
+    setRestoreNotice(null);
+    // Issue #158: ログを消したのに話題だけ残ると中途半端なので、フリーに戻す
+    setTopic(null);
     // Issue #138: 退避したログも消す（次に開いたときに復活させない）
     void storage.deleteConversation();
   };
@@ -541,11 +557,8 @@ export default function ConversationScreen({
       {/* Issue #138: 復元したことを黙ってやらない（何が残っているか分かるように） */}
       {restoreNotice && (
         <div className={`card ${styles.restoreNotice}`} role="status">
-          <span>
-            💾
-            前回の会話を復元しました（直近1セッション分をこの端末に保存しています）
-          </span>
-          <button className="ghost" onClick={() => setRestoreNotice(false)}>
+          <span>{restoreNotice}</span>
+          <button className="ghost" onClick={() => setRestoreNotice(null)}>
             閉じる
           </button>
         </div>
