@@ -154,6 +154,13 @@ export interface ConversationRecord {
   messages: ChatMessage[];
   /** 送信前に入力していた下書き（issue #138: 下書きも消えていた） */
   draft: string;
+  /**
+   * issue #158: 選択中の話題（`ConversationTopic.id`）。画面を離れて戻ると
+   * ローカル state が消えて「フリー」に戻っていたため、会話ログと一緒に退避する。
+   * 未選択（フリー）は null。非インデックスフィールドなので Dexie の
+   * バージョンアップは不要（破壊的変更ではない）。
+   */
+  topicId?: string | null;
   updatedAt: string;
 }
 

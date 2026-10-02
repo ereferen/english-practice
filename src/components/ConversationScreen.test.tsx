@@ -26,7 +26,7 @@ vi.mock("../domain/llm", async (importOriginal) => {
  * IndexedDB に退避して戻ってきたら復元する、という挙動をここで固定する。
  */
 function makeStorage(saved?: ConversationRecord, verified = false) {
-  const saveConversation = vi.fn(async () => {});
+  const saveConversation = vi.fn(async (_record: ConversationRecord) => {});
   const deleteConversation = vi.fn(async () => {});
   // 接続テスト成功済みの設定にすると入力欄がアンロックされる（issue #130）
   const settings = verified
@@ -430,5 +430,126 @@ describe("ConversationScreen (issue #157)", () => {
 
     resolveChat?.({ content: "ok" });
     await waitFor(() => expect(input).not.toBeDisabled());
+  });
+});
+
+/**
+ * Issue #158: 話題は ConversationScreen のローカル state だけだったため、
+ * 会話タブを離れて戻る（アンマウント→再マウント）たびに「フリー」へ戻り、
+ * また自分でネタを振る羽目になっていた。会話ログと一緒に話題も退避・復元する。
+ */
+describe("ConversationScreen (issue #158 話題の保持)", () => {
+  const savedWithTopic: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "Hi!",
+        createdAt: "2026-09-27T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Hello!",
+        createdAt: "2026-09-27T12:00:01.000Z",
+      },
+    ],
+    draft: "",
+    topicId: "gaming",
+    updatedAt: "2026-09-27T12:00:02.000Z",
+  };
+
+  it("退避された話題を復元し、復元通知に話題名を出す", async () => {
+    const { storage } = makeStorage(savedWithTopic, true);
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi!")).toBeTruthy();
+    // 会話中の話題バーが復元した話題で選択状態になっている
+    const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    await waitFor(() =>
+      expect(gamingChip.getAttribute("aria-pressed")).toBe("true"),
+    );
+    // 黙って復元しない（どの話題で戻ったかも分かる）
+    expect(screen.getByText(/前回の会話を復元しました（話題:/)).toBeTruthy();
+  });
+
+  it("話題を選ぶと topicId つきで退避する（次に開いても戻る）", async () => {
+    const { storage, saveConversation } = makeStorage(
+      { ...savedWithTopic, topicId: null },
+      false,
+    );
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    await user.click(gamingChip);
+
+    await waitFor(() =>
+      expect(saveConversation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: CONVERSATION_RECORD_ID,
+          topicId: "gaming",
+        }),
+      ),
+    );
+  });
+
+  it("タブを離れて戻っても選んだ話題が残る（アンマウント→再マウント）", async () => {
+    // 1回目のマウントで話題を選び、その保存内容を次回の復元データとして渡す
+    const savedRef: { current?: ConversationRecord } = {};
+    const first = makeStorage({ ...savedWithTopic, topicId: null }, false);
+    first.saveConversation.mockImplementation(
+      async (record: ConversationRecord) => {
+        savedRef.current = record;
+      },
+    );
+    const user = userEvent.setup();
+
+    const view = render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={first.storage}
+      />,
+    );
+    const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    await user.click(gamingChip);
+    await waitFor(() =>
+      expect(gamingChip.getAttribute("aria-pressed")).toBe("true"),
+    );
+    await waitFor(() => expect(savedRef.current?.topicId).toBe("gaming"));
+    view.unmount();
+
+    // 2回目はタブに戻ってきた想定（保存済みのログを復元する）
+    const second = makeStorage(savedRef.current, true);
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={second.storage}
+      />,
+    );
+
+    const restoredChip = await screen.findByTestId("topic-switch-gaming");
+    await waitFor(() =>
+      expect(restoredChip.getAttribute("aria-pressed")).toBe("true"),
+    );
+    // 「フリー」に戻っていない
+    expect(screen.queryByText("話題: フリー")).toBeNull();
   });
 });
