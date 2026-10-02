@@ -250,10 +250,13 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
 
     await user.click(screen.getByTestId("topic-preset-travel"));
 
-    // 学習者役の最初のひと言がログに残り、相手の返事が来る
+    // Issue #159: 話題の選択は「学習者が打った発言」ではない。中央の注記行として
+    // 残り、打っていない英語が自分のバブルには入らない。
     expect(
-      await screen.findByText(/I'm thinking about my next trip/),
+      await screen.findByText("— 話題「✈️ 旅行」で会話を開始 —"),
     ).toBeTruthy();
+    expect(screen.queryByText(/I'm thinking about my next trip/)).toBeNull();
+    // 相手の返事は来る
     expect(
       await screen.findByText("Nice! What places have you been to?"),
     ).toBeTruthy();
@@ -265,9 +268,16 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     );
     expect(system.content).toContain("Topic mode: 旅行");
     expect(system.content).toContain("well-travelled friend");
+    // 注記行は表示用の日本語ではなく、LLM への英語指示として送られる
+    expect(
+      call.messages.some(
+        (m: { role: string; content: string }) =>
+          m.role === "system" && m.content.includes("[Topic start]"),
+      ),
+    ).toBe(true);
   });
 
-  it("会話中でも話題を切り替えられる（切替の一言を送る）", async () => {
+  it("会話中でも話題を切り替えられる（切替はシステム行・発言にはしない）", async () => {
     requestLlmChatMock.mockResolvedValue({
       content: "Sure, how's your week going?",
       providerId: "primary",
@@ -293,7 +303,12 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     await waitFor(() =>
       expect(workChip.getAttribute("aria-pressed")).toBe("true"),
     );
-    expect(await screen.findByText(/switch to work small talk/)).toBeTruthy();
+    // Issue #159: 切替の一言は「自分の発言」ではなく中央の注記行
+    expect(
+      await screen.findByText("— 話題を「💼 仕事の雑談」に切り替え —"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/switch to work small talk/)).toBeNull();
+    expect(screen.queryByText(/Can we switch to work small talk/)).toBeNull();
     expect(
       screen.getByText(/話題: 💼 仕事の雑談/),
     ).toBeTruthy();
@@ -302,6 +317,19 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
       (m: { role: string }) => m.role === "system",
     );
     expect(system.content).toContain("Topic mode: 仕事の雑談");
+    // 切替も LLM には system 指示として渡る（user 発言にはならない）
+    expect(
+      call.messages.some(
+        (m: { role: string; content: string }) =>
+          m.role === "system" && m.content.includes("[Topic switch]"),
+      ),
+    ).toBe(true);
+    expect(
+      call.messages.every(
+        (m: { content: string }) =>
+          !m.content.includes("Can we switch to work small talk"),
+      ),
+    ).toBe(true);
   });
 
   it("設定が未完了なら話題を選んでも送信はしない（話題だけ選択状態になる）", async () => {

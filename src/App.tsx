@@ -233,6 +233,9 @@ export default function App() {
       <main id="main-content" key={state.screen.name} className={styles.scene}>
         {screen}
       </main>
+      {/* Issue #160: 固定の「? ショートカット」ぶんの余白。ページ末尾まで
+          スクロールすれば、最後の行がボタンの下に潜らず読める。 */}
+      <div className={styles.shortcutSpacer} aria-hidden="true" />
       {/* Issue #121: 初回（エンドポイントが初期値のまま）は入力→接続テストを
           ホーム表示前に挟む。スキップ可。 */}
       <SetupWizard
