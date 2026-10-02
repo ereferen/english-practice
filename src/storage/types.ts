@@ -131,6 +131,12 @@ export interface StorageProvider {
   loadConversation(id?: string): Promise<ConversationRecord | undefined>;
   deleteConversation(id?: string): Promise<void>;
 
+  // 会話セッションの複数保持（issue #148: 直近1セッションしか残らず昨日の続きができない）
+  saveConversationSession(record: ConversationSessionRecord): Promise<void>;
+  listConversationSessions(): Promise<ConversationSessionMeta[]>;
+  loadConversationSession(id: string): Promise<ConversationSessionRecord | undefined>;
+  deleteConversationSession(id: string): Promise<void>;
+
   exportAll(): Promise<unknown>;
   importAll(data: unknown): Promise<void>;
   clearAll(): Promise<void>;
@@ -153,6 +159,36 @@ export interface ConversationRecord {
 
 /** issue #138: 保持するのは直近1セッションのみ（無制限に貯めない） */
 export const CONVERSATION_RECORD_ID = "latest";
+
+/**
+ * issue #148: 英会話の会話セッション。旧 `conversations` テーブル（固定キー "latest"）は
+ * 直近1件しか持てず、昨日の続きができなかった。セッション単位のレコードを別テーブルに
+ * 追加し、直近 MAX_CONVERSATION_SESSIONS 件を残して日付で選べるようにする。
+ * ※ 追加テーブルのみ。既存 `conversations` はそのまま（移行なし）。
+ */
+export interface ConversationSessionRecord {
+  /** セッション ID（crypto.randomUUID() 等で発番） */
+  id: string;
+  messages: ChatMessage[];
+  /** 送信前に入力していた下書き */
+  draft: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** セッション選択 UI 用の軽量メタ（本文は含めない） */
+export interface ConversationSessionMeta {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  /** 会話の往復数（メッセージ数ではなくターン数） */
+  turns: number;
+  /** 一覧に出す冒頭のユーザー発話（無ければ空文字） */
+  preview: string;
+}
+
+/** issue #148: 保持する会話セッションの上限（これを超えたら古い順に削除） */
+export const MAX_CONVERSATION_SESSIONS = 3;
 
 export interface UserDeckMeta {
   id: string;

@@ -2,6 +2,8 @@ import { db } from "./db";
 import type {
   AnswerEvent,
   ConversationRecord,
+  ConversationSessionMeta,
+  ConversationSessionRecord,
   GeneratedQuizSet,
   ImprovementAction,
   ProposalRecord,
@@ -12,7 +14,11 @@ import type {
   StorageProvider,
   UserDeckRecord,
 } from "./types";
-import { CONVERSATION_RECORD_ID, DEFAULT_SETTINGS } from "./types";
+import {
+  CONVERSATION_RECORD_ID,
+  DEFAULT_SETTINGS,
+  MAX_CONVERSATION_SESSIONS,
+} from "./types";
 
 export class DexieStorageProvider implements StorageProvider {
   async loadSettings(): Promise<Settings> {
@@ -163,6 +169,45 @@ export class DexieStorageProvider implements StorageProvider {
     await db.conversations.delete(id);
   }
 
+  // issue #148: 会話セッションを複数保持する。保存のたびに古いセッションを
+  // MAX_CONVERSATION_SESSIONS 件まで剪定する（無制限に貯めない）。
+  async saveConversationSession(
+    record: ConversationSessionRecord,
+  ): Promise<void> {
+    await db.conversationSessions.put(record);
+    const all = await db.conversationSessions
+      .orderBy("updatedAt")
+      .toArray();
+    const excess = all.length - MAX_CONVERSATION_SESSIONS;
+    if (excess > 0) {
+      await db.conversationSessions.bulkDelete(
+        all.slice(0, excess).map((r) => r.id),
+      );
+    }
+  }
+
+  async listConversationSessions(): Promise<ConversationSessionMeta[]> {
+    const rows = await db.conversationSessions.orderBy("updatedAt").toArray();
+    // 新しい順（一覧の先頭が直近セッション）
+    return rows.reverse().map((r) => ({
+      id: r.id,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      turns: r.messages.filter((m) => m.role === "user").length,
+      preview: r.messages.find((m) => m.role === "user")?.content ?? "",
+    }));
+  }
+
+  async loadConversationSession(
+    id: string,
+  ): Promise<ConversationSessionRecord | undefined> {
+    return db.conversationSessions.get(id);
+  }
+
+  async deleteConversationSession(id: string): Promise<void> {
+    await db.conversationSessions.delete(id);
+  }
+
   async exportAll(): Promise<unknown> {
     return {
       settings: await db.settings.toArray(),
@@ -174,6 +219,7 @@ export class DexieStorageProvider implements StorageProvider {
       improvementActions: await db.improvementActions.toArray(),
       proposals: await db.proposals.toArray(),
       conversations: await db.conversations.toArray(),
+      conversationSessions: await db.conversationSessions.toArray(),
     };
   }
 
@@ -188,6 +234,7 @@ export class DexieStorageProvider implements StorageProvider {
       improvementActions?: ImprovementAction[];
       proposals?: ProposalRecord[];
       conversations?: ConversationRecord[];
+      conversationSessions?: ConversationSessionRecord[];
     };
     await db.transaction(
       "rw",
@@ -201,6 +248,7 @@ export class DexieStorageProvider implements StorageProvider {
         db.improvementActions,
         db.proposals,
         db.conversations,
+        db.conversationSessions,
       ],
       async () => {
         await db.settings.clear();
@@ -212,6 +260,7 @@ export class DexieStorageProvider implements StorageProvider {
         await db.improvementActions.clear();
         await db.proposals.clear();
         await db.conversations.clear();
+        await db.conversationSessions.clear();
         if (payload.settings?.length)
           await db.settings.bulkAdd(payload.settings);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
@@ -228,6 +277,8 @@ export class DexieStorageProvider implements StorageProvider {
           await db.proposals.bulkAdd(payload.proposals);
         if (payload.conversations?.length)
           await db.conversations.bulkAdd(payload.conversations);
+        if (payload.conversationSessions?.length)
+          await db.conversationSessions.bulkAdd(payload.conversationSessions);
       },
     );
   }
