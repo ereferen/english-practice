@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { AppState, Action } from "../app/types";
-import { CONVERSATION_RECORD_ID, type StorageProvider } from "../storage/types";
+import {
+  MAX_CONVERSATION_SESSIONS,
+  type ConversationSessionMeta,
+  type StorageProvider,
+} from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   type ChatMessage,
@@ -55,6 +59,42 @@ const LEVEL_OPTIONS: { value: Deck["level"]; label: string }[] = [
   { value: "advanced", label: "上級" },
 ];
 
+/**
+ * Issue #148: 会話セッションをセッション ID で管理するための小道具。
+ * jsdom 等 crypto.randomUUID が無い環境でも動くようにフォールバックを持つ。
+ */
+function newSessionId(): string {
+  const c = globalThis.crypto as Crypto | undefined;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  return `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Issue #148: topicId から話題オブジェクトを引く（未知の ID はフリー扱い） */
+function topicFromId(id: string | null | undefined): ConversationTopic | null {
+  if (!id) return null;
+  return CONVERSATION_TOPICS.find((t) => t.id === id) ?? null;
+}
+
+/** Issue #148: セッション一覧に出す日付（日付で選べれば十分、というペルソナ要望） */
+function formatSessionDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Issue #148: 復元トーストの文言（何が残っているかを正直に出す #138 の延長） */
+function restoreNoticeText(topic: ConversationTopic | null): string {
+  const tail = `直近${MAX_CONVERSATION_SESSIONS}セッションまでこの端末に保存しています。上の「🕘 過去のセッション」から切り替えられます`;
+  return topic
+    ? `💾 前回の会話を復元しました（話題: ${topic.emoji} ${topic.label}／${tail}）`
+    : `💾 前回の会話を復元しました（${tail}）`;
+}
+
 export default function ConversationScreen({
   state,
   dispatch,
@@ -97,6 +137,14 @@ export default function ConversationScreen({
   const hydratedRef = useRef(false);
   // Issue #158: 復元したことを黙ってやらない。話題まで戻ったならその名前も出す。
   const [restoreNotice, setRestoreNotice] = useState<string | null>(null);
+  // Issue #148: 今この画面が書き込んでいるセッションの ID。
+  // マウント時に発番し、以降は同じ ID に追記する（＝1マウント = 1セッション）。
+  const sessionIdRef = useRef<string>(newSessionId());
+  // セッションの作成時刻は保存のたびに上書きしない（一覧の日付が動かないように）
+  const sessionCreatedAtRef = useRef<string>(new Date().toISOString());
+  // 保存済みセッションのメタ一覧（古い→新しいではなく新しい順で保持）
+  const [sessions, setSessions] = useState<ConversationSessionMeta[]>([]);
+  const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
 
   // Issue #138: タブ離脱・リロードで会話ログが丸ごと消えていた（messages が
   // このコンポーネントのローカル state だけだった）。直近1セッションを
@@ -105,23 +153,39 @@ export default function ConversationScreen({
     let mounted = true;
     (async () => {
       try {
-        const saved = await storage.loadConversation();
+        const metas = await storage.listConversationSessions();
         if (!mounted) return;
-        if (saved && saved.messages.length > 0) {
-          setMessages(saved.messages);
-          // Issue #158: 話題も会話と一緒に戻す。ここを戻さないと、画面を
-          // 離れて戻るたびに「フリー」へ戻り、また自分でネタを振ることになる。
-          const restoredTopic = saved.topicId
-            ? (CONVERSATION_TOPICS.find((t) => t.id === saved.topicId) ?? null)
-            : null;
+        setSessions(metas);
+        const latestMeta = metas[0];
+        const latestRecord = latestMeta
+          ? await storage.loadConversationSession(latestMeta.id)
+          : undefined;
+        if (!mounted) return;
+        if (latestRecord && latestRecord.messages.length > 0) {
+          // 新テーブルの最新セッションを復元（従来の「続きから」を維持）
+          sessionIdRef.current = latestRecord.id;
+          sessionCreatedAtRef.current = latestRecord.createdAt;
+          setMessages(latestRecord.messages);
+          const restoredTopic = topicFromId(latestRecord.topicId);
           setTopic(restoredTopic);
-          setRestoreNotice(
-            restoredTopic
-              ? `💾 前回の会話を復元しました（話題: ${restoredTopic.emoji} ${restoredTopic.label}／直近1セッション分をこの端末に保存しています）`
-              : "💾 前回の会話を復元しました（直近1セッション分をこの端末に保存しています）",
-          );
+          if (latestRecord.draft) setInput(latestRecord.draft);
+          setRestoreNotice(restoreNoticeText(restoredTopic));
+        } else {
+          // 旧テーブル（固定キー "latest"）からの一回限りの移行。#156 で
+          // 保存層だけ先に入っているので、UI 接続後は旧レコードを新しい
+          // セッションとして引き継ぐ（旧テーブルは消さずに読み取り専用で残す）。
+          const legacy = await storage.loadConversation();
+          if (!mounted) return;
+          if (legacy && legacy.messages.length > 0) {
+            setMessages(legacy.messages);
+            const restoredTopic = topicFromId(legacy.topicId);
+            setTopic(restoredTopic);
+            if (legacy.draft) setInput(legacy.draft);
+            setRestoreNotice(restoreNoticeText(restoredTopic));
+          } else if (legacy?.draft) {
+            setInput(legacy.draft);
+          }
         }
-        if (saved?.draft) setInput(saved.draft);
       } catch {
         // 復元できなくても会話自体は続けられる（致命ではない）
       } finally {
@@ -133,24 +197,41 @@ export default function ConversationScreen({
     };
   }, [storage]);
 
-  // Issue #138: 会話ログと下書きを退避する。入力のキーストロークごとに
-  // 書かないよう軽くデバウンスする。
+  // Issue #148: 会話ログと下書きを「セッション」として退避する。入力の
+  // キーストロークごとに書かないよう軽くデバウンスする。空のセッションは
+  // 残さない（クリア直後の空レコードで一覧を汚さない）。
   useEffect(() => {
     if (!hydratedRef.current) return;
     const timer = setTimeout(() => {
-      void storage.saveConversation({
-        id: CONVERSATION_RECORD_ID,
-        // エラーカードは会話ではないので残さない（issue #111 と同じ扱い）
-        messages: messages.filter((m) => m.kind !== "error"),
+      // エラーカードは会話ではないので残さない（issue #111 と同じ扱い）
+      const kept = messages.filter((m) => m.kind !== "error");
+      if (kept.length === 0 && input.trim() === "") {
+        void storage.deleteConversationSession(sessionIdRef.current);
+        void storage.deleteConversation();
+        return;
+      }
+      void storage.saveConversationSession({
+        id: sessionIdRef.current,
+        messages: kept,
         draft: input,
         // Issue #158: 話題は画面を離れると消えるローカル state だった。
         // 会話ログと一緒に退避し、戻ったときに同じ話題から続けられるようにする。
         topicId: topic?.id ?? null,
+        createdAt: sessionCreatedAtRef.current,
         updatedAt: new Date().toISOString(),
       });
     }, 300);
     return () => clearTimeout(timer);
   }, [messages, input, topic, storage]);
+
+  // Issue #148: セッション一覧を取り直す（ピッカーを開いたとき・削除したとき）
+  const refreshSessions = useCallback(async () => {
+    try {
+      setSessions(await storage.listConversationSessions());
+    } catch {
+      // 一覧が取れなくても会話は続けられる
+    }
+  }, [storage]);
 
   // Load config on mount
   useEffect(() => {
@@ -371,10 +452,47 @@ export default function ConversationScreen({
     setSavedMessage(null);
     setSavedDeck(null);
     setRestoreNotice(null);
+    setSessionPickerOpen(false);
     // Issue #158: ログを消したのに話題だけ残ると中途半端なので、フリーに戻す
     setTopic(null);
-    // Issue #138: 退避したログも消す（次に開いたときに復活させない）
+    // Issue #148: 消すのは「表示中のセッション」だけ（他のセッションは残す）。
+    // 旧テーブルの固定キーも消して、次に開いたときに復活させない。
+    void storage.deleteConversationSession(sessionIdRef.current);
     void storage.deleteConversation();
+    // 次に話し始めたら新しいセッションとして残す
+    sessionIdRef.current = newSessionId();
+    sessionCreatedAtRef.current = new Date().toISOString();
+    void refreshSessions();
+  };
+
+  // Issue #148: 過去のセッションを開く（日付つきの一覧を出し、選ぶと読み込む）
+  const handleOpenSessionPicker = () => {
+    void refreshSessions();
+    setSessionPickerOpen((open) => !open);
+  };
+
+  const handleSelectSession = async (id: string) => {
+    try {
+      const record = await storage.loadConversationSession(id);
+      if (!record) {
+        void refreshSessions();
+        return;
+      }
+      sessionIdRef.current = record.id;
+      sessionCreatedAtRef.current = record.createdAt;
+      setMessages(record.messages);
+      setTopic(topicFromId(record.topicId));
+      setInput(record.draft ?? "");
+      setStreamingContent("");
+      setExtracted(null);
+      setExtractError(null);
+      setSavedMessage(null);
+      setSavedDeck(null);
+      setRestoreNotice(null);
+      setSessionPickerOpen(false);
+    } catch {
+      // 読み込みに失敗しても今の会話は消さない
+    }
   };
 
   // --- Issue #19: 会話ログから学習コンテンツを抽出（提案→承認でデッキ保存） ---
@@ -523,6 +641,15 @@ export default function ConversationScreen({
       <div className={`nav-header ${styles.navHeader}`}>
         <h2 className={styles.title}>英会話</h2>
         <div className={styles.headerActions}>
+          {/* Issue #148: 直近3セッションを日付で選べる（一覧 UI は最小限） */}
+          <button
+            className={`ghost ${styles.clearButton}`}
+            onClick={handleOpenSessionPicker}
+            data-testid="open-session-picker"
+            aria-expanded={sessionPickerOpen}
+          >
+            🕘 過去のセッション
+          </button>
           <button
             className={`ghost ${styles.clearButton}`}
             onClick={handleClear}
@@ -561,6 +688,57 @@ export default function ConversationScreen({
           <button className="ghost" onClick={() => setRestoreNotice(null)}>
             閉じる
           </button>
+        </div>
+      )}
+
+      {/* Issue #148: 過去のセッション（日付つきで選ぶと読み込む） */}
+      {sessionPickerOpen && (
+        <div className={`card ${styles.sessionPicker}`} data-testid="session-picker">
+          <div className={styles.sessionPickerHeader}>
+            <strong>過去のセッション</strong>
+            <button
+              className="ghost"
+              onClick={() => setSessionPickerOpen(false)}
+            >
+              閉じる
+            </button>
+          </div>
+          <p className={styles.sessionPickerNote}>
+            直近{MAX_CONVERSATION_SESSIONS}
+            セッションまで、この端末に保存しています。選ぶとその会話から続けられます。
+          </p>
+          {sessions.length === 0 ? (
+            <p className={styles.sessionPickerEmpty}>
+              保存されたセッションはまだありません。
+            </p>
+          ) : (
+            <ul className={styles.sessionList}>
+              {sessions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className={`ghost ${styles.sessionItem} ${
+                      s.id === sessionIdRef.current ? styles.sessionItemCurrent : ""
+                    }`}
+                    data-testid={`session-item-${s.id}`}
+                    aria-current={s.id === sessionIdRef.current}
+                    onClick={() => void handleSelectSession(s.id)}
+                  >
+                    <span className={styles.sessionDate}>
+                      {formatSessionDate(s.updatedAt)}
+                    </span>
+                    <span className={styles.sessionTurns}>{s.turns}往復</span>
+                    <span className={styles.sessionPreview}>
+                      {s.preview || "(無題)"}
+                    </span>
+                    {s.id === sessionIdRef.current && (
+                      <span className={styles.sessionCurrentBadge}>表示中</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -903,8 +1081,8 @@ export default function ConversationScreen({
           onCancel={() => setConfirmingClear(false)}
         >
           <p>
-            会話履歴（{userTurns}
-            往復）を削除します。抽出済みの語はデッキに残ります。
+            表示中の会話履歴（{userTurns}
+            往復）を削除します。他のセッションと、抽出済みの語はデッキに残ります。
           </p>
           <p>この操作は元に戻せません。</p>
         </ConfirmDialog>
