@@ -179,6 +179,13 @@ export interface ConversationSessionRecord {
   messages: ChatMessage[];
   /** 送信前に入力していた下書き */
   draft: string;
+  /**
+   * issue #148: 選択中の話題（`ConversationTopic.id`）。issue #158 で
+   * `ConversationRecord` に入れたのと同じ理由で、セッションを切り替えたときも
+   * 「フリー」に戻らないよう一緒に退避する。非インデックスフィールドなので
+   * Dexie のバージョンアップは不要（破壊的変更ではない）。
+   */
+  topicId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

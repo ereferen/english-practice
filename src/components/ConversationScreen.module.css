@@ -384,6 +384,81 @@
   color: var(--color-muted);
 }
 
+/* Issue #148: 過去のセッション（日付つき一覧。開くとそのログを読み込む） */
+.sessionPicker {
+  margin: 0 0.5rem 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.sessionPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text-parchment);
+}
+
+.sessionPickerNote {
+  margin: 0.5rem 0 0.6rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.sessionPickerEmpty {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.sessionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sessionItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+
+.sessionItemCurrent {
+  border-color: var(--color-border-gold);
+  color: var(--color-accent-gold);
+}
+
+.sessionDate {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sessionTurns {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.sessionPreview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-muted);
+}
+
+.sessionCurrentBadge {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--color-accent-gold);
+}
+
 /* Issue #19: conversation extraction panel */
 .extractBar {
   display: flex;

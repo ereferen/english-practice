@@ -7,6 +7,7 @@ import {
   CONVERSATION_RECORD_ID,
   DEFAULT_SETTINGS,
   type ConversationRecord,
+  type ConversationSessionRecord,
   type StorageProvider,
 } from "../storage/types";
 
@@ -25,9 +26,26 @@ vi.mock("../domain/llm", async (importOriginal) => {
  * タブ離脱（アンマウント）やリロードで丸ごと消えていた。直近1セッションを
  * IndexedDB に退避して戻ってきたら復元する、という挙動をここで固定する。
  */
-function makeStorage(saved?: ConversationRecord, verified = false) {
+function makeStorage(
+  saved?: ConversationRecord,
+  verified = false,
+  sessionRecords: ConversationSessionRecord[] = [],
+) {
   const saveConversation = vi.fn(async (_record: ConversationRecord) => {});
   const deleteConversation = vi.fn(async () => {});
+  // Issue #148: セッション単位の保存（in-memory のストアで読み書きを模す）
+  const sessionStore = [...sessionRecords];
+  const saveConversationSession = vi.fn(
+    async (record: ConversationSessionRecord) => {
+      const i = sessionStore.findIndex((r) => r.id === record.id);
+      if (i >= 0) sessionStore[i] = record;
+      else sessionStore.push(record);
+    },
+  );
+  const deleteConversationSession = vi.fn(async (id: string) => {
+    const i = sessionStore.findIndex((r) => r.id === id);
+    if (i >= 0) sessionStore.splice(i, 1);
+  });
   // 接続テスト成功済みの設定にすると入力欄がアンロックされる（issue #130）
   const settings = verified
     ? {
@@ -40,8 +58,31 @@ function makeStorage(saved?: ConversationRecord, verified = false) {
     loadConversation: vi.fn(async () => saved),
     saveConversation,
     deleteConversation,
+    listConversationSessions: vi.fn(async () =>
+      [...sessionStore]
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+        .map((r) => ({
+          id: r.id,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+          turns: r.messages.filter((m) => m.role === "user").length,
+          preview: r.messages.find((m) => m.role === "user")?.content ?? "",
+        })),
+    ),
+    loadConversationSession: vi.fn(async (id: string) =>
+      sessionStore.find((r) => r.id === id),
+    ),
+    saveConversationSession,
+    deleteConversationSession,
   } as unknown as StorageProvider;
-  return { storage, saveConversation, deleteConversation };
+  return {
+    storage,
+    saveConversation,
+    deleteConversation,
+    saveConversationSession,
+    deleteConversationSession,
+    sessionStore,
+  };
 }
 
 function makeState(): AppState {
@@ -98,7 +139,7 @@ describe("ConversationScreen (issue #138)", () => {
   });
 
   it("会話ログを退避する（タブを離れても消えない）", async () => {
-    const { storage, saveConversation } = makeStorage(undefined, true);
+    const { storage, saveConversationSession } = makeStorage(undefined, true);
     const user = userEvent.setup();
 
     render(
@@ -115,9 +156,8 @@ describe("ConversationScreen (issue #138)", () => {
     await user.type(input, "Hello there");
 
     await waitFor(() =>
-      expect(saveConversation).toHaveBeenCalledWith(
+      expect(saveConversationSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: CONVERSATION_RECORD_ID,
           draft: "Hello there",
         }),
       ),
@@ -127,19 +167,23 @@ describe("ConversationScreen (issue #138)", () => {
   });
 
   it("クリアしたときは退避ログも消す（次に開いても復活しない）", async () => {
-    const { storage, deleteConversation } = makeStorage({
-      id: CONVERSATION_RECORD_ID,
-      messages: [
+    const { storage, deleteConversation, deleteConversationSession } =
+      makeStorage(undefined, false, [
         {
-          id: "m1",
-          role: "user",
-          content: "Hi!",
+          id: "sess-1",
+          messages: [
+            {
+              id: "m1",
+              role: "user",
+              content: "Hi!",
+              createdAt: "2026-09-27T12:00:00.000Z",
+            },
+          ],
+          draft: "",
           createdAt: "2026-09-27T12:00:00.000Z",
+          updatedAt: "2026-09-27T12:00:00.000Z",
         },
-      ],
-      draft: "",
-      updatedAt: "2026-09-27T12:00:00.000Z",
-    });
+      ]);
     const user = userEvent.setup();
 
     render(
@@ -156,10 +200,13 @@ describe("ConversationScreen (issue #138)", () => {
     // Issue #150: 標準 confirm をやめてアプリ内モーダルで確認するようになった。
     // モーダルが出るまでは何も消えない。
     expect(deleteConversation).not.toHaveBeenCalled();
+    expect(deleteConversationSession).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "削除する" }));
 
+    // 消えるのは表示中のセッションだけ（issue #148）
+    expect(deleteConversationSession).toHaveBeenCalledWith("sess-1");
     expect(deleteConversation).toHaveBeenCalledWith();
     expect(
       await screen.findByText("英語でメッセージを送って会話を始めましょう！"),
@@ -482,7 +529,7 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
   });
 
   it("話題を選ぶと topicId つきで退避する（次に開いても戻る）", async () => {
-    const { storage, saveConversation } = makeStorage(
+    const { storage, saveConversationSession } = makeStorage(
       { ...savedWithTopic, topicId: null },
       false,
     );
@@ -500,9 +547,8 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     await user.click(gamingChip);
 
     await waitFor(() =>
-      expect(saveConversation).toHaveBeenCalledWith(
+      expect(saveConversationSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: CONVERSATION_RECORD_ID,
           topicId: "gaming",
         }),
       ),
@@ -511,10 +557,10 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
 
   it("タブを離れて戻っても選んだ話題が残る（アンマウント→再マウント）", async () => {
     // 1回目のマウントで話題を選び、その保存内容を次回の復元データとして渡す
-    const savedRef: { current?: ConversationRecord } = {};
+    const savedRef: { current?: ConversationSessionRecord } = {};
     const first = makeStorage({ ...savedWithTopic, topicId: null }, false);
-    first.saveConversation.mockImplementation(
-      async (record: ConversationRecord) => {
+    first.saveConversationSession.mockImplementation(
+      async (record: ConversationSessionRecord) => {
         savedRef.current = record;
       },
     );
@@ -535,8 +581,10 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     await waitFor(() => expect(savedRef.current?.topicId).toBe("gaming"));
     view.unmount();
 
-    // 2回目はタブに戻ってきた想定（保存済みのログを復元する）
-    const second = makeStorage(savedRef.current, true);
+    // 2回目はタブに戻ってきた想定（保存済みのセッションを復元する）
+    const second = makeStorage(undefined, true, [
+      savedRef.current as ConversationSessionRecord,
+    ]);
     render(
       <ConversationScreen
         state={makeState()}
@@ -551,5 +599,144 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     );
     // 「フリー」に戻っていない
     expect(screen.queryByText("話題: フリー")).toBeNull();
+  });
+});
+
+/**
+ * Issue #148: 保存が「直近1セッション」の1スロットだけで、新しい会話を始めると
+ * 前のログが残らなかった（昨日の続きができない）。直近3セッションを残し、
+ * 日付つきの一覧から選んで読み込めることをここで固定する。
+ */
+describe("ConversationScreen (issue #148 複数セッション)", () => {
+  const olderSession: ConversationSessionRecord = {
+    id: "sess-old",
+    messages: [
+      {
+        id: "o1",
+        role: "user",
+        content: "What did you do last weekend?",
+        createdAt: "2026-09-25T10:00:00.000Z",
+      },
+      {
+        id: "o2",
+        role: "assistant",
+        content: "I played some games!",
+        createdAt: "2026-09-25T10:00:01.000Z",
+      },
+    ],
+    draft: "",
+    createdAt: "2026-09-25T10:00:00.000Z",
+    updatedAt: "2026-09-25T10:05:00.000Z",
+  };
+
+  const latestSession: ConversationSessionRecord = {
+    id: "sess-new",
+    messages: [
+      {
+        id: "n1",
+        role: "user",
+        content: "Hi, I'm back!",
+        createdAt: "2026-09-27T09:00:00.000Z",
+      },
+    ],
+    draft: "typing again",
+    createdAt: "2026-09-27T09:00:00.000Z",
+    updatedAt: "2026-09-27T09:10:00.000Z",
+  };
+
+  it("最新セッションを復元し、トーストは『直近3セッション』を正直に出す", async () => {
+    const { storage } = makeStorage(undefined, false, [
+      olderSession,
+      latestSession,
+    ]);
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    // 古いセッションは（まだ）表示されない
+    expect(screen.queryByText("What did you do last weekend?")).toBeNull();
+    // 文言が「直近1セッション分」のままになっていない
+    expect(screen.getByText(/直近3セッションまで/)).toBeTruthy();
+    expect(screen.queryByText(/直近1セッション分/)).toBeNull();
+  });
+
+  it("過去のセッションを開いて古いログに切り替えられる（日付つき）", async () => {
+    const { storage } = makeStorage(undefined, false, [
+      olderSession,
+      latestSession,
+    ]);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    await user.click(screen.getByTestId("open-session-picker"));
+
+    // 一覧に両方のセッションが出る（往復数つき）
+    expect(screen.getByTestId("session-item-sess-old")).toBeTruthy();
+    expect(screen.getByTestId("session-item-sess-new")).toBeTruthy();
+    // 一覧には往復数も出る（両方とも 1 往復）
+    expect(screen.getAllByText("1往復")).toHaveLength(2);
+
+    await user.click(screen.getByTestId("session-item-sess-old"));
+
+    expect(
+      await screen.findByText("What did you do last weekend?"),
+    ).toBeTruthy();
+    // 切り替え後は一覧が閉じる
+    expect(screen.queryByTestId("session-picker")).toBeNull();
+  });
+
+  it("旧テーブル（固定キー latest）のログをセッションとして引き継ぐ", async () => {
+    // sessions は空、旧テーブルだけにログがある状態（#156 の保存層だけ入った状態）
+    const { storage, saveConversationSession } = makeStorage(
+      {
+        id: CONVERSATION_RECORD_ID,
+        messages: [
+          {
+            id: "l1",
+            role: "user",
+            content: "Legacy log here",
+            createdAt: "2026-09-24T10:00:00.000Z",
+          },
+        ],
+        draft: "",
+        updatedAt: "2026-09-24T10:00:00.000Z",
+      },
+      true,
+    );
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Legacy log here")).toBeTruthy();
+    expect(screen.getByText(/前回の会話を復元しました/)).toBeTruthy();
+    // 復元後に新しいセッションとして退避され直す（旧→新の移行）
+    await waitFor(() =>
+      expect(saveConversationSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({ content: "Legacy log here" }),
+          ]),
+        }),
+      ),
+    );
   });
 });
