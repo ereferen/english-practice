@@ -513,7 +513,22 @@ describe("FlashScreen", () => {
     const card = screen.getByRole("button", { name: /カードをめくる/ });
     await userEvent.click(card);
     // First fixture word is "ability" which is "noun"
-    expect(screen.getByText(word0.partOfSpeech!)).toBeTruthy();
+    expect(screen.getByText("名詞")).toBeTruthy();
+  });
+
+  // Issue #168: 抽出デッキは品詞が全部 "other" になり、英語のまま浮いていた。
+  // 判定不能（other）はバッジを出さない。
+  it("品詞が other のときはバッジを出さない (#168)", async () => {
+    const deck = makeTestDeck();
+    deck.lessons[0].words[0] = {
+      ...deck.lessons[0].words[0],
+      partOfSpeech: "other",
+    };
+    renderFlashScreen(makeState(deck));
+    const card = screen.getByRole("button", { name: /カードをめくる/ });
+    await userEvent.click(card);
+    expect(screen.queryByText("other")).toBeNull();
+    expect(screen.queryByText("その他")).toBeNull();
   });
 
   // Issue #132: 進捗 used to navigate away and destroy the session.

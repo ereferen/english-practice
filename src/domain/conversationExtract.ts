@@ -26,6 +26,20 @@ import { extractJsonObject } from "./quizGeneration";
 
 export type ExtractedType = "vocabulary" | "expression" | "grammar-correction";
 
+/** 品詞（issue #168: 抽出デッキが全部 "other" になる問題への対処） */
+const POS_VALUES = [
+  "noun",
+  "verb",
+  "adjective",
+  "adverb",
+  "preposition",
+  "conjunction",
+  "pronoun",
+  "determiner",
+  "exclamation",
+  "other",
+] as const;
+
 export interface ExtractedContent {
   type: ExtractedType;
   sourceMessageId: string;
@@ -36,6 +50,7 @@ export interface ExtractedContent {
   example: string;
   correctedVersion?: string;
   explanation?: string;
+  partOfSpeech?: (typeof POS_VALUES)[number];
 }
 
 /** 上限（LLM の冗長出力をアプリのスケールに合わせる） */
@@ -53,6 +68,7 @@ const extractedItemSchema = z.object({
   example: z.string().max(MAX_TEXT_LEN).default(""),
   correctedVersion: z.string().max(MAX_TEXT_LEN).optional(),
   explanation: z.string().max(MAX_TEXT_LEN).optional(),
+  partOfSpeech: z.enum(POS_VALUES).optional(),
 });
 
 const extractionSchema = z.object({
@@ -100,11 +116,12 @@ Rules:
 - example: a natural example sentence taken from or adapted from the transcript.
 - correctedVersion: REQUIRED for grammar-correction (the fixed sentence); omit otherwise.
 - explanation: for grammar-correction, a 1-sentence Japanese explanation of the mistake.
+- partOfSpeech: for vocabulary/expression items, one of "noun","verb","adjective","adverb","preposition","conjunction","pronoun","determiner","exclamation","other". Use "other" only if unsure.
 - sourceMessageIndex: the [n] index of the message the item came from.
 - Skip greetings and filler. If nothing is worth extracting, return an empty items array.
 
 Respond with ONLY a JSON object, no markdown fences, no commentary:
-{"items":[{"type":"vocabulary","sourceMessageIndex":3,"sourceText":"...","term":"...","reading":"...","meaning":"...","example":"..."}]}`;
+{"items":[{"type":"vocabulary","sourceMessageIndex":3,"sourceText":"...","term":"...","reading":"...","meaning":"...","example":"...","partOfSpeech":"noun"}]}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +202,7 @@ export function parseExtractionResult(
         ? { correctedVersion: cleanText(item.correctedVersion) }
         : {}),
       ...(item.explanation ? { explanation: cleanText(item.explanation) } : {}),
+      ...(item.partOfSpeech ? { partOfSpeech: item.partOfSpeech } : {}),
     });
   }
   return out;
@@ -241,6 +259,8 @@ const PART_OF_SPEECH_HINTS: [RegExp, Word["partOfSpeech"]][] = [
 ];
 
 function guessPartOfSpeech(item: ExtractedContent): Word["partOfSpeech"] {
+  // Issue #168: LLM が品詞を返したらそれを優先（ヒント推定は全部 "other" に落ちていた）。
+  if (item.partOfSpeech) return item.partOfSpeech;
   const hintSource = `${item.reading ?? ""} ${item.meaning} ${item.explanation ?? ""}`;
   for (const [re, pos] of PART_OF_SPEECH_HINTS) {
     if (re.test(hintSource)) return pos;

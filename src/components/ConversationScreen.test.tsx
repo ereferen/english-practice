@@ -399,6 +399,27 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     );
     expect(requestLlmChatMock).not.toHaveBeenCalled();
   });
+
+  // Issue #167: 未設定時の話題チップが「無反応なのに見出しだけ変わる」のを、
+  // 押せない理由の明示で解消する。
+  it("設定未完了のときは話題チップの近くに理由を出す（#167）", async () => {
+    const { storage } = makeStorage(savedLog, false);
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    expect(gamingChip.getAttribute("title")).toBe(
+      "先に設定（APIエンドポイント）が必要です",
+    );
+    expect(
+      screen.getByText(/先に設定（APIエンドポイント）が必要です/),
+    ).toBeTruthy();
+  });
 });
 
 describe("ConversationScreen (issue #157)", () => {
@@ -477,6 +498,77 @@ describe("ConversationScreen (issue #157)", () => {
 
     resolveChat?.({ content: "ok" });
     await waitFor(() => expect(input).not.toBeDisabled());
+  });
+});
+
+/**
+ * Issue #166: 失敗した送信を「再送」すると、自分の発言がログに二重に残り、
+ * エラーカードも居座っていた。再送は「失敗した1件を置き換える」であってほしい。
+ */
+describe("ConversationScreen (issue #166 再送の置き換え)", () => {
+  it("再送で自分の発言が二重にならず、エラーカードも残らない", async () => {
+    requestLlmChatMock
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockResolvedValueOnce({ content: "Nice!" });
+    const { storage } = makeStorage(undefined, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const input = await screen.findByRole("textbox");
+    await waitFor(() => expect(input).not.toBeDisabled());
+    await user.click(input);
+    await user.type(input, "RETRY-REPRO-1{Enter}");
+
+    // 1回目は失敗 → エラーカードと再送ボタンが出る
+    const retry = await screen.findByText("再送");
+    expect(screen.getAllByText("RETRY-REPRO-1")).toHaveLength(1);
+
+    // 再送（今回は成功）
+    await user.click(retry);
+    await waitFor(() => expect(requestLlmChatMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByText("Nice!")).toBeTruthy());
+
+    // 自分の発言は1つだけ・エラーカードは消えている
+    expect(screen.getAllByText("RETRY-REPRO-1")).toHaveLength(1);
+    expect(screen.queryByText(/LLM応答がありません/)).toBeNull();
+  });
+});
+
+/**
+ * Issue #169: ショートカット一覧に「Shift+Enter 改行」とあるのに、入力欄が
+ * 1行の <input> で改行できなかった。複数行 textarea にして Enter=送信 /
+ * Shift+Enter=改行 を成立させる。
+ */
+describe("ConversationScreen (issue #169 改行)", () => {
+  it("入力欄は複数行 textarea で、Shift+Enter は改行・Enter は送信", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: "ok" });
+    const { storage } = makeStorage(undefined, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const input = (await screen.findByRole("textbox")) as HTMLTextAreaElement;
+    expect(input.tagName).toBe("TEXTAREA");
+    await waitFor(() => expect(input).not.toBeDisabled());
+    await user.click(input);
+    await user.type(input, "line one{Shift>}{Enter}{/Shift}line two");
+
+    // Shift+Enter で改行が入り、送信はされない
+    expect(input.value).toBe("line one\nline two");
+    expect(requestLlmChatMock).not.toHaveBeenCalled();
   });
 });
 

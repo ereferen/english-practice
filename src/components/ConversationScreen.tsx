@@ -113,6 +113,9 @@ export default function ConversationScreen({
   const [streamingContent, setStreamingContent] = useState("");
   // Issue #73: last failed user text + flag so the error card can offer 再送/設定へ
   const [failedSendText, setFailedSendText] = useState<string | null>(null);
+  // Issue #166: 失敗時に入れた「自分の発言」と「エラーカード」の id。再送時に
+  // これらをログから取り除いてから送り直す（二重化・エラーカード残留の防止）。
+  const [failedSendIds, setFailedSendIds] = useState<string[]>([]);
   // Issue #47: which message is currently being read aloud (Web Speech)
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   // Issue #83: TTS availability (no-voices env gets explicit feedback)
@@ -131,7 +134,7 @@ export default function ConversationScreen({
   } | null>(null);
   const extractControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
   // Issue #138: 復元が終わるまで保存を止める（空ログで上書きしないため）
   const hydratedRef = useRef(false);
@@ -306,6 +309,7 @@ export default function ConversationScreen({
       overrideText?: string,
       topicOverride?: ConversationTopic | null,
       note?: { content: string; instruction: string },
+      pruneIds?: string[],
     ) => {
       const text = (overrideText ?? input).trim();
       if (!note && !text) return;
@@ -316,10 +320,17 @@ export default function ConversationScreen({
       const nextMsg = note
         ? createNoteMessage(note.content, note.instruction)
         : createUserMessage(text);
-      const updated = [...messages, nextMsg];
+      // Issue #166: 再送時は失敗した user バブルとエラーカードを履歴から除いてから
+      // 積み直す。そうしないと自分の発言が二重に残り、エラーカードも居座る。
+      const base =
+        pruneIds && pruneIds.length
+          ? messages.filter((m) => !pruneIds.includes(m.id))
+          : messages;
+      const updated = [...base, nextMsg];
       setMessages(updated);
       if (!note) setInput("");
       setFailedSendText(null);
+      setFailedSendIds([]);
       setLoading(true);
       setStreamingContent("");
 
@@ -369,10 +380,10 @@ export default function ConversationScreen({
         setFailedSendText(text);
         // Issue #111: kind="error" renders the card without read-aloud.
         // Issue #122: details go on the message for the 詳しく disclosure.
-        setMessages((prev) => [
-          ...prev,
-          { ...createAssistantMessage(summary, "error"), details },
-        ]);
+        const errorMsg = { ...createAssistantMessage(summary, "error"), details };
+        // Issue #166: 再送で置き換える対象（自分の発言 + エラーカード）を覚える。
+        setFailedSendIds(note ? [errorMsg.id] : [nextMsg.id, errorMsg.id]);
+        setMessages((prev) => [...prev, errorMsg]);
       } finally {
         setLoading(false);
         controllerRef.current = null;
@@ -389,7 +400,12 @@ export default function ConversationScreen({
    * Issue #147: 話題ボタン。空ログなら相手に振ってもらう最初のひと言を送り、
    * 会話中なら「話題を変えたい」と伝える。設定未完了のときは送らずに話題だけ
    * 選択状態にする（設定後にその話題で始められる）。
+   * Issue #167: 設定未完了のときはチップを押しても何も起きないのに「話題:」見出し
+   * だけ切り替わって「選べた」と誤解させていた。未設定ならチップを disabled にし、
+   * 理由を出す（見出しを切り替えない）。
    */
+  const topicsDisabled = providers.length === 0 || needsConfig;
+
   const startTopic = (t: ConversationTopic) => {
     setTopic(t);
     if (providers.length === 0 || needsConfig || loading) return;
@@ -764,6 +780,11 @@ export default function ConversationScreen({
                     className={`ghost ${styles.topicButton} ${
                       topic?.id === t.id ? styles.topicButtonActive : ""
                     }`}
+                    title={
+                      topicsDisabled
+                        ? "先に設定（APIエンドポイント）が必要です"
+                        : undefined
+                    }
                     onClick={() => startTopic(t)}
                   >
                     <span className={styles.topicEmoji}>{t.emoji}</span>
@@ -862,7 +883,7 @@ export default function ConversationScreen({
           <div className={styles.retryBar}>
             <button
               className={`primary ${styles.retryButton}`}
-              onClick={() => sendMessage(failedSendText)}
+              onClick={() => sendMessage(failedSendText, undefined, undefined, failedSendIds)}
             >
               再送
             </button>
@@ -1027,20 +1048,33 @@ export default function ConversationScreen({
                   topic?.id === t.id ? styles.topicChipActive : ""
                 }`}
                 disabled={loading}
+                title={
+                  topicsDisabled
+                    ? "先に設定（APIエンドポイント）が必要です"
+                    : undefined
+                }
                 onClick={() => startTopic(t)}
               >
                 {t.emoji} {t.label}
               </button>
             ))}
           </div>
+          {topicsDisabled && (
+            <span className={styles.topicDisabledHint} role="status">
+              ⚠ 先に設定（APIエンドポイント）が必要です。選んだ話題は設定後から使えます。
+            </span>
+          )}
         </div>
       )}
 
       {/* Input */}
       <div className={styles.inputBar}>
-        <input
+        {/* Issue #169: Shift+Enter 改行がショートカット一覧に載っていたのに
+            1行 <input> で効かなかった。複数行入力できる textarea にする。
+            Enter 単体は送信、Shift+Enter は改行（handleKeyDown 側で分岐）。 */}
+        <textarea
           ref={inputRef}
-          type="text"
+          rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

@@ -312,6 +312,13 @@
   padding: 0.25rem 0.6rem;
 }
 
+/* Issue #167: 未設定時、話題チップが押せない理由を示す一言 */
+.topicDisabledHint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #a89f8c);
+  margin-left: 0.5rem;
+}
+
 /* Issue #44: DESIGN.md text-input well (inset + hairline, gold on focus) */
 .chatInput {
   flex: 1;
@@ -322,6 +329,12 @@
   color: var(--color-text-parchment);
   caret-color: var(--color-accent-gold);
   font-size: 1rem;
+  /* Issue #169: 複数行入力を許す textarea。1行のときの見た目は input と同じに。 */
+  font-family: inherit;
+  line-height: 1.4;
+  resize: none;
+  overflow-y: auto;
+  max-height: 8rem;
 }
 
 .chatInput:focus {
