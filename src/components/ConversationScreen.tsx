@@ -780,6 +780,11 @@ export default function ConversationScreen({
                     className={`ghost ${styles.topicButton} ${
                       topic?.id === t.id ? styles.topicButtonActive : ""
                     }`}
+                    // Issue #173: 未設定のときはチップが有効に見えるのに押しても
+                    // 何も起きなかった（入力欄・送信は disabled で理由も出ている）。
+                    // 同じ画面で「無効なもの」と「有効に見えて無反応なもの」が
+                    // 混在しないよう、未設定ならチップも disabled にする。
+                    disabled={topicsDisabled}
                     title={
                       topicsDisabled
                         ? "先に設定（APIエンドポイント）が必要です"
@@ -793,7 +798,9 @@ export default function ConversationScreen({
                 ))}
               </div>
               <p className={styles.topicNote}>
-                選ぶと相手から話を振ります。自分で始めたいときは下の入力欄へどうぞ。
+                {topicsDisabled
+                  ? "⚠ 先に設定（APIエンドポイント）が必要です。設定すると、ここから話題を選べます。"
+                  : "選ぶと相手から話を振ります。自分で始めたいときは下の入力欄へどうぞ。"}
               </p>
             </div>
           </div>
@@ -1047,7 +1054,7 @@ export default function ConversationScreen({
                 className={`ghost ${styles.topicChip} ${
                   topic?.id === t.id ? styles.topicChipActive : ""
                 }`}
-                disabled={loading}
+                disabled={loading || topicsDisabled}
                 title={
                   topicsDisabled
                     ? "先に設定（APIエンドポイント）が必要です"

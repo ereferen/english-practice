@@ -3,6 +3,11 @@ import type { StorageProvider } from "../storage/types";
 import { endpointWarning, type EndpointWarning } from "../app/endpointStatus";
 import styles from "./EndpointRibbon.module.css";
 
+/**
+ * Issue #171: LLM を使わない純粋な学習画面。警告帯を隠す対象。
+ */
+const LEARNING_SCREENS = new Set(["flash", "quiz", "result", "review"]);
+
 interface Props {
   storage: StorageProvider;
   /**
@@ -43,6 +48,10 @@ export default function EndpointRibbon({
   if (!warning) return null;
   // 設定画面にいる間は導線としての意味が無いので出さない
   if (screenName === "settings") return null;
+  // Issue #171: フラッシュカード / クイズ / 結果 / 復習は LLM と無関係の純粋な
+  // 学習画面。sticky な 47px の警告帯が上に張り付いたままだと集中を邪魔する
+  // ので、これらの画面では出さない（ホーム等に戻れば再び出る）。
+  if (LEARNING_SCREENS.has(screenName)) return null;
 
   return (
     <div

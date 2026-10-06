@@ -18,9 +18,18 @@ interface Props {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   storage: StorageProvider;
+  /** Issue #170: 設定に入る直前の画面へ戻る（未指定ならホームへ） */
+  onBack?: () => void;
+  /** Issue #170: 「戻る」ボタンの文言（会話から来たときは「会話に戻る」） */
+  backLabel?: string;
 }
 
-export default function Settings({ dispatch, storage }: Props) {
+export default function Settings({
+  dispatch,
+  storage,
+  onBack,
+  backLabel = "戻る",
+}: Props) {
   const [settings, setSettings] = useState<SettingsType>(DEFAULT_SETTINGS);
   const [exported, setExported] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -177,9 +186,12 @@ export default function Settings({ dispatch, storage }: Props) {
         <h2>設定</h2>
         <button
           className="ghost"
-          onClick={() => dispatch({ type: "go", screen: { name: "home" } })}
+          onClick={
+            onBack ??
+            (() => dispatch({ type: "go", screen: { name: "home" } }))
+          }
         >
-          戻る
+          {backLabel}
         </button>
       </div>
 
@@ -382,7 +394,18 @@ export default function Settings({ dispatch, storage }: Props) {
           <h3>フォールバックプロバイダ（任意）</h3>
           <p className={styles.hint}>
             プライマリが失敗したときのみ使用します。未設定なら無効。 （例:
-            プライマリ=OpenCode Go / フォールバック=OpenRouter）
+            プライマリ=ローカルLLM や 社内API / フォールバック=OpenRouter）
+          </p>
+          {/* Issue #174: 以前ここに「例: プライマリ=OpenCode Go / フォールバック=OpenRouter」
+              と出していた。しかし OpenCode Go は x-opencode-session ヘッダが必須で、
+              このアプリはカスタムヘッダを送れないため、例のまま入力すると 400
+              （MissingSessionID）で弾かれる罠だった。ヘッダ不要なプロバイダへ例を
+              差し替え、注意書きを添える。 */}
+          <p className={styles.hint}>
+            ⚠ OpenCode Go（opencode.ai/zen/go/v1）は{" "}
+            <code>x-opencode-session</code> ヘッダが必須のため、このアプリからは
+            接続できません（カスタムヘッダの指定は未対応）。OpenRouter など
+            ヘッダ不要のプロバイダを指定してください。
           </p>
           <label>
             API エンドポイント
@@ -390,7 +413,7 @@ export default function Settings({ dispatch, storage }: Props) {
               type="text"
               value={settings.llmFallbackApiEndpoint}
               onChange={(e) => save({ llmFallbackApiEndpoint: e.target.value })}
-              placeholder="https://opencode.ai/zen/go/v1"
+              placeholder="https://openrouter.ai/api/v1"
               className={styles.fieldSpaced}
             />
           </label>

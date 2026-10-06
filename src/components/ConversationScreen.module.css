@@ -269,6 +269,13 @@
   padding: 0.5rem 0.9rem;
 }
 
+/* Issue #173: 未設定時のチップは「押せない」ことが見た目で分かるようにする */
+.topicButton:disabled,
+.topicChip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .topicButtonActive,
 .topicChipActive {
   border-color: var(--color-border-gold);

@@ -379,7 +379,10 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     ).toBe(true);
   });
 
-  it("設定が未完了なら話題を選んでも送信はしない（話題だけ選択状態になる）", async () => {
+  // Issue #173: #167 では「理由を出す」だけだったが、チップは有効に見えたまま
+  // 押しても無反応で、同じ画面の入力欄（disabled + 理由）と状態表示がバラバラ
+  // だった。#173 に従い未設定時のチップは disabled にする。
+  it("設定が未完了なら話題チップは disabled で、押しても選択状態にならない（#173）", async () => {
     const { storage } = makeStorage(savedLog, false);
     const user = userEvent.setup();
 
@@ -392,11 +395,12 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     );
 
     const gamingChip = await screen.findByTestId("topic-switch-gaming");
+    expect((gamingChip as HTMLButtonElement).disabled).toBe(true);
+
     await user.click(gamingChip);
 
-    await waitFor(() =>
-      expect(gamingChip.getAttribute("aria-pressed")).toBe("true"),
-    );
+    // 押しても「選べた」と誤解させない（見出しは切り替わらない）
+    expect(gamingChip.getAttribute("aria-pressed")).toBe("false");
     expect(requestLlmChatMock).not.toHaveBeenCalled();
   });
 
@@ -418,6 +422,25 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     );
     expect(
       screen.getByText(/先に設定（APIエンドポイント）が必要です/),
+    ).toBeTruthy();
+  });
+
+  // Issue #173: 空ログでは「話題:」見出しが無いので、プリセットを押しても画面に
+  // 何も起きないのに押せて見えていた（#167 の症状の再発）。未設定なら disabled に。
+  it("設定未完了なら空状態の話題プリセットも disabled（#173）", async () => {
+    const { storage } = makeStorage(undefined, false);
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const preset = await screen.findByTestId("topic-preset-travel");
+    expect((preset as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      screen.getByText(/先に設定（APIエンドポイント）が必要です。設定すると/),
     ).toBeTruthy();
   });
 });
@@ -623,7 +646,9 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
   it("話題を選ぶと topicId つきで退避する（次に開いても戻る）", async () => {
     const { storage, saveConversationSession } = makeStorage(
       { ...savedWithTopic, topicId: null },
-      false,
+      // Issue #173: 未設定だとチップが disabled になる。このテストの主題は
+      // 話題の退避（#158）なので、設定済み＝チップが押せる状態で検証する。
+      true,
     );
     const user = userEvent.setup();
 
@@ -650,7 +675,7 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
   it("タブを離れて戻っても選んだ話題が残る（アンマウント→再マウント）", async () => {
     // 1回目のマウントで話題を選び、その保存内容を次回の復元データとして渡す
     const savedRef: { current?: ConversationSessionRecord } = {};
-    const first = makeStorage({ ...savedWithTopic, topicId: null }, false);
+    const first = makeStorage({ ...savedWithTopic, topicId: null }, true);
     first.saveConversationSession.mockImplementation(
       async (record: ConversationSessionRecord) => {
         savedRef.current = record;

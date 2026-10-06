@@ -55,4 +55,44 @@ describe("EndpointRibbon (issue #121)", () => {
     await waitFor(() => expect(storage.loadSettings).toHaveBeenCalled());
     expect(screen.queryByTestId("endpoint-ribbon-action")).toBeNull();
   });
+
+  // Issue #171: フラッシュカード / クイズ / 結果 / 復習は LLM と無関係の学習画面。
+  // sticky な警告帯が上に張り付いたままだと集中を邪魔するので出さない。
+  it.each(["flash", "quiz", "result", "review"])(
+    "学習画面(%s)では未設定でもリボンを出さない（#171）",
+    async (screenName) => {
+      const storage = makeStorage();
+      render(
+        <EndpointRibbon
+          storage={storage}
+          screenName={screenName}
+          onOpenSettings={vi.fn()}
+        />,
+      );
+      await waitFor(() => expect(storage.loadSettings).toHaveBeenCalled());
+      expect(screen.queryByTestId("endpoint-ribbon-action")).toBeNull();
+    },
+  );
+
+  it("学習画面でもホーム等に戻れば再びリボンを出す（#171）", async () => {
+    const storage = makeStorage();
+    const { rerender } = render(
+      <EndpointRibbon
+        storage={storage}
+        screenName="quiz"
+        onOpenSettings={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(storage.loadSettings).toHaveBeenCalled());
+    expect(screen.queryByTestId("endpoint-ribbon-action")).toBeNull();
+
+    rerender(
+      <EndpointRibbon
+        storage={storage}
+        screenName="home"
+        onOpenSettings={vi.fn()}
+      />,
+    );
+    expect(await screen.findByTestId("endpoint-ribbon-action")).toBeTruthy();
+  });
 });

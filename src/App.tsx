@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 import { reducer, initialState } from "./app/types";
-import type { Action } from "./app/types";
+import type { Action, Screen } from "./app/types";
 import { loadBundledDecks } from "./content/loader";
 import { storage } from "./storage/dexieProvider";
 import { localProgress } from "./storage/localProgress";
@@ -33,10 +33,21 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  // Issue #170: 設定画面に入る直前の画面を覚えておく。「設定を開く」→「戻る」で
+  // ホームに落ちてしまい、会話を再開するのに「英会話」をもう一度押す3タップが
+  // 必要だった。直前にいた画面へ1タップで戻せるようにする。
+  const [settingsReturn, setSettingsReturn] = useState<Screen>({
+    name: "home",
+  });
 
   // Issue #95: wrap every screen-changing dispatch in a View Transition
   // (graceful instant fallback on unsupported browsers / reduced motion).
   const dispatchTransitioned = (action: Action) => {
+    // 設定以外へ移動したら「設定からの戻り先」を更新する（設定へ入るときは
+    // 直前の値を保つので、設定 → 設定 の移動では壊れない）。
+    if (action.type === "go" && action.screen.name !== "settings") {
+      setSettingsReturn(action.screen);
+    }
     const to = actionScreenName(action);
     if (!to || to === state.screen.name) {
       dispatch(action);
@@ -193,6 +204,13 @@ export default function App() {
             state={state}
             dispatch={dispatchTransitioned}
             storage={storage}
+            // Issue #170: 設定に入る前の画面へ戻す（会話から来たなら会話へ）。
+            onBack={() =>
+              dispatchTransitioned({ type: "go", screen: settingsReturn })
+            }
+            backLabel={
+              settingsReturn.name === "conversation" ? "会話に戻る" : "戻る"
+            }
           />
         );
       case "conversation":
