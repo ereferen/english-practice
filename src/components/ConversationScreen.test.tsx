@@ -208,8 +208,9 @@ describe("ConversationScreen (issue #138)", () => {
     // 消えるのは表示中のセッションだけ（issue #148）
     expect(deleteConversationSession).toHaveBeenCalledWith("sess-1");
     expect(deleteConversation).toHaveBeenCalledWith();
+    // Issue #175: 未設定なので「始めましょう」ではなく「まず設定」を出す
     expect(
-      await screen.findByText("英語でメッセージを送って会話を始めましょう！"),
+      await screen.findByText(/会話を始めるには、まず上の警告/),
     ).toBeTruthy();
   });
 
@@ -420,8 +421,9 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     expect(gamingChip.getAttribute("title")).toBe(
       "先に設定（APIエンドポイント）が必要です",
     );
+    // Issue #175: 理由は画面内の警告カードに一本化した（チップ下の重複警告は廃止）
     expect(
-      screen.getByText(/先に設定（APIエンドポイント）が必要です/),
+      screen.getByText(/保存されているエンドポイントが初期値/),
     ).toBeTruthy();
   });
 
@@ -439,8 +441,9 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
 
     const preset = await screen.findByTestId("topic-preset-travel");
     expect((preset as HTMLButtonElement).disabled).toBe(true);
+    // Issue #175: チップ下の重複警告をやめ、「まず設定」の案内に一本化
     expect(
-      screen.getByText(/先に設定（APIエンドポイント）が必要です。設定すると/),
+      screen.getByText(/会話を始めるには、まず上の警告/),
     ).toBeTruthy();
   });
 });

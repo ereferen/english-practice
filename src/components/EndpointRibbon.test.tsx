@@ -74,6 +74,20 @@ describe("EndpointRibbon (issue #121)", () => {
     },
   );
 
+  // Issue #175: 会話画面は自前の警告カードがあるので、リボンは二重表示を避けて出さない。
+  it("会話画面では未設定でもリボンを出さない（#175）", async () => {
+    const storage = makeStorage();
+    render(
+      <EndpointRibbon
+        storage={storage}
+        screenName="conversation"
+        onOpenSettings={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(storage.loadSettings).toHaveBeenCalled());
+    expect(screen.queryByTestId("endpoint-ribbon-action")).toBeNull();
+  });
+
   it("学習画面でもホーム等に戻れば再びリボンを出す（#171）", async () => {
     const storage = makeStorage();
     const { rerender } = render(

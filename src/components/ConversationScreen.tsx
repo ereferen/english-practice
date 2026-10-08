@@ -762,14 +762,27 @@ export default function ConversationScreen({
       <div className={styles.messagesArea}>
         {messages.length === 0 && !streamingContent && (
           <div className={`card ${styles.emptyState}`}>
-            <p>英語でメッセージを送って会話を始めましょう！</p>
-            <p className={styles.emptyHint}>
-              例: "Hi! How are you?", "What did you do today?"
-            </p>
+            {/* Issue #175: 未設定なのに「英語でメッセージを送って会話を始めましょう！」と
+                誘い、操作要素は全部止まっていた。設定が済むまでは誘い文句を出さず、
+                「まず設定」を主役にする（設定完了後の案内は従来どおり）。 */}
+            {needsConfig ? (
+              <p className={styles.emptyHint}>
+                会話を始めるには、まず上の警告の「設定を開く」からエンドポイントを設定してください。設定が済むと、ここから会話を始められます。
+              </p>
+            ) : (
+              <>
+                <p>英語でメッセージを送って会話を始めましょう！</p>
+                <p className={styles.emptyHint}>
+                  例: "Hi! How are you?", "What did you do today?"
+                </p>
+              </>
+            )}
             {/* Issue #147: 話題の入口が無いと毎回ネタを自分で振ることになる。
                 押すと相手役＋進め方を決めた状態で相手から話を振ってもらう。 */}
             <div className={styles.topicPicker}>
-              <p className={styles.topicIntro}>今日は何を話す？</p>
+              {/* Issue #175: 未設定ではチップが disabled で使えないので、話題の
+                  問いかけは出さない（警告の重複を避ける）。設定後は従来どおり。 */}
+              {!needsConfig && <p className={styles.topicIntro}>今日は何を話す？</p>}
               <div className={styles.topicButtons}>
                 {CONVERSATION_TOPICS.map((t) => (
                   <button
@@ -797,11 +810,13 @@ export default function ConversationScreen({
                   </button>
                 ))}
               </div>
-              <p className={styles.topicNote}>
-                {topicsDisabled
-                  ? "⚠ 先に設定（APIエンドポイント）が必要です。設定すると、ここから話題を選べます。"
-                  : "選ぶと相手から話を振ります。自分で始めたいときは下の入力欄へどうぞ。"}
-              </p>
+              {/* Issue #175: 警告文の重複を解消。未設定時の理由は上の警告カードに
+                  一本化し、ここでは通常時の使い方だけを示す。 */}
+              {!needsConfig && (
+                <p className={styles.topicNote}>
+                  選ぶと相手から話を振ります。自分で始めたいときは下の入力欄へどうぞ。
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -1087,7 +1102,7 @@ export default function ConversationScreen({
           onKeyDown={handleKeyDown}
           placeholder={
             needsConfig
-              ? "⚠ 先に設定（APIエンドポイント）が必要です"
+              ? "（設定を済ませると英語で入力できます）"
               : "英語でメッセージを入力..."
           }
           disabled={providers.length === 0 || needsConfig}

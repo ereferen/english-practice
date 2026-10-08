@@ -7,6 +7,12 @@ import styles from "./EndpointRibbon.module.css";
  * Issue #171: LLM を使わない純粋な学習画面。警告帯を隠す対象。
  */
 const LEARNING_SCREENS = new Set(["flash", "quiz", "result", "review"]);
+/**
+ * Issue #175: 英会話画面は独自の設定警告カード（理由＋設定を開く導線）を持って
+ * いる。同じ内容の警告が「全画面リボン」と「画面内カード」で二重に出て、
+ * 警告だらけの画面になっていた。会話画面ではリボンを隠し、カードに一本化する。
+ */
+const SELF_WARNING_SCREENS = new Set(["conversation"]);
 
 interface Props {
   storage: StorageProvider;
@@ -52,6 +58,8 @@ export default function EndpointRibbon({
   // 学習画面。sticky な 47px の警告帯が上に張り付いたままだと集中を邪魔する
   // ので、これらの画面では出さない（ホーム等に戻れば再び出る）。
   if (LEARNING_SCREENS.has(screenName)) return null;
+  // Issue #175: 会話画面は自前の警告カードがあるのでリボンは出さない
+  if (SELF_WARNING_SCREENS.has(screenName)) return null;
 
   return (
     <div

@@ -219,6 +219,10 @@ export default function Settings({
         </div>
 
         <div className="card">
+          <h3>音声フィードバック</h3>
+          <p className={styles.hint}>
+            英単語を自動で読み上げます。フラッシュカード・クイズの出題時に発音を再生し、結果画面の誤答語や会話の読み上げでも使われます。オフにすると自動再生しません（各画面の🔊ボタンは使えます）。
+          </p>
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
