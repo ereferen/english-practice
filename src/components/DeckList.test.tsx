@@ -5,6 +5,8 @@ import type { AppState } from "../app/types";
 import type { Deck } from "../content/schema";
 import { loadBundledDecks } from "../content/loader";
 import { CONVERSATION_DECK_ID } from "../domain/conversationExtract";
+import { MANUAL_DECK_ID } from "../domain/manualDeck";
+import type { StorageProvider } from "../storage/types";
 import DeckList from "./DeckList";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,7 @@ describe("DeckList menu-item rows (issue #42)", () => {
     render(<DeckList state={makeState([deck])} dispatch={vi.fn()} />);
 
     const row = screen.getByRole("button", { name: reLiteral(deck.title) });
+    await user.tab(); // 単語を追加 button
     await user.tab(); // 戻る button
     await user.tab(); // deck row
     expect(document.activeElement).toBe(row);
@@ -77,14 +80,16 @@ describe("DeckList の並び（issue #151）", () => {
     // state ではサンプルが先（追加順のまま）でも、表示は自分のデッキが先頭
     render(<DeckList state={makeState([sample, mine])} dispatch={vi.fn()} />);
 
-    const rows = screen.getAllByRole("button");
-    expect(rows[0].textContent).toContain("戻る");
-    expect(rows[1].textContent).toContain("会話から抽出 (2026-09-29)");
-    expect(rows[2].textContent).toContain(sample.title);
-    expect(rows[1].textContent).toContain("beginner");
+    // ナビのボタン（単語を追加 / 戻る）を除いたデッキ行だけを見る。
+    const deckRows = screen
+      .getAllByRole("button")
+      .filter((b) => b.className.includes("menu-item"));
+    expect(deckRows[0].textContent).toContain("会話から抽出 (2026-09-29)");
+    expect(deckRows[1].textContent).toContain(sample.title);
+    expect(deckRows[0].textContent).toContain("beginner");
 
     // まとまりの見出し（複数たまったときにここへ集まる）
-    expect(screen.getByText("自分の会話から")).toBeTruthy();
+    expect(screen.getByText("自分のデッキ")).toBeTruthy();
     expect(screen.getByText("サンプル")).toBeTruthy();
   });
 
@@ -92,7 +97,66 @@ describe("DeckList の並び（issue #151）", () => {
     const { decks } = await loadBundledDecks();
     render(<DeckList state={makeState([decks[0].deck])} dispatch={vi.fn()} />);
 
-    expect(screen.queryByText("自分の会話から")).toBeNull();
+    expect(screen.queryByText("自分のデッキ")).toBeNull();
     expect(screen.getByText("デッキ")).toBeTruthy();
+  });
+});
+
+describe("DeckList 単語を追加（issue #178）", () => {
+  it("貼り付けた語を検証して保存し、一覧を更新する", async () => {
+    const { decks } = await loadBundledDecks();
+    const dispatch = vi.fn();
+    const saveUserDeck = vi.fn().mockResolvedValue(undefined);
+    const storage = { saveUserDeck } as unknown as StorageProvider;
+
+    render(
+      <DeckList
+        state={makeState([decks[0].deck])}
+        dispatch={dispatch}
+        storage={storage}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "単語を追加" }));
+    await user.type(
+      screen.getByRole("textbox"),
+      "commute, 通勤する, I commute by train.",
+    );
+    await user.click(screen.getByRole("button", { name: "追加する" }));
+
+    expect(saveUserDeck).toHaveBeenCalledTimes(1);
+    const saved = saveUserDeck.mock.calls[0][0];
+    expect(saved.deckId).toBe(MANUAL_DECK_ID);
+    expect(saved.deck.lessons[0].words[0].term).toBe("commute");
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setDecks",
+      decks: expect.arrayContaining([
+        expect.objectContaining({ deckId: MANUAL_DECK_ID }),
+      ]),
+    });
+  });
+
+  it("区切りの無い入力はエラーを出し、保存しない", async () => {
+    const { decks } = await loadBundledDecks();
+    const saveUserDeck = vi.fn();
+    const storage = { saveUserDeck } as unknown as StorageProvider;
+
+    render(
+      <DeckList
+        state={makeState([decks[0].deck])}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "単語を追加" }));
+    await user.type(screen.getByRole("textbox"), "commute");
+    await user.click(screen.getByRole("button", { name: "追加する" }));
+
+    expect(saveUserDeck).not.toHaveBeenCalled();
+    expect(screen.getByText(/1行目/)).toBeTruthy();
   });
 });

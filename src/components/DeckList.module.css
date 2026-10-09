@@ -29,3 +29,68 @@
 :global(.menu-item):focus-visible .deckMeta {
   color: var(--color-muted);
 }
+
+/* Issue #178: 単語を追加（手動デッキ） */
+.navActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.modal {
+  max-width: 32rem;
+  width: 100%;
+}
+
+.modalTitle {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+}
+
+.modalHint {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.modalHint code {
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0 0.25rem;
+  border-radius: 3px;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body, monospace);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.levelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.select {
+  padding: 0.1rem 0.35rem;
+}
+
+.errorText {
+  margin: 0.25rem 0;
+  color: var(--color-danger, #e0625f);
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
