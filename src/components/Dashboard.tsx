@@ -8,6 +8,7 @@ import type {
 } from "../storage/types";
 import { allWords } from "../content/loader";
 import { providersFromSettings } from "../domain/llm";
+import { countStudyDays, isLowSample } from "../domain/progress";
 import {
   analyzeWeaknessWithLlm,
   buildWeaknessInput,
@@ -66,6 +67,10 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [improvements, setImprovements] = useState<ImprovementAction[]>([]);
   // issue #20: Self-Improveが設定でオフなら提案UIを出さない（デフォルト=オフ）
   const [selfImproveEnabled, setSelfImproveEnabled] = useState(false);
+  // issue #177: 直近30日の回答数（低サンプル判定）と今週（直近7日）の学習量
+  const [recentAnswers, setRecentAnswers] = useState<number | null>(null);
+  const [weekAnswers, setWeekAnswers] = useState(0);
+  const [weekStudyDays, setWeekStudyDays] = useState(0);
 
   const reloadImprovements = async () => {
     setImprovements(await storage.listImprovementActions(20));
@@ -84,8 +89,17 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
     (async () => {
       const list = await storage.listSessions(50);
       const settings = await storage.loadSettings();
+      // issue #177: 直近30日の回答数（低サンプル判定）と今週分を一度に取得
+      const weekStart = daysAgoDate(new Date(), 6);
+      const [answers30, answers7] = await Promise.all([
+        storage.listAnswersSince(windowStart),
+        storage.listAnswersSince(weekStart),
+      ]);
       if (!mounted) return;
       setSelfImproveEnabled(settings.selfImproveEnabled);
+      setRecentAnswers(answers30.length);
+      setWeekAnswers(answers7.length);
+      setWeekStudyDays(countStudyDays(answers7));
       setSessions(list);
       await reloadImprovements();
       await reloadPendingSrs();
@@ -108,7 +122,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             100,
         )
       : 0;
-
+  // issue #177: 回答が少ないうちは平均正答率を断定しない
+  const lowSample = recentAnswers !== null && isLowSample(recentAnswers);
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setAnalyzeError(null);
@@ -262,6 +277,14 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           <div>
             <div className="badge">平均正答率</div>
             <div className={styles.statValue}>{avgScore}%</div>
+            {lowSample && (
+              <div className={styles.statNote}>参考値（サンプル少なめ）</div>
+            )}
+          </div>
+          <div>
+            <div className="badge">今週の回答</div>
+            <div className={styles.statValue}>{weekAnswers} 回</div>
+            <div className={styles.statNote}>{weekStudyDays} 日学習</div>
           </div>
         </div>
       </div>

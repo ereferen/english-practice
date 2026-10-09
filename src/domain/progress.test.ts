@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   completionRate,
   computeProgress,
+  countStudyDays,
   dailyGoalRate,
+  isLowSample,
+  LOW_SAMPLE_ANSWER_THRESHOLD,
   streakDays,
 } from "./progress";
 import type { ReviewState } from "../storage/types";
@@ -147,5 +150,34 @@ describe("streakDays", () => {
     expect(
       streakDays(["2026-09-07", "2026-09-06", "2026-09-05"], "2026-09-06"),
     ).toBe(2);
+  });
+});
+
+// Issue #177: 進捗ダッシュボードの「週の振り返り」用ヘルパー
+describe("isLowSample", () => {
+  it("treats fewer than the threshold answers as low sample", () => {
+    expect(isLowSample(0)).toBe(true);
+    expect(isLowSample(LOW_SAMPLE_ANSWER_THRESHOLD - 1)).toBe(true);
+  });
+
+  it("treats the threshold and above as enough data", () => {
+    expect(isLowSample(LOW_SAMPLE_ANSWER_THRESHOLD)).toBe(false);
+    expect(isLowSample(100)).toBe(false);
+  });
+});
+
+describe("countStudyDays", () => {
+  it("counts distinct calendar days", () => {
+    expect(
+      countStudyDays([
+        { askedAt: "2026-10-08T09:00:00.000Z" },
+        { askedAt: "2026-10-08T21:00:00.000Z" },
+        { askedAt: "2026-10-07T10:00:00.000Z" },
+      ]),
+    ).toBe(2);
+  });
+
+  it("returns 0 for no answers", () => {
+    expect(countStudyDays([])).toBe(0);
   });
 });

@@ -43,6 +43,18 @@ export function dailyGoalRate(summary: ProgressSummary): number {
   return Math.min(1, summary.todayAnswered / summary.dailyGoalWords);
 }
 
+/** Issue #177: 回答数が少ないうちは平均正答率を「参考値」扱いにする */
+export const LOW_SAMPLE_ANSWER_THRESHOLD = 10;
+
+export function isLowSample(answerCount: number): boolean {
+  return answerCount < LOW_SAMPLE_ANSWER_THRESHOLD;
+}
+
+/** Issue #177: 学習した日数（重複日を除く）。askedAt は ISO 日時 */
+export function countStudyDays(answers: { askedAt: string }[]): number {
+  return new Set(answers.map((a) => a.askedAt.slice(0, 10))).size;
+}
+
 export function streakDays(sessionDates: string[], today: string): number {
   const dates = Array.from(new Set(sessionDates.slice().sort().reverse()));
   let streak = 0;

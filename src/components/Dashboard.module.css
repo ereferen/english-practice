@@ -7,6 +7,13 @@
   composes: stat-value from global;
 }
 
+/* Issue #177: 補足表示（参考値・学習日数など） */
+.statNote {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
 .sessionRow {
   display: flex;
   justify-content: space-between;
