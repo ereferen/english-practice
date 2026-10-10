@@ -8,7 +8,7 @@ import type {
 } from "../storage/types";
 import { allWords } from "../content/loader";
 import { providersFromSettings } from "../domain/llm";
-import { countStudyDays, isLowSample } from "../domain/progress";
+import { countStudyDays, isLowSample, lastNDates, streakDays, studyDateSet } from "../domain/progress";
 import {
   analyzeWeaknessWithLlm,
   buildWeaknessInput,
@@ -71,6 +71,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [recentAnswers, setRecentAnswers] = useState<number | null>(null);
   const [weekAnswers, setWeekAnswers] = useState(0);
   const [weekStudyDays, setWeekStudyDays] = useState(0);
+  // issue #177: 直近30日の学習日（カレンダー表示用）
+  const [studyDates, setStudyDates] = useState<string[]>([]);
 
   const reloadImprovements = async () => {
     setImprovements(await storage.listImprovementActions(20));
@@ -100,6 +102,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       setRecentAnswers(answers30.length);
       setWeekAnswers(answers7.length);
       setWeekStudyDays(countStudyDays(answers7));
+      setStudyDates(Array.from(studyDateSet(answers30)));
       setSessions(list);
       await reloadImprovements();
       await reloadPendingSrs();
@@ -124,6 +127,11 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       : 0;
   // issue #177: 回答が少ないうちは平均正答率を断定しない
   const lowSample = recentAnswers !== null && isLowSample(recentAnswers);
+  // issue #177: 直近30日の学習カレンダーと連続学習日
+  const todayStr = daysAgoDate(new Date(), 0);
+  const studiedSet = new Set(studyDates);
+  const calendarDays = lastNDates(todayStr, 30);
+  const streak = streakDays(studyDates, todayStr);
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setAnalyzeError(null);
@@ -286,6 +294,34 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             <div className={styles.statValue}>{weekAnswers} 回</div>
             <div className={styles.statNote}>{weekStudyDays} 日学習</div>
           </div>
+        </div>
+      </div>
+
+      {/* Issue #177: 学習カレンダー（直近30日）＋連続学習日 */}
+      <h3>学習カレンダー</h3>
+      <div className="card">
+        <p className={styles.reportEmpty}>
+          <span>
+            直近30日の学習日: {studyDates.length} 日 ・ 連続学習日:{" "}
+            <strong>{streak}</strong> 日
+          </span>
+        </p>
+        <div className={styles.calendar}>
+          {calendarDays.map((date) => (
+            <span
+              key={date}
+              className={
+                studiedSet.has(date)
+                  ? `${styles.calDay} ${styles.calDayOn}`
+                  : styles.calDay
+              }
+              title={date}
+              aria-label={`${date}${studiedSet.has(date) ? " 学習あり" : ""}`}
+            />
+          ))}
+        </div>
+        <div className={styles.statNote}>
+          塗りつぶし＝学習した日（右端が今日）
         </div>
       </div>
 

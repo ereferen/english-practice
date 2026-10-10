@@ -73,6 +73,20 @@ export function streakDays(sessionDates: string[], today: string): number {
   return streak;
 }
 
+/** Issue #177: 回答から「学習した日付」の集合を作る（askedAt は ISO 日時） */
+export function studyDateSet(answers: { askedAt: string }[]): Set<string> {
+  return new Set(answers.map((a) => a.askedAt.slice(0, 10)));
+}
+
+/** Issue #177: 直近 n 日の日付を昇順で返す（today を含む）。カレンダー表示用 */
+export function lastNDates(today: string, n: number): string[] {
+  const out: string[] = [];
+  for (let i = n - 1; i >= 0; i -= 1) {
+    out.push(addDays(today, -i));
+  }
+  return out;
+}
+
 function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);

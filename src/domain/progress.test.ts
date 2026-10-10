@@ -5,8 +5,10 @@ import {
   countStudyDays,
   dailyGoalRate,
   isLowSample,
+  lastNDates,
   LOW_SAMPLE_ANSWER_THRESHOLD,
   streakDays,
+  studyDateSet,
 } from "./progress";
 import type { ReviewState } from "../storage/types";
 
@@ -179,5 +181,43 @@ describe("countStudyDays", () => {
 
   it("returns 0 for no answers", () => {
     expect(countStudyDays([])).toBe(0);
+  });
+});
+
+// Issue #177: 学習カレンダー用ヘルパー
+describe("studyDateSet", () => {
+  it("collects distinct study dates from answers", () => {
+    const set = studyDateSet([
+      { askedAt: "2026-10-08T09:00:00.000Z" },
+      { askedAt: "2026-10-08T21:00:00.000Z" },
+      { askedAt: "2026-10-07T10:00:00.000Z" },
+    ]);
+    expect(Array.from(set).sort()).toEqual(["2026-10-07", "2026-10-08"]);
+  });
+
+  it("returns an empty set for no answers", () => {
+    expect(studyDateSet([]).size).toBe(0);
+  });
+});
+
+describe("lastNDates", () => {
+  it("returns n dates ascending ending at today", () => {
+    expect(lastNDates("2026-10-10", 3)).toEqual([
+      "2026-10-08",
+      "2026-10-09",
+      "2026-10-10",
+    ]);
+  });
+
+  it("crosses month boundaries", () => {
+    expect(lastNDates("2026-10-01", 3)).toEqual([
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+    ]);
+  });
+
+  it("returns just today when n=1", () => {
+    expect(lastNDates("2026-10-10", 1)).toEqual(["2026-10-10"]);
   });
 });

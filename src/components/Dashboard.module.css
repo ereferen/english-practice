@@ -14,6 +14,27 @@
   margin-top: 2px;
 }
 
+/* Issue #177: 学習カレンダー（直近30日のマス目） */
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  margin: 10px 0 8px;
+  max-width: 320px;
+}
+
+.calDay {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: rgba(127, 127, 127, 0.18);
+  border: 1px solid transparent;
+}
+
+.calDayOn {
+  background: var(--color-accent, #7ac786);
+  border-color: var(--color-accent, #7ac786);
+}
+
 .sessionRow {
   display: flex;
   justify-content: space-between;
