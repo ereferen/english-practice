@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Settings from "./Settings";
+import Settings, { describeImportError } from "./Settings";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import type { StorageProvider } from "../storage/types";
 import { initialState } from "../app/types";
@@ -53,5 +53,28 @@ describe("Settings (issue #170 戻り先)", () => {
       type: "go",
       screen: { name: "home" },
     });
+  });
+});
+
+// Issue #183: 壊れた JSON を貼ると英語の生エラー（Expected property name...）が
+// そのまま学習アプリの画面に出ていた。日本語1行に言い換える。
+describe("describeImportError (issue #183)", () => {
+  it("JSONの構文エラーを日本語（位置つき）に言い換える", () => {
+    let err: unknown;
+    try {
+      JSON.parse("{not valid json");
+    } catch (e) {
+      err = e;
+    }
+    const message = describeImportError(err);
+    expect(message).toContain("JSONの形式が正しくありません");
+    expect(message).toMatch(/\d+行目\d+文字目/);
+    expect(message).not.toContain("Expected property name");
+  });
+
+  it("構文エラー以外は従来どおりのメッセージを出す", () => {
+    expect(describeImportError(new Error("storage refused"))).toBe(
+      "インポート失敗: storage refused",
+    );
   });
 });

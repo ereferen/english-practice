@@ -96,6 +96,28 @@ describe("QuizScreen", () => {
     expect(marked.length).toBe(1);
   });
 
+  // Issue #182: フラッシュカード裏面には出る例文・ノートが、クイズの答え合わせ
+  // 後には出ていなかった。解答後に出題語の例文が1つ出ることを固定する。
+  it("shows the answered word's example sentence after choosing (#182)", async () => {
+    const deck = makeTestDeck();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    const buttons = screen.getAllByRole("button", { name: /選択肢/ });
+    await userEvent.click(buttons[0]);
+    await screen.findByText(/[○×] (正解|不正解)/);
+    const shownExample = deck.lessons[0].words.some(
+      (w) => screen.queryByText(w.examples[0].en) !== null,
+    );
+    expect(shownExample).toBe(true);
+  });
+
   // Issue #142: 1-4 キーで選べることは画面のどこにも書かれておらず、
   // 知らないと存在しないのと同じだった。
   it("shows the 1-4 key hint next to the choices (#142)", async () => {
@@ -109,9 +131,7 @@ describe("QuizScreen", () => {
         lessonId="lesson-1"
       />,
     );
-    expect(
-      await screen.findByText(/1 - 4 キーでも選べます/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/1 - 4 キーでも選べます/)).toBeTruthy();
   });
 
   // Issue #107: any throw in the generation-prep pipeline (e.g. the old

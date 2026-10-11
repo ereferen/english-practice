@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import { db } from "./db";
 import { DexieStorageProvider } from "./dexieProvider";
 import { makeReviewState } from "../domain/srs";
-import { CONVERSATION_RECORD_ID, MAX_CONVERSATION_SESSIONS } from "./types";
+import {
+  CONVERSATION_RECORD_ID,
+  DEFAULT_SETTINGS,
+  MAX_CONVERSATION_SESSIONS,
+} from "./types";
+import type { Settings } from "./types";
 
 // Issue #107: loadWeakWords() queried review.wrongTotal, which was not an
 // indexed field — the query threw SchemaError inside the generation-prep
@@ -113,8 +118,12 @@ describe("Dexie conversation sessions (issue #148)", () => {
 
   it("keeps several sessions and lists them newest first", async () => {
     await db.conversationSessions.clear();
-    await storage.saveConversationSession(makeSession("s1", "2026-09-25T10:00:00.000Z"));
-    await storage.saveConversationSession(makeSession("s2", "2026-09-26T10:00:00.000Z"));
+    await storage.saveConversationSession(
+      makeSession("s1", "2026-09-25T10:00:00.000Z"),
+    );
+    await storage.saveConversationSession(
+      makeSession("s2", "2026-09-26T10:00:00.000Z"),
+    );
 
     const list = await storage.listConversationSessions();
     expect(list.map((s) => s.id)).toEqual(["s2", "s1"]);
@@ -131,13 +140,23 @@ describe("Dexie conversation sessions (issue #148)", () => {
 
   it("prunes the oldest session once the cap is exceeded", async () => {
     await db.conversationSessions.clear();
-    await storage.saveConversationSession(makeSession("old", "2026-09-20T10:00:00.000Z"));
-    await storage.saveConversationSession(makeSession("mid", "2026-09-21T10:00:00.000Z"));
-    await storage.saveConversationSession(makeSession("new", "2026-09-22T10:00:00.000Z"));
+    await storage.saveConversationSession(
+      makeSession("old", "2026-09-20T10:00:00.000Z"),
+    );
+    await storage.saveConversationSession(
+      makeSession("mid", "2026-09-21T10:00:00.000Z"),
+    );
+    await storage.saveConversationSession(
+      makeSession("new", "2026-09-22T10:00:00.000Z"),
+    );
     // 4 件目を保存 → 最も古い "old" が消える
-    await storage.saveConversationSession(makeSession("newest", "2026-09-23T10:00:00.000Z"));
+    await storage.saveConversationSession(
+      makeSession("newest", "2026-09-23T10:00:00.000Z"),
+    );
 
-    expect(await db.conversationSessions.count()).toBe(MAX_CONVERSATION_SESSIONS);
+    expect(await db.conversationSessions.count()).toBe(
+      MAX_CONVERSATION_SESSIONS,
+    );
     expect(await storage.loadConversationSession("old")).toBeUndefined();
 
     const list = await storage.listConversationSessions();
@@ -146,8 +165,12 @@ describe("Dexie conversation sessions (issue #148)", () => {
 
   it("deletes a single session (clear) without touching the others", async () => {
     await db.conversationSessions.clear();
-    await storage.saveConversationSession(makeSession("keep", "2026-09-24T10:00:00.000Z"));
-    await storage.saveConversationSession(makeSession("drop", "2026-09-24T11:00:00.000Z"));
+    await storage.saveConversationSession(
+      makeSession("keep", "2026-09-24T10:00:00.000Z"),
+    );
+    await storage.saveConversationSession(
+      makeSession("drop", "2026-09-24T11:00:00.000Z"),
+    );
 
     await storage.deleteConversationSession("drop");
 
@@ -158,12 +181,69 @@ describe("Dexie conversation sessions (issue #148)", () => {
 
   it("survives a simulated reload", async () => {
     await db.conversationSessions.clear();
-    await storage.saveConversationSession(makeSession("durable", "2026-09-24T12:00:00.000Z"));
+    await storage.saveConversationSession(
+      makeSession("durable", "2026-09-24T12:00:00.000Z"),
+    );
     db.close();
     await db.open();
     const storage2 = new DexieStorageProvider();
     const restored = await storage2.loadConversationSession("durable");
     expect(restored?.messages[0].content).toBe("hello from durable");
     await db.conversationSessions.clear();
+  });
+});
+
+// Issue #180: 「バックアップをダウンロード」の JSON に LLM の API キーが平文で
+// 入っていた。書き出し時にキーを除外し、復元時は空キーを現行値で補完する。
+describe("backup API key redaction (issue #180)", () => {
+  const storage = new DexieStorageProvider();
+
+  it("exportAll は API キーを平文で含めない", async () => {
+    await db.settings.clear();
+    await db.settings.put({
+      id: 1,
+      ...DEFAULT_SETTINGS,
+      llmApiKey: "sk-secret-primary",
+      llmFallbackApiKey: "sk-secret-fallback",
+    });
+    const data = (await storage.exportAll()) as { settings: Settings[] };
+    expect(data.settings[0].llmApiKey).toBe("");
+    expect(data.settings[0].llmFallbackApiKey).toBe("");
+    expect(JSON.stringify(data)).not.toContain("sk-secret");
+    await db.settings.clear();
+  });
+
+  it("importAll は空のキーを現在の設定値で補完する", async () => {
+    await db.settings.clear();
+    await db.settings.put({
+      id: 1,
+      ...DEFAULT_SETTINGS,
+      llmApiKey: "keep-primary",
+      llmFallbackApiKey: "keep-fallback",
+    });
+    await storage.importAll({
+      settings: [
+        {
+          id: 1,
+          ...DEFAULT_SETTINGS,
+          llmApiKey: "",
+          llmFallbackApiKey: "",
+        },
+      ],
+    });
+    const s = await storage.loadSettings();
+    expect(s.llmApiKey).toBe("keep-primary");
+    expect(s.llmFallbackApiKey).toBe("keep-fallback");
+    await db.settings.clear();
+  });
+
+  it("importAll はバックアップに実際のキーが入っていればそれを優先する", async () => {
+    await db.settings.clear();
+    await db.settings.put({ id: 1, ...DEFAULT_SETTINGS, llmApiKey: "old" });
+    await storage.importAll({
+      settings: [{ id: 1, ...DEFAULT_SETTINGS, llmApiKey: "from-backup" }],
+    });
+    expect((await storage.loadSettings()).llmApiKey).toBe("from-backup");
+    await db.settings.clear();
   });
 });

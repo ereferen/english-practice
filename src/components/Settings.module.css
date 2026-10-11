@@ -95,3 +95,10 @@
   color: var(--color-muted);
   margin-top: 0.75rem;
 }
+
+/* Issue #180: バックアップに API キーが含まれないことの注意書き */
+.backupNote {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin: 0.25rem 0 0.75rem;
+}
