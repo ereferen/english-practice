@@ -175,9 +175,7 @@ export class DexieStorageProvider implements StorageProvider {
     record: ConversationSessionRecord,
   ): Promise<void> {
     await db.conversationSessions.put(record);
-    const all = await db.conversationSessions
-      .orderBy("updatedAt")
-      .toArray();
+    const all = await db.conversationSessions.orderBy("updatedAt").toArray();
     const excess = all.length - MAX_CONVERSATION_SESSIONS;
     if (excess > 0) {
       await db.conversationSessions.bulkDelete(
@@ -210,7 +208,7 @@ export class DexieStorageProvider implements StorageProvider {
 
   async exportAll(): Promise<unknown> {
     return {
-      settings: await db.settings.toArray(),
+      settings: (await db.settings.toArray()).map(redactApiKeys),
       review: await db.review.toArray(),
       sessions: await db.sessions.toArray(),
       answers: await db.answers.toArray(),
@@ -236,6 +234,18 @@ export class DexieStorageProvider implements StorageProvider {
       conversations?: ConversationRecord[];
       conversationSessions?: ConversationSessionRecord[];
     };
+    // Issue #180: バックアップからは API キーを除外するため、復元時にキーが
+    // 空なら現在の設定値を残す（同じ端末での復元で入れ直しを不要にする）。
+    const existingSettings = await db.settings.get(1);
+    const incoming = payload.settings?.map((s) => ({
+      ...s,
+      llmApiKey: s.llmApiKey?.trim()
+        ? s.llmApiKey
+        : (existingSettings?.llmApiKey ?? ""),
+      llmFallbackApiKey: s.llmFallbackApiKey?.trim()
+        ? s.llmFallbackApiKey
+        : (existingSettings?.llmFallbackApiKey ?? ""),
+    }));
     await db.transaction(
       "rw",
       [
@@ -261,8 +271,7 @@ export class DexieStorageProvider implements StorageProvider {
         await db.proposals.clear();
         await db.conversations.clear();
         await db.conversationSessions.clear();
-        if (payload.settings?.length)
-          await db.settings.bulkAdd(payload.settings);
+        if (incoming?.length) await db.settings.bulkAdd(incoming);
         if (payload.review?.length) await db.review.bulkAdd(payload.review);
         if (payload.sessions?.length)
           await db.sessions.bulkAdd(payload.sessions);
@@ -286,6 +295,15 @@ export class DexieStorageProvider implements StorageProvider {
   async clearAll(): Promise<void> {
     await db.delete();
   }
+}
+
+/**
+ * Issue #180: 「バックアップをダウンロード」で API キーが平文で出力されていた。
+ * バックアップは共有・クラウド保存され得るので、書き出す設定レコードから
+ * API キーだけを取り除く（復元側で空キーは現行値で補完する）。
+ */
+function redactApiKeys(record: Settings & { id?: number }): Settings {
+  return { ...record, llmApiKey: "", llmFallbackApiKey: "" };
 }
 
 export const storage = new DexieStorageProvider();

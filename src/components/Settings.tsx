@@ -24,6 +24,20 @@ interface Props {
   backLabel?: string;
 }
 
+/**
+ * Issue #183: 壊れたJSONを貼ると英語の生エラー（`Expected property name...`）
+ * がそのまま学習アプリの画面に出ていた。技術者以外には意味不明なので、
+ * 日本語1行に言い換える（位置が分かる時は行・文字目も添える）。
+ */
+export function describeImportError(e: unknown): string {
+  if (e instanceof SyntaxError) {
+    const at = /line (\d+) column (\d+)/.exec(e.message);
+    const where = at ? `（${at[1]}行目${at[2]}文字目あたり）` : "";
+    return `インポート失敗: JSONの形式が正しくありません${where}。バックアップファイルの中身を確認してください`;
+  }
+  return `インポート失敗: ${e instanceof Error ? e.message : String(e)}`;
+}
+
 export default function Settings({
   dispatch,
   storage,
@@ -75,9 +89,7 @@ export default function Settings({
       await storage.importAll(data);
       setMessage("インポートしました");
     } catch (e) {
-      setMessage(
-        `インポート失敗: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      setMessage(describeImportError(e));
     }
   };
 
@@ -187,8 +199,7 @@ export default function Settings({
         <button
           className="ghost"
           onClick={
-            onBack ??
-            (() => dispatch({ type: "go", screen: { name: "home" } }))
+            onBack ?? (() => dispatch({ type: "go", screen: { name: "home" } }))
           }
         >
           {backLabel}
@@ -238,6 +249,12 @@ export default function Settings({
           <button onClick={handleExport} className={styles.blockButton}>
             バックアップをダウンロード
           </button>
+          {/* Issue #180: APIキーが平文でバックアップに載っていた。
+              書き出す側から除外し、その旨をここで明示する。 */}
+          <p className={styles.backupNote}>
+            ※
+            APIキーは安全のためバックアップに含まれません（復元後に入れ直してください）
+          </p>
           <textarea
             value={exported}
             onChange={(e) => setExported(e.target.value)}

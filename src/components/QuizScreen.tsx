@@ -147,6 +147,14 @@ export default function QuizScreen({
   const activeItems = gen ? genQuizzes : items;
   const current = activeItems[index];
   const isLast = index === activeItems.length - 1;
+  // Issue #182: フラッシュカード裏面には出る例文・ノートが、クイズの答え合わせ
+  // 後には一切出ていなかった。間違えた語ほどその場で用例を見たいので、
+  // 出題語をデッキから引いて解答後に表示する。
+  const answerWord = current
+    ? deck?.lessons
+        .flatMap((l) => l.words)
+        .find((w) => w.wordId === current.wordId)
+    : undefined;
 
   const handleChooseById = (choiceId: string | undefined) => {
     if (!current || !choiceId || showFeedback) return;
@@ -471,6 +479,33 @@ export default function QuizScreen({
             {lastCorrect ? "○ 正解" : "× 不正解"}
           </p>
           {current.explanation && !lastCorrect && <p>{current.explanation}</p>}
+          {/* Issue #182: 解答後に出題語の例文（と意味・ノート）を1行で見せる */}
+          {answerWord && (
+            <div className={styles.answerDetail}>
+              <p className={styles.answerWord}>
+                {answerWord.term}
+                {answerWord.reading && (
+                  <span className={styles.answerReading}>
+                    （{answerWord.reading}）
+                  </span>
+                )}
+                <span className={styles.answerMeaning}>
+                  {answerWord.meaning}
+                </span>
+              </p>
+              {answerWord.examples.slice(0, 1).map((ex, i) => (
+                <div key={i} className={styles.answerExample}>
+                  <div>{ex.en}</div>
+                  {ex.ja && (
+                    <div className={styles.answerExampleJa}>{ex.ja}</div>
+                  )}
+                </div>
+              ))}
+              {answerWord.note && (
+                <p className={styles.answerNote}>ノート: {answerWord.note}</p>
+              )}
+            </div>
+          )}
           <button
             className={`primary ${styles.nextButton}`}
             onClick={handleNext}
