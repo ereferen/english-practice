@@ -7,6 +7,7 @@ import { loadBundledDecks } from "../content/loader";
 import { CONVERSATION_DECK_ID } from "../domain/conversationExtract";
 import { MANUAL_DECK_ID } from "../domain/manualDeck";
 import type { StorageProvider } from "../storage/types";
+import { DEFAULT_SETTINGS } from "../storage/types";
 import DeckList from "./DeckList";
 
 // ---------------------------------------------------------------------------
@@ -158,5 +159,61 @@ describe("DeckList 単語を追加（issue #178）", () => {
 
     expect(saveUserDeck).not.toHaveBeenCalled();
     expect(screen.getByText(/1行目/)).toBeTruthy();
+  });
+});
+
+describe("DeckList デッキの非表示（issue #181）", () => {
+  it("非表示にすると一覧から外れ、settings に保存される", async () => {
+    const { decks } = await loadBundledDecks();
+    const deck = decks[0].deck;
+    const saveSettings = vi.fn().mockResolvedValue(undefined);
+    const storage = {
+      loadSettings: vi.fn().mockResolvedValue({
+        ...DEFAULT_SETTINGS,
+        hiddenDeckIds: [],
+      }),
+      saveSettings,
+    } as unknown as StorageProvider;
+
+    render(
+      <DeckList state={makeState([deck])} dispatch={vi.fn()} storage={storage} />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "非表示" }));
+
+    expect(saveSettings).toHaveBeenCalledWith({ hiddenDeckIds: [deck.deckId] });
+    // 一覧のデッキ行（ボタン）は消え、非表示セクション側に移る
+    expect(
+      screen.queryByRole("button", { name: reLiteral(deck.title) }),
+    ).toBeNull();
+    expect(screen.getByText("非表示のデッキ（1）")).toBeTruthy();
+  });
+
+  it("保存済みの非表示デッキは最初から一覧に出ない（戻せる）", async () => {
+    const { decks } = await loadBundledDecks();
+    const deck = decks[0].deck;
+    const storage = {
+      loadSettings: vi.fn().mockResolvedValue({
+        ...DEFAULT_SETTINGS,
+        hiddenDeckIds: [deck.deckId],
+      }),
+      saveSettings: vi.fn(),
+    } as unknown as StorageProvider;
+
+    render(
+      <DeckList state={makeState([deck])} dispatch={vi.fn()} storage={storage} />,
+    );
+
+    await screen.findByText("非表示のデッキ（1）");
+    expect(
+      screen.queryByRole("button", { name: reLiteral(deck.title) }),
+    ).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "表示に戻す" }));
+    expect(
+      screen.getByRole("button", { name: reLiteral(deck.title) }),
+    ).toBeTruthy();
   });
 });

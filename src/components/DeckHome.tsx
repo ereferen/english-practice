@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider, ReviewState } from "../storage/types";
+import type { Deck, Word } from "../content/schema";
 import { allWords } from "../content/loader";
 import { systemClock } from "../domain/srs";
 import { computeProgress } from "../domain/progress";
+import {
+  editDeckWord,
+  isOwnDeck,
+  removeDeckWord,
+  renameDeck,
+  type ManualWordInput,
+} from "../domain/manualDeck";
 import { localProgress } from "../storage/localProgress";
+import ConfirmDialog from "./ConfirmDialog";
 import styles from "./DeckHome.module.css";
 
 interface Props {
@@ -14,11 +23,32 @@ interface Props {
   deckId: string;
 }
 
+function message(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
   const [reviews, setReviews] = useState<ReviewState[]>([]);
   const [todayAnswered, setTodayAnswered] = useState(0);
   const [goal, setGoal] = useState(10);
+
+  // Issue #181: 自分のデッキを後から直す（名前変更・語の編集・語の削除）。
+  const [titleDraft, setTitleDraft] = useState("");
+  const [editingWordId, setEditingWordId] = useState<string | null>(null);
+  const [wordDraft, setWordDraft] = useState<ManualWordInput>({
+    term: "",
+    meaning: "",
+    example: "",
+  });
+  const [wordError, setWordError] = useState<string | null>(null);
+  const [deckError, setDeckError] = useState<string | null>(null);
+  const [pendingDeleteWord, setPendingDeleteWord] = useState<Word | null>(null);
+  const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(false);
+
+  useEffect(() => {
+    setTitleDraft(deck?.title ?? "");
+  }, [deck?.deckId, deck?.title]);
 
   useEffect(() => {
     if (!deck) return;
@@ -75,6 +105,91 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       ? Math.round((learnedWords / summary.totalWords) * 100)
       : 0;
 
+  const editable = isOwnDeck(deck);
+  const words = deck.lessons[0]?.words ?? [];
+
+  /** 編集結果を保存し、一覧の deck も差し替える（自分のデッキのみ呼ぶ）。 */
+  const persistDeck = async (next: Deck) => {
+    const now = new Date().toISOString();
+    await storage.saveUserDeck({
+      deckId: next.deckId,
+      deck: next,
+      sourceTurns: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    dispatch({
+      type: "setDecks",
+      decks: state.decks.map((d) => (d.deckId === next.deckId ? next : d)),
+    });
+  };
+
+  const handleRename = async () => {
+    setDeckError(null);
+    const next = renameDeck(deck, titleDraft);
+    if (next.title === deck.title) return;
+    try {
+      await persistDeck(next);
+    } catch (e) {
+      setDeckError(message(e));
+    }
+  };
+
+  const startEditWord = (w: Word) => {
+    setWordError(null);
+    setEditingWordId(w.wordId);
+    setWordDraft({
+      term: w.term,
+      meaning: w.meaning,
+      example: w.examples[0]?.en ?? "",
+    });
+  };
+
+  const handleSaveWord = async (wordId: string) => {
+    setWordError(null);
+    const result = editDeckWord(deck, wordId, wordDraft);
+    if (!result.ok) {
+      setWordError(result.error);
+      return;
+    }
+    try {
+      await persistDeck(result.deck);
+      setEditingWordId(null);
+    } catch (e) {
+      setWordError(message(e));
+    }
+  };
+
+  const handleDeleteWord = async (target: Word) => {
+    setPendingDeleteWord(null);
+    setWordError(null);
+    const result = removeDeckWord(deck, target.wordId);
+    if (!result.ok) {
+      setWordError(result.error);
+      return;
+    }
+    try {
+      await persistDeck(result.deck);
+    } catch (e) {
+      setWordError(message(e));
+    }
+  };
+
+  const handleDeleteDeck = async () => {
+    setConfirmDeleteDeck(false);
+    try {
+      await storage.deleteUserDeck(deck.deckId);
+    } catch (e) {
+      setDeckError(message(e));
+      return;
+    }
+    dispatch({
+      type: "setDecks",
+      decks: state.decks.filter((d) => d.deckId !== deck.deckId),
+    });
+    dispatch({ type: "go", screen: { name: "deckList" } });
+  };
+
   return (
     <div className="container">
       <div className="nav-header">
@@ -118,6 +233,125 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
           <div className="progress-fill" style={{ width: `${completion}%` }} />
         </div>
       </div>
+
+      {/* Issue #181: 自分で入れた語は後から直せる。「入れたら最後」をやめる。 */}
+      {editable && (
+        <div className="card" data-testid="deck-edit-card">
+          <h3 className={styles.editHeading}>このデッキを直す</h3>
+
+          <div className={styles.fieldRow}>
+            <label className={styles.fieldLabel} htmlFor="deck-title-input">
+              デッキ名
+            </label>
+            <input
+              id="deck-title-input"
+              className={styles.input}
+              value={titleDraft}
+              maxLength={60}
+              onChange={(e) => setTitleDraft(e.target.value)}
+            />
+            <button
+              className="ghost"
+              type="button"
+              onClick={handleRename}
+              disabled={!titleDraft.trim() || titleDraft.trim() === deck.title}
+            >
+              名前を変更
+            </button>
+          </div>
+
+          <h4 className={styles.wordHeading}>登録した単語（{words.length}）</h4>
+          <ul className={styles.wordList} data-testid="deck-word-list">
+            {words.map((w) =>
+              editingWordId === w.wordId ? (
+                <li key={w.wordId} className={styles.wordItem}>
+                  <div className={styles.editForm}>
+                    <input
+                      className={styles.input}
+                      aria-label="語"
+                      value={wordDraft.term}
+                      maxLength={80}
+                      onChange={(e) =>
+                        setWordDraft({ ...wordDraft, term: e.target.value })
+                      }
+                    />
+                    <input
+                      className={styles.input}
+                      aria-label="意味"
+                      value={wordDraft.meaning}
+                      maxLength={300}
+                      onChange={(e) =>
+                        setWordDraft({ ...wordDraft, meaning: e.target.value })
+                      }
+                    />
+                    <input
+                      className={styles.input}
+                      aria-label="例文"
+                      value={wordDraft.example ?? ""}
+                      maxLength={300}
+                      onChange={(e) =>
+                        setWordDraft({ ...wordDraft, example: e.target.value })
+                      }
+                    />
+                    <div className={styles.wordActions}>
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => setEditingWordId(null)}
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        className="primary"
+                        type="button"
+                        onClick={() => handleSaveWord(w.wordId)}
+                      >
+                        保存
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ) : (
+                <li key={w.wordId} className={styles.wordItem}>
+                  <span className={styles.wordText}>
+                    <strong>{w.term}</strong>
+                    <span className={styles.wordMeaning}>{w.meaning}</span>
+                  </span>
+                  <span className={styles.wordActions}>
+                    <button
+                      className="ghost"
+                      type="button"
+                      aria-label={`${w.term} を編集`}
+                      onClick={() => startEditWord(w)}
+                    >
+                      編集
+                    </button>
+                    <button
+                      className="ghost"
+                      type="button"
+                      aria-label={`${w.term} を削除`}
+                      onClick={() => setPendingDeleteWord(w)}
+                    >
+                      削除
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+
+          {wordError && <p className={styles.errorText}>{wordError}</p>}
+          {deckError && <p className={styles.errorText}>{deckError}</p>}
+
+          <button
+            className="danger"
+            type="button"
+            onClick={() => setConfirmDeleteDeck(true)}
+          >
+            このデッキを削除
+          </button>
+        </div>
+      )}
 
       <h3>レッスン一覧</h3>
       <div className="card-grid">
@@ -172,6 +406,31 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
           </div>
         ))}
       </div>
+
+      {pendingDeleteWord && (
+        <ConfirmDialog
+          title={`「${pendingDeleteWord.term}」を削除しますか？`}
+          confirmLabel="削除する"
+          onCancel={() => setPendingDeleteWord(null)}
+          onConfirm={() => handleDeleteWord(pendingDeleteWord)}
+        >
+          <p>
+            この語と意味・例文をデッキから消します。学習履歴は残りますが一覧からは
+            見えなくなります。
+          </p>
+        </ConfirmDialog>
+      )}
+
+      {confirmDeleteDeck && (
+        <ConfirmDialog
+          title={`「${deck.title}」を削除しますか？`}
+          confirmLabel="デッキを削除"
+          onCancel={() => setConfirmDeleteDeck(false)}
+          onConfirm={handleDeleteDeck}
+        >
+          <p>このデッキの語と、このデッキについた復習履歴をまとめて削除します。</p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

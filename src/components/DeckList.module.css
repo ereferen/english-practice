@@ -94,3 +94,33 @@
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+
+/* Issue #181: デッキ行 + 非表示ボタン（入れ子ボタンは不正なので横並びにする） */
+.deckRow {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.deckRow > :global(.menu-item) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hideButton {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.6rem;
+  align-self: center;
+}
+
+/* 非表示セクションのタイトル（押せないので deckTitle より控えめ） */
+.hiddenTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}

@@ -54,6 +54,13 @@ export interface Settings {
   // false かつ llmApiEndpoint が初期値の間だけ、初回起動時にウィザードを出す。
   // これも DEFAULT_SETTINGS スプレッドで補完される（マイグレーション不要）。
   llmSetupDismissed: boolean;
+  /**
+   * issue #181: 個別に非表示にしたデッキ（サンプル/自分のデッキ問わず）。
+   * 以前は「すべてのデータを削除」しか消す手段が無く、サンプルの3デッキや
+   * 使わない自分のデッキが一覧に居座っていた。DEFAULT_SETTINGS スプレッドで
+   * 補完されるため IndexedDB マイグレーションは不要。
+   */
+  hiddenDeckIds: string[];
 }
 
 /**
@@ -309,6 +316,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoApplyLevel: "none",
   llmVerifiedEndpoint: "",
   llmSetupDismissed: false,
+  hiddenDeckIds: [],
 };
 
 export function progressKey(deckId: string, wordId: string): string {

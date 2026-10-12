@@ -3,8 +3,12 @@ import { deckSchema } from "../content/schema";
 import {
   MANUAL_DECK_ID,
   buildManualDeck,
+  editDeckWord,
+  isOwnDeck,
   mergeIntoManualDeck,
   parseManualWords,
+  removeDeckWord,
+  renameDeck,
 } from "./manualDeck";
 
 describe("parseManualWords (issue #178)", () => {
@@ -90,5 +94,73 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
     );
     expect(added).toBe(0);
     expect(deck.title).toBe(base.title);
+  });
+});
+
+describe("自分のデッキを後から直す (issue #181)", () => {
+  const base = buildManualDeck(
+    [
+      { term: "commute", meaning: "通勤する" },
+      { term: "resilient", meaning: "粘り強い" },
+    ],
+    { now: "2026-10-11T00:00:00.000Z" },
+  );
+
+  it("isOwnDeck は手動・会話デッキだけ true を返す", () => {
+    expect(isOwnDeck(base)).toBe(true);
+    expect(
+      isOwnDeck({ ...base, deckId: "sample-deck", source: "bundled" }),
+    ).toBe(false);
+  });
+
+  it("renameDeck は名前を変える（空文字は無視）", () => {
+    const renamed = renameDeck(base, "  旅行で使う語  ");
+    expect(renamed.title).toBe("旅行で使う語");
+    expect(renameDeck(base, "   ").title).toBe(base.title);
+    expect(deckSchema.safeParse(renamed).success).toBe(true);
+  });
+
+  it("editDeckWord は語と意味と例文を書き換える（wordId は据え置き）", () => {
+    const target = base.lessons[0].words[0];
+    const r = editDeckWord(base, target.wordId, {
+      term: "commute",
+      meaning: "通勤する、往復する",
+      example: "I commute by train.",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const word = r.deck.lessons[0].words[0];
+    expect(word.wordId).toBe(target.wordId);
+    expect(word.meaning).toBe("通勤する、往復する");
+    expect(word.examples[0].en).toBe("I commute by train.");
+    expect(deckSchema.safeParse(r.deck).success).toBe(true);
+  });
+
+  it("editDeckWord は他と重複する語/意味を弾く", () => {
+    const target = base.lessons[0].words[0];
+    const dupTerm = editDeckWord(base, target.wordId, {
+      term: "resilient",
+      meaning: "別の意味",
+    });
+    expect(dupTerm.ok).toBe(false);
+    const dupMeaning = editDeckWord(base, target.wordId, {
+      term: "new-term",
+      meaning: "粘り強い",
+    });
+    expect(dupMeaning.ok).toBe(false);
+  });
+
+  it("removeDeckWord は1語だけ消し、最後の1語は消させない", () => {
+    const target = base.lessons[0].words[1];
+    const r = removeDeckWord(base, target.wordId);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.deck.lessons[0].words).toHaveLength(1);
+    expect(deckSchema.safeParse(r.deck).success).toBe(true);
+
+    const last = removeDeckWord(r.deck, r.deck.lessons[0].words[0].wordId);
+    expect(last.ok).toBe(false);
+    if (last.ok) return;
+    expect(last.error).toContain("最後の1語");
   });
 });
