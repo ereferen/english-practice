@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { Deck } from "../content/schema";
 import { deckSchema } from "../content/schema";
-import { CONVERSATION_DECK_ID } from "../domain/conversationExtract";
 import {
   MANUAL_DECK_ID,
   buildManualDeck,
+  isOwnDeck,
   mergeIntoManualDeck,
   parseManualWords,
 } from "../domain/manualDeck";
@@ -28,16 +28,6 @@ const LEVEL_LABEL: Record<Deck["level"], string> = {
   advanced: "上級",
 };
 
-/** Issue #151: 自分の会話から出た語が一番復習価値が高いのに、一覧の末尾に沈んでいた。 */
-function isOwnDeck(deck: Deck): boolean {
-  return deck.source === "conversation" || deck.deckId === CONVERSATION_DECK_ID;
-}
-
-/** Issue #178: 手動で足した語のデッキ（source: "manual"）。 */
-function isManualDeck(deck: Deck): boolean {
-  return deck.deckId === MANUAL_DECK_ID || deck.source === "manual";
-}
-
 export default function DeckList({
   state,
   dispatch,
@@ -47,13 +37,36 @@ export default function DeckList({
   const [text, setText] = useState("");
   const [level, setLevel] = useState<Deck["level"]>("intermediate");
   const [error, setError] = useState<string | null>(null);
+  // Issue #181: 個別に非表示にしたデッキ（サンプル/自分のデッキ問わず）。
+  // 「すべてのデータを削除」以外に消す手段が無かったのを、一覧から外すだけの
+  // 軽い非表示で解決する（設定に保存。デッキ本体は消さない）。
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 自分のデッキ（会話抽出・手動追加）をサンプルより上に出す。安定ソートで元順を保つ。
-  const ownDecks = state.decks.filter((d) => isOwnDeck(d) || isManualDeck(d));
-  const sampleDecks = state.decks.filter(
-    (d) => !isOwnDeck(d) && !isManualDeck(d),
+  const ownDecks = state.decks.filter(
+    (d) => isOwnDeck(d) && !hiddenIds.includes(d.deckId),
   );
+  const sampleDecks = state.decks.filter(
+    (d) => !isOwnDeck(d) && !hiddenIds.includes(d.deckId),
+  );
+  const hiddenDecks = state.decks.filter((d) => hiddenIds.includes(d.deckId));
+
+  useEffect(() => {
+    let mounted = true;
+    // storage をモック差し替えしたテストでも落ちないよう、同期例外も拾う。
+    Promise.resolve()
+      .then(() => storage.loadSettings())
+      .then((s) => {
+        if (!mounted) return;
+        const ids = (s as { hiddenDeckIds?: string[] }).hiddenDeckIds ?? [];
+        setHiddenIds(ids);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [storage]);
 
   useEffect(() => {
     if (!adding) return;
@@ -71,6 +84,16 @@ export default function DeckList({
       window.removeEventListener("keydown", onKey);
     };
   }, [adding]);
+
+  const setHidden = (deckId: string, hide: boolean) => {
+    const next = hide
+      ? Array.from(new Set([...hiddenIds, deckId]))
+      : hiddenIds.filter((id) => id !== deckId);
+    setHiddenIds(next);
+    Promise.resolve()
+      .then(() => storage.saveSettings({ hiddenDeckIds: next }))
+      .catch(() => {});
+  };
 
   const openAdd = () => {
     setText("");
@@ -115,6 +138,8 @@ export default function DeckList({
         updatedAt: now,
       });
       dispatch({ type: "setDecks", decks: updatedDecks });
+      // 追加したデッキが非表示のままだと「追加したのに出てこない」になる。
+      if (hiddenIds.includes(deck.deckId)) setHidden(deck.deckId, false);
       setAdding(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -122,21 +147,30 @@ export default function DeckList({
   };
 
   const renderDeck = (deck: Deck) => (
-    <button
-      key={deck.deckId}
-      className="menu-item"
-      onClick={() =>
-        dispatch({
-          type: "go",
-          screen: { name: "deckHome", deckId: deck.deckId },
-        })
-      }
-    >
-      <span className={styles.deckTitle}>{deck.title}</span>
-      <span className={styles.deckMeta}>
-        {deck.level} · {deck.lessons.length} レッスン
-      </span>
-    </button>
+    <div key={deck.deckId} className={styles.deckRow}>
+      <button
+        className="menu-item"
+        onClick={() =>
+          dispatch({
+            type: "go",
+            screen: { name: "deckHome", deckId: deck.deckId },
+          })
+        }
+      >
+        <span className={styles.deckTitle}>{deck.title}</span>
+        <span className={styles.deckMeta}>
+          {deck.level} · {deck.lessons.length} レッスン
+        </span>
+      </button>
+      <button
+        className={`ghost ${styles.hideButton}`}
+        type="button"
+        title="一覧から非表示にする（データは残る）"
+        onClick={() => setHidden(deck.deckId, true)}
+      >
+        非表示
+      </button>
+    </div>
   );
 
   return (
@@ -167,6 +201,30 @@ export default function DeckList({
         {ownDecks.length > 0 ? "サンプル" : "デッキ"}
       </h3>
       <div className="card-grid">{sampleDecks.map(renderDeck)}</div>
+
+      {/* Issue #181: 非表示にしたデッキはここに溜める（戻せる）。 */}
+      {hiddenDecks.length > 0 && (
+        <>
+          <h3 className={styles.groupTitle}>
+            非表示のデッキ（{hiddenDecks.length}）
+          </h3>
+          <div className="card-grid">
+            {hiddenDecks.map((deck) => (
+              <div key={deck.deckId} className={styles.deckRow}>
+                <span className={styles.hiddenTitle}>{deck.title}</span>
+                <button
+                  className={`ghost ${styles.hideButton}`}
+                  type="button"
+                  title="一覧に戻す"
+                  onClick={() => setHidden(deck.deckId, false)}
+                >
+                  表示に戻す
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {adding && (
         <div

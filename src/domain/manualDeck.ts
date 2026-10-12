@@ -10,9 +10,26 @@
  */
 
 import type { Deck, Word } from "../content/schema";
-import { normalizeTermKey, termToWordId } from "./conversationExtract";
+import {
+  CONVERSATION_DECK_ID,
+  normalizeTermKey,
+  termToWordId,
+} from "./conversationExtract";
 
 export const MANUAL_DECK_ID = "manual-words";
+
+/**
+ * issue #151/#178/#181: 自分で作ったデッキ（会話抽出・手動追加）か。
+ * サンプルデッキ（bundled）と区別して、一覧で上に出したり編集対象にしたりする。
+ */
+export function isOwnDeck(deck: Deck): boolean {
+  return (
+    deck.source === "conversation" ||
+    deck.source === "manual" ||
+    deck.deckId === MANUAL_DECK_ID ||
+    deck.deckId === CONVERSATION_DECK_ID
+  );
+}
 
 /** 1行に収まる語の上限（誤って長文を貼ったときの保険）。 */
 export const MAX_MANUAL_WORDS = 500;
@@ -131,6 +148,105 @@ export function buildManualDeck(
       },
     ],
   };
+}
+
+/**
+ * Issue #181: 自分のデッキを後から直す（名前変更・語の編集・語の削除）。
+ *
+ * aki の指摘: 「入れたら最後、直せない」。ここでは純関数だけを提供し、
+ * 保存は呼び出し側（DeckHome）が storage.saveUserDeck / deleteUserDeck で行う。
+ */
+
+export const MAX_DECK_TITLE_LEN = 60;
+
+export type DeckEditResult =
+  | { ok: true; deck: Deck }
+  | { ok: false; error: string };
+
+/** デッキ名を変更する。空文字は無視（既存をそのまま返す）。 */
+export function renameDeck(deck: Deck, title: string): Deck {
+  const trimmed = title.trim().slice(0, MAX_DECK_TITLE_LEN);
+  if (!trimmed) return deck;
+  return { ...deck, title: trimmed };
+}
+
+/** 編集対象の語を探す（手動/会話デッキは最初のレッスンに語がまとまっている）。 */
+function firstLessonWords(deck: Deck): Word[] | null {
+  return deck.lessons[0]?.words ?? null;
+}
+
+function replaceWords(deck: Deck, words: Word[]): Deck {
+  const lesson = deck.lessons[0];
+  if (!lesson) return deck;
+  return {
+    ...deck,
+    lessons: [{ ...lesson, words }, ...deck.lessons.slice(1)],
+  };
+}
+
+/**
+ * 語を編集する。term / meaning の重複（正規化一致）は弾く。
+ * wordId は据え置き（SRS の復習履歴と紐づいているため変えない）。
+ */
+export function editDeckWord(
+  deck: Deck,
+  wordId: string,
+  input: ManualWordInput,
+): DeckEditResult {
+  const words = firstLessonWords(deck);
+  if (!words) return { ok: false, error: "デッキにレッスンがありません" };
+  const index = words.findIndex((w) => w.wordId === wordId);
+  if (index < 0) return { ok: false, error: "語が見つかりません" };
+
+  const term = input.term.trim();
+  const meaning = input.meaning.trim();
+  if (!term || !meaning) {
+    return { ok: false, error: "語と意味は両方入力してください" };
+  }
+
+  const termKey = normalizeTermKey(term);
+  const meaningKey = normalizeTermKey(meaning);
+  for (let i = 0; i < words.length; i++) {
+    if (i === index) continue;
+    if (normalizeTermKey(words[i].term) === termKey) {
+      return { ok: false, error: "同じ語がすでにデッキにあります" };
+    }
+    if (normalizeTermKey(words[i].meaning) === meaningKey) {
+      return { ok: false, error: "同じ意味がすでにデッキにあります" };
+    }
+  }
+
+  const example = input.example?.trim();
+  const updated: Word = {
+    ...words[index],
+    term,
+    // wordSchema は reading を必須にする（manualToWord と同じ規則）。
+    reading: /[^\u0020-\u007e]/.test(term) ? term : "—",
+    meaning,
+    examples: [{ en: example || term }],
+  };
+  const next = words.map((w, i) => (i === index ? updated : w));
+  return { ok: true, deck: replaceWords(deck, next) };
+}
+
+/**
+ * 語を削除する。lessonSchema が words を min(1) で要求するため、
+ * 最後の1語は削除できない（デッキごと削除する導線に誘導する）。
+ */
+export function removeDeckWord(deck: Deck, wordId: string): DeckEditResult {
+  const words = firstLessonWords(deck);
+  if (!words) return { ok: false, error: "デッキにレッスンがありません" };
+  const next = words.filter((w) => w.wordId !== wordId);
+  if (next.length === words.length) {
+    return { ok: false, error: "語が見つかりません" };
+  }
+  if (next.length === 0) {
+    return {
+      ok: false,
+      error: "最後の1語は削除できません。デッキごと削除してください",
+    };
+  }
+  return { ok: true, deck: replaceWords(deck, next) };
 }
 
 /**
