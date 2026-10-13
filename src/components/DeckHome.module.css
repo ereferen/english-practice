@@ -88,6 +88,34 @@
   min-width: 0;
 }
 
+/* Issue #187: 語 + 読み + 品詞 を横並びにする行 */
+.wordHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.wordReading {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.wordPos {
+  font-size: 0.68rem;
+  padding: 0.02rem 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-muted);
+  color: var(--color-muted);
+}
+
+/* Issue #189: 学習率の定義を1行で示す注記 */
+.completionHint {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
 .wordMeaning {
   color: var(--color-muted);
   font-size: 0.85rem;

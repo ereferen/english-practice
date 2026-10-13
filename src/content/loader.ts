@@ -17,6 +17,14 @@ export interface LoadedDeck {
   url: string;
 }
 
+/**
+ * Issue #186: クイズ生成に必要な最低語数。以前は 4 が loader 内に直書きされ、
+ * UI 側（会話抽出の「今すぐ学習」導線）はこの閾値を知らずにクイズ画面へ送り、
+ * 3語以下のレッスンで「クイズがありません」の行き止まりになっていた。
+ */
+export const MIN_QUIZ_WORDS = 4;
+
+
 export interface LoadError {
   url: string;
   reason: string;
@@ -111,7 +119,7 @@ export function validateDeckConsistency(deck: Deck): string[] {
   }
 
   const allWordIds = Array.from(wordIds);
-  if (allWordIds.length < 4) {
+  if (allWordIds.length < MIN_QUIZ_WORDS) {
     issues.push("deck must contain at least 4 words for quiz generation");
   }
 
@@ -234,7 +242,7 @@ export function generateQuizzesForLesson(deck: Deck, lessonId: string): Quiz[] {
   if ((lesson.quizzes?.length ?? 0) > 0) return lesson.quizzes;
 
   const pool = allWords(deck);
-  if (pool.length < 4) return [];
+  if (pool.length < MIN_QUIZ_WORDS) return [];
 
   const quizzes: Quiz[] = [];
   const usedDistractors = new Map<string, string[]>();

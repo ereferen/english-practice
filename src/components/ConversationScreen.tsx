@@ -27,11 +27,14 @@ import {
 import {
   type ExtractedContent,
   CONVERSATION_DECK_ID,
+  ExtractionError,
   buildConversationDeck,
   dedupeExtracted,
   extractContentWithLlm,
   mergeIntoConversationDeck,
 } from "../domain/conversationExtract";
+import { MIN_QUIZ_WORDS } from "../content/loader";
+import { partOfSpeechLabel } from "../domain/partOfSpeech";
 import { deckSchema } from "../content/schema";
 import type { Deck } from "../content/schema";
 import { speak } from "../domain/speech";
@@ -124,6 +127,10 @@ export default function ConversationScreen({
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<ExtractedContent[] | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
+  // Issue #188: 生のスキーマエラーは「詳しく（技術情報）」に隠す。
+  const [extractErrorDetails, setExtractErrorDetails] = useState<string | null>(
+    null,
+  );
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   // Issue #141: 追加直後にそのまま学習へ入れるようにする（デッキを探し直す4タップを無くす）
@@ -131,6 +138,9 @@ export default function ConversationScreen({
     deckId: string;
     lessonId: string;
     count: number;
+    // Issue #186: レッスン総語数。4語未満ならクイズではなくカードへ送る
+    // （3語以下で「今すぐ学習」が「クイズがありません」の行き止まりになっていた）。
+    wordCount: number;
   } | null>(null);
   const extractControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -517,6 +527,7 @@ export default function ConversationScreen({
     if (providers.length === 0 || extracting) return;
     setExtracting(true);
     setExtractError(null);
+    setExtractErrorDetails(null);
     setSavedMessage(null);
     setSavedDeck(null);
     const controller = new AbortController();
@@ -545,7 +556,14 @@ export default function ConversationScreen({
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
-      setExtractError(e instanceof Error ? e.message : String(e));
+      // Issue #188: ExtractionError は技術情報を details に分離して持つ。
+      if (e instanceof ExtractionError) {
+        setExtractError(e.message);
+        setExtractErrorDetails(e.details ?? null);
+      } else {
+        setExtractError(e instanceof Error ? e.message : String(e));
+        setExtractErrorDetails(null);
+      }
     } finally {
       setExtracting(false);
       extractControllerRef.current = null;
@@ -583,7 +601,8 @@ export default function ConversationScreen({
       // 保存前にスキーマ再検証（LLM由来データを決して素で入れない）
       const parsed = deckSchema.safeParse(deck);
       if (!parsed.success) {
-        setExtractError(
+        setExtractError("デッキの保存データを検証できませんでした。");
+        setExtractErrorDetails(
           `デッキ検証に失敗しました: ${parsed.error.issues
             .map((i) => `${i.path.join(".")}: ${i.message}`)
             .slice(0, 2)
@@ -608,21 +627,25 @@ export default function ConversationScreen({
         `✓ ${approved.length} 件を「${parsed.data.title}」に追加しました。`,
       );
       // Issue #141: 追加した語にその場で入れるよう、遷移先（デッキ/レッスン）を覚えておく
-      const firstLessonId = parsed.data.lessons[0]?.lessonId;
+      const firstLesson = parsed.data.lessons[0];
       setSavedDeck(
-        firstLessonId
+        firstLesson
           ? {
               deckId: parsed.data.deckId,
-              lessonId: firstLessonId,
+              lessonId: firstLesson.lessonId,
               count: approved.length,
+              // Issue #186: クイズ可否は「追加した語数」ではなくレッスン総語数で決まる
+              wordCount: firstLesson.words.length,
             }
           : null,
       );
       setExtracted(null);
       setExtractError(null);
+      setExtractErrorDetails(null);
       setSelectedLevel(null);
     } catch (e: unknown) {
       setExtractError(e instanceof Error ? e.message : String(e));
+      setExtractErrorDetails(null);
     }
   }, [
     extracted,
@@ -937,24 +960,49 @@ export default function ConversationScreen({
               <span className={styles.savedHint}>{savedMessage}</span>
             )}
             {/* Issue #141: 追加した直後にそのまま学習へ。以前はここから
-                デッキ一覧を探し直す4タップが必要だった。 */}
-            {savedDeck && (
-              <button
-                className="primary"
-                data-testid="conversation-study-now"
-                onClick={() =>
-                  dispatch({
-                    type: "go",
-                    screen: {
-                      name: "quiz",
-                      deckId: savedDeck.deckId,
-                      lessonId: savedDeck.lessonId,
-                    },
-                  })
-                }
-              >
-                この {savedDeck.count} 語を今すぐ学習
-              </button>
+                デッキ一覧を探し直す4タップが必要だった。
+                Issue #186: 4語未満はクイズが作れないのでカードへ送る
+                （以前は「今すぐ学習」→「クイズがありません」の行き止まり）。 */}
+            {savedDeck &&
+              (savedDeck.wordCount >= MIN_QUIZ_WORDS ? (
+                <button
+                  className="primary"
+                  data-testid="conversation-study-now"
+                  onClick={() =>
+                    dispatch({
+                      type: "go",
+                      screen: {
+                        name: "quiz",
+                        deckId: savedDeck.deckId,
+                        lessonId: savedDeck.lessonId,
+                      },
+                    })
+                  }
+                >
+                  この {savedDeck.count} 語を今すぐ学習
+                </button>
+              ) : (
+                <button
+                  className="primary"
+                  data-testid="conversation-study-now"
+                  onClick={() =>
+                    dispatch({
+                      type: "go",
+                      screen: {
+                        name: "flash",
+                        deckId: savedDeck.deckId,
+                        lessonId: savedDeck.lessonId,
+                      },
+                    })
+                  }
+                >
+                  この {savedDeck.count} 語をカードで見る
+                </button>
+              ))}
+            {savedDeck && savedDeck.wordCount < MIN_QUIZ_WORDS && (
+              <span className={styles.savedHint}>
+                クイズは4語から。まずカードで確認できます。
+              </span>
             )}
           </div>
         )}
@@ -962,15 +1010,36 @@ export default function ConversationScreen({
         {extractError && (
           <div className={`card ${styles.configWarning}`}>
             <span>⚠ {extractError}</span>
-            {/* Issue #133: 失敗の文言が「もう一度試行してください」なのに
-                戻るしか無かった。その場で再試行できるようにする。 */}
-            <button
-              className="primary"
-              onClick={() => void handleExtract()}
-              disabled={extracting}
-            >
-              {extracting ? "抽出中..." : "再試行"}
-            </button>
+            {/* Issue #188: 生のスキーマパスは開発者向け。送信失敗カードと同じく
+                「詳しく（技術情報）」の折りたたみに隠す。 */}
+            {extractErrorDetails && (
+              <details className={styles.errorDetails}>
+                <summary>詳しく（技術情報）</summary>
+                <pre className={styles.errorDetailsText}>
+                  {extractErrorDetails}
+                </pre>
+              </details>
+            )}
+            <div className={styles.extractErrorActions}>
+              {/* Issue #133: 失敗の文言が「もう一度試行してください」なのに
+                  戻るしか無かった。その場で再試行できるようにする。 */}
+              <button
+                className="primary"
+                onClick={() => void handleExtract()}
+                disabled={extracting}
+              >
+                {extracting ? "抽出中..." : "再試行"}
+              </button>
+              {/* Issue #188: 応答形式違いなら「別のモデル」へ行ける導線が要る。 */}
+              <button
+                className="ghost"
+                onClick={() =>
+                  dispatch({ type: "go", screen: { name: "settings" } })
+                }
+              >
+                設定を開く
+              </button>
+            </div>
           </div>
         )}
 
@@ -993,6 +1062,18 @@ export default function ConversationScreen({
                       {TYPE_LABELS[item.type]}
                     </span>
                     <span className={styles.extractTerm}>{item.term}</span>
+                    {/* Issue #187: 品詞と読みが無いと、残す語を選ぶときに
+                        何を覚えることになるのか判断できない。 */}
+                    {item.reading && (
+                      <span className={styles.extractReading}>
+                        {item.reading}
+                      </span>
+                    )}
+                    {partOfSpeechLabel(item.partOfSpeech) && (
+                      <span className={styles.extractPos}>
+                        {partOfSpeechLabel(item.partOfSpeech)}
+                      </span>
+                    )}
                     <span className={styles.extractMeaning}>
                       {item.meaning}
                     </span>

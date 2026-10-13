@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import { generateQuizzesForLesson, pickLesson } from "../content/loader";
-import type { Word } from "../content/schema";
 import { buildSessionQuizItems } from "../domain/session";
+import { partOfSpeechLabel } from "../domain/partOfSpeech";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -18,24 +18,9 @@ interface Props {
 }
 
 /**
- * Issue #168: 品詞バッジは英語のままだった（サンプル= noun、抽出デッキ= other）。
- * 日本語 UI に合わせて表記を日本語化し、"other" は情報量ゼロなので出さない。
+ * Issue #168 / #187: 品詞ラベルは domain/partOfSpeech に一本化した
+ * （会話抽出パネル・デッキ単語一覧と表記を揃えるため）。
  */
-const PART_OF_SPEECH_LABELS: Record<
-  NonNullable<Word["partOfSpeech"]>,
-  string
-> = {
-  noun: "名詞",
-  verb: "動詞",
-  adjective: "形容詞",
-  adverb: "副詞",
-  preposition: "前置詞",
-  conjunction: "接続詞",
-  pronoun: "代名詞",
-  determiner: "限定詞",
-  exclamation: "間投詞",
-  other: "", // 判定不能 — バッジを出さない
-};
 
 export default function FlashScreen({
   state,
@@ -316,9 +301,9 @@ export default function FlashScreen({
           <>
             <div className={styles.readingBack}>{word.reading}</div>
             <div className={styles.meaning}>{word.meaning}</div>
-            {word.partOfSpeech && PART_OF_SPEECH_LABELS[word.partOfSpeech] && (
+            {partOfSpeechLabel(word.partOfSpeech) && (
               <div className={`badge-gold ${styles.partOfSpeech}`}>
-                {PART_OF_SPEECH_LABELS[word.partOfSpeech]}
+                {partOfSpeechLabel(word.partOfSpeech)}
               </div>
             )}
             <div className={styles.examples}>

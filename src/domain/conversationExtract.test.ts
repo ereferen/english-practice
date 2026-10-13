@@ -95,6 +95,24 @@ describe("parseExtractionResult", () => {
     ).toThrow(ExtractionError);
   });
 
+  // Issue #188: 生のスキーマパスを UI 前面に出さない。日本語の一言を message に、
+  // 技術情報を details に分離する。
+  it("schema違反は日本語メッセージ + details に生パスを持つ (#188)", () => {
+    let caught: ExtractionError | undefined;
+    try {
+      parseExtractionResult(
+        JSON.stringify({ items: [{ type: "vocabulary", meaning: "x" }] }),
+        CONVO,
+      );
+    } catch (e) {
+      caught = e as ExtractionError;
+    }
+    expect(caught).toBeInstanceOf(ExtractionError);
+    expect(caught?.message).toContain("応答形式が想定と違います");
+    expect(caught?.message).not.toContain("Required");
+    expect(caught?.details).toContain("items.0.term");
+  });
+
   it("grammar-correction で correctedVersion 欠落の項はすてる", () => {
     const bad = {
       type: "grammar-correction",
