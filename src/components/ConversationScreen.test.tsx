@@ -58,6 +58,8 @@ function makeStorage(
     loadConversation: vi.fn(async () => saved),
     saveConversation,
     deleteConversation,
+    // Issue #186 のテスト用: 抽出した語の保存先
+    saveUserDeck: vi.fn(async () => {}),
     listConversationSessions: vi.fn(async () =>
       [...sessionStore]
         .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
@@ -858,5 +860,122 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
         }),
       ),
     );
+  });
+});
+
+/**
+ * Issue #186: 会話から抽出した語が3件以下のとき、「今すぐ学習」がクイズ画面へ
+ * 飛んで「クイズがありません」の行き止まりになっていた。4語未満ならフラッシュ
+ * カードへフォールバックする（デッキ画面からの導線と同じ挙動）。
+ */
+describe("ConversationScreen (issue #186 抽出後の導線)", () => {
+  const convo: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "They use a lot of slang in voice chat.",
+        createdAt: "2026-10-13T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Yeah, gamers love slang.",
+        createdAt: "2026-10-13T12:00:01.000Z",
+      },
+      {
+        id: "m3",
+        role: "user",
+        content: "I didn't know that word.",
+        createdAt: "2026-10-13T12:00:02.000Z",
+      },
+    ],
+    draft: "",
+    topicId: null,
+    updatedAt: "2026-10-13T12:00:03.000Z",
+  };
+
+  const extractJson = (n: number) =>
+    JSON.stringify({
+      items: Array.from({ length: n }, (_, i) => ({
+        type: "vocabulary",
+        term: `word${i}`,
+        reading: `ワード${i}`,
+        meaning: `意味${i}`,
+        example: `Example ${i}.`,
+        partOfSpeech: "noun",
+      })),
+    });
+
+  async function extractAndSave(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      await screen.findByRole("button", { name: /この会話から学ぶ/ }),
+    );
+    const saveButton = await screen.findByRole("button", {
+      name: /件をデッキに追加/,
+    });
+    await user.click(saveButton);
+  }
+
+  it("抽出が3件ならカードへ送り、クイズの閾値を添える", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: extractJson(3) });
+    const { storage } = makeStorage(convo, true);
+    const dispatch = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={storage}
+      />,
+    );
+
+    await extractAndSave(user);
+
+    const studyNow = await screen.findByTestId("conversation-study-now");
+    expect(studyNow.textContent).toContain("カードで見る");
+    expect(screen.getByText(/クイズは4語から/)).toBeTruthy();
+
+    await user.click(studyNow);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "flash",
+        deckId: expect.any(String),
+        lessonId: expect.any(String),
+      },
+    });
+  });
+
+  it("抽出が4件以上なら今までどおりクイズへ送る", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: extractJson(5) });
+    const { storage } = makeStorage(convo, true);
+    const dispatch = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={storage}
+      />,
+    );
+
+    await extractAndSave(user);
+
+    const studyNow = await screen.findByTestId("conversation-study-now");
+    expect(studyNow.textContent).toContain("今すぐ学習");
+
+    await user.click(studyNow);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "quiz",
+        deckId: expect.any(String),
+        lessonId: expect.any(String),
+      },
+    });
   });
 });

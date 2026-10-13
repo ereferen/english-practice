@@ -13,6 +13,7 @@ import {
   type ManualWordInput,
 } from "../domain/manualDeck";
 import { localProgress } from "../storage/localProgress";
+import { partOfSpeechLabel } from "../domain/partOfSpeech";
 import ConfirmDialog from "./ConfirmDialog";
 import styles from "./DeckHome.module.css";
 
@@ -208,6 +209,11 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
           <span className="badge">{deck.level}</span>
           <span className="badge-gold">学習率 {completion}%</span>
         </div>
+        {/* Issue #189: 「学習率」の定義が画面のどこにも無く、カードをめくった
+            だけで100%になり信用しづらかった。何を数えているかを1行で明示する。 */}
+        <p className={styles.completionHint} data-testid="completion-hint">
+          学習率 = カードを見た語の割合（クイズの正解は含みません）
+        </p>
         {/* Issue #114: direct entry into a review session for this deck's
             due words — previously the only path was per-lesson 学習・クイズ. */}
         {summary.dueToday > 0 && (
@@ -314,7 +320,18 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
               ) : (
                 <li key={w.wordId} className={styles.wordItem}>
                   <span className={styles.wordText}>
-                    <strong>{w.term}</strong>
+                    <span className={styles.wordHead}>
+                      <strong>{w.term}</strong>
+                      {/* Issue #187: 読みと品詞が無いと何を覚えるのか分からない */}
+                      {w.reading && w.reading !== "—" && (
+                        <span className={styles.wordReading}>{w.reading}</span>
+                      )}
+                      {partOfSpeechLabel(w.partOfSpeech) && (
+                        <span className={styles.wordPos}>
+                          {partOfSpeechLabel(w.partOfSpeech)}
+                        </span>
+                      )}
+                    </span>
                     <span className={styles.wordMeaning}>{w.meaning}</span>
                   </span>
                   <span className={styles.wordActions}>

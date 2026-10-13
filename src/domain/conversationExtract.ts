@@ -128,7 +128,18 @@ Respond with ONLY a JSON object, no markdown fences, no commentary:
 // 解析 + サニタイズ（LLM 出力は絶対に素で信用しない）
 // ---------------------------------------------------------------------------
 
-export class ExtractionError extends Error {}
+export class ExtractionError extends Error {
+  /**
+   * Issue #188: 生のスキーマパス（items.0.term: Required 等）は開発者向け。
+   * UI では日本語の一言を出し、この技術情報は「詳しく」の中に隠す。
+   */
+  details?: string;
+  constructor(message: string, details?: string) {
+    super(message);
+    this.name = "ExtractionError";
+    this.details = details;
+  }
+}
 
 function cleanText(s: string): string {
   return s
@@ -163,7 +174,11 @@ export function parseExtractionResult(
   }
   const parsed = extractionSchema.safeParse(parsedJson);
   if (!parsed.success) {
+    // Issue #188: 「items.0.term: Required」を素で出しても何を直せばいいか
+    // 分からない（利用者のミスではなく LLM の応答形式違い）。日本語の一言を
+    // 前面に出し、生のパスは details に退避して「詳しく」で見せる。
     throw new ExtractionError(
+      "このモデルは応答形式が想定と違います。別のモデルを試すか、設定の「接続テスト」を確認してください。",
       `抽出結果のスキーマ検証に失敗しました: ${parsed.error.issues
         .map((i) => `${i.path.join(".")}: ${i.message}`)
         .slice(0, 3)

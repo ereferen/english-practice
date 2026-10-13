@@ -534,6 +534,28 @@
   font-weight: 700;
 }
 
+/* Issue #187: 抽出候補の品詞バッジ・読み（カタカナ） */
+.extractReading {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.extractPos {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-muted);
+  color: var(--color-muted);
+}
+
+/* Issue #188: 抽出エラーカードの操作行（再試行 + 設定を開く） */
+.extractErrorActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
 .extractMeaning {
   color: var(--color-muted);
   font-size: 0.875rem;
