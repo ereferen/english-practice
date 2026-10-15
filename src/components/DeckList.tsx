@@ -9,8 +9,12 @@ import {
   mergeIntoManualDeck,
   parseManualWords,
 } from "../domain/manualDeck";
-import type { StorageProvider } from "../storage/types";
+import type { StorageProvider, ReviewState } from "../storage/types";
 import { storage as defaultStorage } from "../storage/dexieProvider";
+import { allWords } from "../content/loader";
+import { deckListStat, type DeckListStat } from "../domain/progress";
+import { systemClock } from "../domain/srs";
+import { localProgress } from "../storage/localProgress";
 import { setShortcutsSuppressed } from "../app/useKeyboardShortcuts";
 import styles from "./DeckList.module.css";
 
@@ -41,7 +45,45 @@ export default function DeckList({
   // 「すべてのデータを削除」以外に消す手段が無かったのを、一覧から外すだけの
   // 軽い非表示で解決する（設定に保存。デッキ本体は消さない）。
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  // Issue #195: 一覧で「どのデッキを今日開くか」を決められるよう、行に語数・学習率・
+  // 今日の復習数を出す。数字は deckHome と同じ計算（review + localStorage）。
+  const [stats, setStats] = useState<Record<string, DeckListStat>>({});
+  const decks = state.decks;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const today = systemClock.today();
+      const flash = localProgress.load().learnedWords;
+      const next: Record<string, DeckListStat> = {};
+      for (const deck of decks) {
+        try {
+          const words = allWords(deck);
+          const reviews = (
+            await Promise.all(
+              words.map((w) => storage.loadReview(deck.deckId, w.wordId)),
+            )
+          ).filter((r): r is ReviewState => Boolean(r));
+          const flashLearned = flash.filter(
+            (w) => w.deckId === deck.deckId,
+          ).length;
+          next[deck.deckId] = deckListStat(
+            words.length,
+            reviews,
+            today,
+            flashLearned,
+          );
+        } catch {
+          // 取得できないデッキは数字なしで出す（一覧自体は壊さない）。
+        }
+      }
+      if (mounted) setStats(next);
+    })().catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [decks, storage]);
 
   // 自分のデッキ（会話抽出・手動追加）をサンプルより上に出す。安定ソートで元順を保つ。
   const ownDecks = state.decks.filter(
@@ -146,7 +188,9 @@ export default function DeckList({
     }
   };
 
-  const renderDeck = (deck: Deck) => (
+  const renderDeck = (deck: Deck) => {
+    const stat = stats[deck.deckId];
+    return (
     <div key={deck.deckId} className={styles.deckRow}>
       <button
         className="menu-item"
@@ -160,7 +204,18 @@ export default function DeckList({
         <span className={styles.deckTitle}>{deck.title}</span>
         <span className={styles.deckMeta}>
           {deck.level} · {deck.lessons.length} レッスン
+          {stat && (
+            <>
+              {" · "}
+              {stat.totalWords} 語 · 学習率 {stat.completion}%
+            </>
+          )}
         </span>
+        {/* Issue #195: 復習期限が来ているデッキは一覧で目立たせる
+            （朝いちばんに開くデッキが一目で分かる）。 */}
+        {stat && stat.dueToday > 0 && (
+          <span className={styles.dueBadge}>復習 {stat.dueToday}語</span>
+        )}
       </button>
       <button
         className={`ghost ${styles.hideButton}`}
@@ -171,7 +226,8 @@ export default function DeckList({
         非表示
       </button>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="container">

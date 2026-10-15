@@ -33,6 +33,40 @@ export function computeProgress(
   };
 }
 
+/**
+ * Issue #195: デッキ一覧の行に出す進捗（語数・学習率・今日の復習数）。
+ * 学習率は DeckHome と同じく「review.level>0 と localStorage の学習済み語の和集合」
+ * で数える（片方だけだと画面ごとに数字が食い違う）。
+ */
+export interface DeckListStat {
+  totalWords: number;
+  learnedWords: number;
+  dueToday: number;
+  completion: number;
+}
+
+export function deckListStat(
+  wordsCount: number,
+  reviewStates: ReviewState[],
+  today: string,
+  flashLearnedWords = 0,
+): DeckListStat {
+  const learnedWords = Math.max(
+    reviewStates.filter((r) => r.level > 0).length,
+    flashLearnedWords,
+  );
+  const dueToday = reviewStates.filter(
+    (r) => r.dueAt && r.dueAt <= today,
+  ).length;
+  return {
+    totalWords: wordsCount,
+    learnedWords,
+    dueToday,
+    completion:
+      wordsCount > 0 ? Math.round((learnedWords / wordsCount) * 100) : 0,
+  };
+}
+
 export function completionRate(summary: ProgressSummary): number {
   if (summary.totalWords === 0) return 0;
   return Math.round((summary.learnedWords / summary.totalWords) * 100);
