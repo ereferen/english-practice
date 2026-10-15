@@ -4,6 +4,7 @@ import {
   computeProgress,
   countStudyDays,
   dailyGoalRate,
+  deckListStat,
   isLowSample,
   lastNDates,
   LOW_SAMPLE_ANSWER_THRESHOLD,
@@ -219,5 +220,32 @@ describe("lastNDates", () => {
 
   it("returns just today when n=1", () => {
     expect(lastNDates("2026-10-10", 1)).toEqual(["2026-10-10"]);
+  });
+});
+
+describe("deckListStat (issue #195)", () => {
+  it("語数・学習率・今日の復習数をまとめて返す", () => {
+    const states = [
+      review({ wordId: "a", level: 2, dueAt: "2026-10-16" }),
+      review({ wordId: "b", level: 1, dueAt: "2026-10-20" }),
+      review({ wordId: "c", level: 0, dueAt: "2026-10-01" }),
+    ];
+    const stat = deckListStat(4, states, "2026-10-16");
+    expect(stat.totalWords).toBe(4);
+    expect(stat.learnedWords).toBe(2);
+    expect(stat.completion).toBe(50);
+    expect(stat.dueToday).toBe(2); // 02-01 と 10-16 の2語
+  });
+
+  it("localStorage の学習済み語が多いときはそちらを学習率に使う", () => {
+    const stat = deckListStat(4, [review({ level: 1 })], "2026-10-16", 3);
+    expect(stat.learnedWords).toBe(3);
+    expect(stat.completion).toBe(75);
+  });
+
+  it("語が0のデッキでも 0% を返し NaN にしない", () => {
+    const stat = deckListStat(0, [], "2026-10-16");
+    expect(stat.completion).toBe(0);
+    expect(stat.dueToday).toBe(0);
   });
 });
