@@ -299,7 +299,10 @@ export default function FlashScreen({
           </>
         ) : (
           <>
-            <div className={styles.readingBack}>{word.reading}</div>
+            {/* Issue #191: 読み未設定（"—" プレースホルダ）なら行ごと出さない。 */}
+            {word.reading && word.reading !== "—" && (
+              <div className={styles.readingBack}>{word.reading}</div>
+            )}
             <div className={styles.meaning}>{word.meaning}</div>
             {partOfSpeechLabel(word.partOfSpeech) && (
               <div className={`badge-gold ${styles.partOfSpeech}`}>
