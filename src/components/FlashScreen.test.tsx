@@ -609,3 +609,77 @@ describe("FlashScreen", () => {
     expect(screen.queryByTestId("quiz-unavailable")).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #192: 会話から拾った文法訂正カード専用レイアウト
+// ---------------------------------------------------------------------------
+
+describe("FlashScreen — 文法訂正カード (issue #192)", () => {
+  /** 会話抽出 (conversationExtract) が作る grammar-correction 由来の Word。 */
+  function makeGrammarDeck(): Deck {
+    const base = makeTestDeck();
+    return {
+      ...base,
+      deckId: "grammar-deck",
+      lessons: [
+        {
+          lessonId: "lesson-1",
+          title: "Lesson 1",
+          words: [
+            {
+              wordId: "grammar-correction-0",
+              term: "I very like this game.",
+              reading: "—",
+              meaning: "very は動詞を直接修飾できない",
+              examples: [{ en: "I really like this game." }],
+              partOfSpeech: "other",
+              tags: ["conversation", "grammar-correction"],
+              note: "✗ I very like this game.\n✓ I really like this game.\nvery は形容詞・副詞を修飾します",
+            },
+          ],
+          quizzes: [],
+        },
+      ],
+    };
+  }
+
+  it("marks the front with ✗ and shows the learner's own sentence", () => {
+    renderFlashScreen(makeState(makeGrammarDeck()));
+    const front = screen.getByTestId("grammar-front");
+    expect(front.textContent).toContain("✗");
+    expect(front.textContent).toContain("I very like this game.");
+  });
+
+  it("shows ✓ corrected sentence + explanation + note on the back", async () => {
+    renderFlashScreen(makeState(makeGrammarDeck()));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    const back = screen.getByTestId("grammar-corrected");
+    expect(back.textContent).toContain("✓");
+    expect(back.textContent).toContain("I really like this game.");
+    expect(screen.getByText("very は動詞を直接修飾できない")).toBeTruthy();
+    expect(screen.getByText(/ノート:/)).toBeTruthy();
+  });
+
+  it("does not render the reading placeholder / POS badge for grammar cards", async () => {
+    renderFlashScreen(makeState(makeGrammarDeck()));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    // 読みの「—」も品詞バッジも出さない（語のカードではないため）
+    expect(screen.queryByText("—")).toBeNull();
+    expect(screen.queryByText("その他")).toBeNull();
+  });
+
+  it("keeps the normal word-card layout for non-grammar words", async () => {
+    const deck = makeTestDeck();
+    renderFlashScreen(makeState(deck));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    expect(screen.queryByTestId("grammar-corrected")).toBeNull();
+    expect(screen.queryByTestId("grammar-front")).toBeNull();
+    expect(screen.getByText(deck.lessons[0].words[0].meaning)).toBeTruthy();
+  });
+});

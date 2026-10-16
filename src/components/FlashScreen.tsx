@@ -92,6 +92,10 @@ export default function FlashScreen({
   const words = lesson?.words ?? [];
   const word = words[Math.min(index, Math.max(words.length - 1, 0))];
   const isLast = lesson ? index === lesson.words.length - 1 : false;
+  // Issue #192: 会話から拾った文法訂正は「語のカード」ではなく「訂正文のカード」として
+  // 見せる。表=✗自分の文 / 裏=✓訂正文＋解説＋ノート（読み・品詞・例文リストは出さない）。
+  const isGrammarCorrection =
+    word?.tags?.includes("grammar-correction") ?? false;
 
   /** Mark the current word as learned (idempotent per render cycle). */
   const markCurrentLearned = () => {
@@ -292,10 +296,35 @@ export default function FlashScreen({
           <>
             {/* Issue #72: the front shows ONLY the term. Reading + meaning
                 stay hidden so users can self-test before flipping. */}
-            <div className={`flash-term ${styles.term}`}>{word.term}</div>
+            {/* Issue #192: 文法訂正は「自分の間違えた文」だと分かるよう ✗ を付ける。 */}
+            {isGrammarCorrection ? (
+              <div
+                className={`flash-term ${styles.grammarFront}`}
+                data-testid="grammar-front"
+              >
+                <span className={styles.crossMark}>✗</span> {word.term}
+              </div>
+            ) : (
+              <div className={`flash-term ${styles.term}`}>{word.term}</div>
+            )}
             <div className={styles.flipHint} aria-hidden="true">
               クリック / Space でめくる
             </div>
+          </>
+        ) : isGrammarCorrection ? (
+          <>
+            {/* Issue #192: カード裏も抽出パネルと同じ3段組
+                （✓ 訂正文 / 解説 / ノート）。読み・品詞バッジ・例文リストは出さない。 */}
+            {word.examples[0]?.en && (
+              <div
+                className={styles.grammarCorrected}
+                data-testid="grammar-corrected"
+              >
+                <span className={styles.checkMark}>✓</span> {word.examples[0].en}
+              </div>
+            )}
+            <div className={styles.meaning}>{word.meaning}</div>
+            {word.note && <p className={styles.note}>ノート: {word.note}</p>}
           </>
         ) : (
           <>
