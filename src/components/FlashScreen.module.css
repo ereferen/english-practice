@@ -115,6 +115,33 @@
   margin-bottom: 0.75rem;
 }
 
+/* Issue #192: 文法訂正カード（表=✗自分の文）。語のカードと同じ体裁だが、
+   「文」であることが伝わるよう字間と行間をゆるめる。 */
+.grammarFront {
+  composes: term;
+  line-height: 1.4;
+}
+
+/* Issue #192: 裏の ✓ 訂正文。意味（＝解説）と並ぶので、こちらが正解だと
+   ひと目で分かるよう金のアクセントを残す。 */
+.grammarCorrected {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-text-parchment);
+  margin-bottom: 0.5rem;
+}
+
+.crossMark {
+  color: var(--color-danger);
+  margin-right: 0.35rem;
+}
+
+.checkMark {
+  color: var(--color-primary);
+  margin-right: 0.35rem;
+}
+
 /* Issue #45 / #94: reduced motion — the flip stays instant, no rotate,
    no scale, no traveling shadow, no gold pulse */
 @media (prefers-reduced-motion: reduce) {
