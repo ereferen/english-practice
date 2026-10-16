@@ -296,9 +296,12 @@ export default function DeckList({
           >
             <h2 className={styles.modalTitle}>単語を追加</h2>
             <p className={styles.modalHint}>
-              1行に1語。<code>語, 意味, 例文(任意)</code> の順で、カンマ or
-              タブ区切り。例:{" "}
-              <code>commute, 通勤する, I commute by train.</code>
+              1行に1語。
+              <code>語, 意味, 例文(任意), 読み(任意), 品詞(任意)</code>{" "}
+              の順で、カンマ or タブ区切り（タブなら位置で厳密に判定）。例:{" "}
+              <code>
+                {"commute\t通勤する\tI commute by train.\tコミュート\t動詞"}
+              </code>
             </p>
             <textarea
               ref={textareaRef}

@@ -47,6 +47,97 @@ describe("parseManualWords (issue #178)", () => {
     const r = parseManualWords("   \n\n");
     expect(r.ok).toBe(false);
   });
+
+  it("Issue #191: タブ区切りなら 読み と 品詞 も位置で受け取る", () => {
+    const r = parseManualWords(
+      "commute\t通勤する\tI commute by train.\tコミュート\t動詞",
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.words[0]).toEqual({
+      term: "commute",
+      meaning: "通勤する",
+      example: "I commute by train.",
+      reading: "コミュート",
+      partOfSpeech: "verb",
+    });
+  });
+
+  it("Issue #191: カンマ区切りはカタカナ読みと既知の品詞名だけ拾う", () => {
+    const r = parseManualWords(
+      "commute, 通勤する, I commute by train., コミュート, 動詞",
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.words[0]).toEqual({
+      term: "commute",
+      meaning: "通勤する",
+      example: "I commute by train.",
+      reading: "コミュート",
+      partOfSpeech: "verb",
+    });
+  });
+
+  it("Issue #191: 例文内のカンマは従来どおり例文に残す", () => {
+    const r = parseManualWords("keel, 竜骨, a, b, c");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.words[0]).toEqual({
+      term: "keel",
+      meaning: "竜骨",
+      example: "a, b, c",
+    });
+  });
+});
+
+describe("buildManualDeck の読み・品詞 (issue #191)", () => {
+  it("未入力の語は読みプレースホルダを持ち、品詞は付かない", () => {
+    const deck = buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
+      now: "2026-10-16T00:00:00.000Z",
+    });
+    const word = deck.lessons[0].words[0];
+    expect(word.reading).toBe("—");
+    expect(word.partOfSpeech).toBeUndefined();
+    expect(deckSchema.safeParse(deck).success).toBe(true);
+  });
+
+  it("入力した読み・品詞がカードのデータに入る", () => {
+    const deck = buildManualDeck(
+      [
+        {
+          term: "commute",
+          meaning: "通勤する",
+          reading: "コミュート",
+          partOfSpeech: "verb",
+        },
+      ],
+      { now: "2026-10-16T00:00:00.000Z" },
+    );
+    const word = deck.lessons[0].words[0];
+    expect(word.reading).toBe("コミュート");
+    expect(word.partOfSpeech).toBe("verb");
+    expect(deckSchema.safeParse(deck).success).toBe(true);
+  });
+
+  it("editDeckWord で読み・品詞を後から足せる（既存は保持）", () => {
+    const base = buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
+      now: "2026-10-16T00:00:00.000Z",
+    });
+    const target = base.lessons[0].words[0];
+    const r = editDeckWord(base, target.wordId, {
+      term: "commute",
+      meaning: "通勤する",
+      example: "I commute by train.",
+      reading: "コミュート",
+      partOfSpeech: "verb",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const word = r.deck.lessons[0].words[0];
+    expect(word.reading).toBe("コミュート");
+    expect(word.partOfSpeech).toBe("verb");
+    expect(deckSchema.safeParse(r.deck).success).toBe(true);
+  });
 });
 
 describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {

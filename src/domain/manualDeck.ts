@@ -10,6 +10,7 @@
  */
 
 import type { Deck, Word } from "../content/schema";
+import { partOfSpeechFromInput } from "./partOfSpeech";
 import {
   CONVERSATION_DECK_ID,
   normalizeTermKey,
@@ -40,14 +41,22 @@ export interface ManualWordInput {
   term: string;
   meaning: string;
   example?: string;
+  /** Issue #191: カタカナ読み（任意）。未入力ならカード裏に読みを出さない。 */
+  reading?: string;
+  /** Issue #191: 品詞（任意）。未入力ならバッジを出さない。 */
+  partOfSpeech?: Word["partOfSpeech"];
 }
 
 export type ManualParseResult =
   { ok: true; words: ManualWordInput[] } | { ok: false; error: string };
 
+/** カタカナ読みらしいか（ひらがな・漢字・ラテン文字は含めない）。 */
+const KATAKANA_RE = /^[\u30a1-\u30fa\u30fc\u3005\u30fb\s]+$/;
+
 /**
  * 貼り付けテキストを行単位で解釈する。
- * 1行1語。[語]\\t[意味]\\t[例文(任意)] または [語],[意味],[例文(任意)]。
+ * 1行1語。[語]\t[意味]\t[例文(任意)]\t[読み(任意)]\t[品詞(任意)]、
+ * またはカンマ区切りで [語],[意味],[例文(任意)…],[読み],[品詞]。
  * 空行と `#` 始まりの行（コメント）は無視する。崩れた行は行番号付きで弾く。
  */
 export function parseManualWords(text: string): ManualParseResult {
@@ -58,14 +67,45 @@ export function parseManualWords(text: string): ManualParseResult {
     const raw = lines[i].trim();
     if (!raw || raw.startsWith("#")) continue;
 
-    // タブ区切りを優先。無ければカンマ（和文/半角）で最大3分割。
-    const fields = raw.includes("\t")
+    const isTab = raw.includes("\t");
+    const fields = isTab
       ? raw.split("\t").map((s) => s.trim())
       : raw.split(/\s*[,，]\s*/);
 
     const term = fields[0]?.trim() ?? "";
     const meaning = fields[1]?.trim() ?? "";
-    const example = fields.slice(2).join(", ").trim();
+
+    // Issue #191: タブ区切りは位置で厳密に割り当てる。
+    // カンマ区切りは例文にカンマが入りうるので、4つ目以降が
+    // 「カタカナ読み」か「既知の品詞名」のときだけ読み/品詞として拾う
+    // （既存の `語, 意味, 例文` 解釈を壊さないため）。
+    const rest = fields.slice(2);
+    const exampleParts: string[] = [];
+    let reading: string | undefined;
+    let partOfSpeech: Word["partOfSpeech"] | undefined;
+
+    rest.forEach((field, idx) => {
+      if (!field) return;
+      if (isTab) {
+        if (idx === 0) exampleParts.push(field);
+        else if (idx === 1) reading = field;
+        else if (idx === 2) partOfSpeech = partOfSpeechFromInput(field);
+        else exampleParts.push(field);
+        return;
+      }
+      const pos = partOfSpeechFromInput(field);
+      if (pos && !partOfSpeech) {
+        partOfSpeech = pos;
+        return;
+      }
+      if (!reading && KATAKANA_RE.test(field)) {
+        reading = field;
+        return;
+      }
+      exampleParts.push(field);
+    });
+
+    const example = exampleParts.join(", ").trim();
 
     if (!term || !meaning) {
       return {
@@ -78,6 +118,8 @@ export function parseManualWords(text: string): ManualParseResult {
       term: term.slice(0, MAX_TERM_LEN),
       meaning: meaning.slice(0, MAX_TEXT_LEN),
       ...(example ? { example: example.slice(0, MAX_TEXT_LEN) } : {}),
+      ...(reading ? { reading: reading.slice(0, MAX_TERM_LEN) } : {}),
+      ...(partOfSpeech ? { partOfSpeech } : {}),
     });
   }
 
@@ -98,9 +140,13 @@ function manualToWord(item: ManualWordInput, index: number): Word {
   return {
     wordId: termToWordId(item.term, index),
     term: item.term,
-    // wordSchema は reading を必須にする。非ASCII語はそのまま、ASCIIはダッシュ。
-    reading: /[^\u0020-\u007e]/.test(item.term) ? item.term : "—",
+    // wordSchema は reading を必須にする（Issue #191 の描画側は
+    // "—" を「未設定」として扱い、読み行そのものを出さない）。
+    reading:
+      item.reading?.trim() ||
+      (/[^\u0020-\u007e]/.test(item.term) ? item.term : "—"),
     meaning: item.meaning,
+    ...(item.partOfSpeech ? { partOfSpeech: item.partOfSpeech } : {}),
     examples: [{ en: item.example || item.term }],
     tags: ["manual"],
   };
@@ -221,9 +267,14 @@ export function editDeckWord(
     ...words[index],
     term,
     // wordSchema は reading を必須にする（manualToWord と同じ規則）。
-    reading: /[^\u0020-\u007e]/.test(term) ? term : "—",
+    reading:
+      input.reading?.trim() ||
+      (/[^\u0020-\u007e]/.test(term) ? term : "—"),
     meaning,
     examples: [{ en: example || term }],
+    ...(input.partOfSpeech
+      ? { partOfSpeech: input.partOfSpeech }
+      : { partOfSpeech: words[index].partOfSpeech }),
   };
   const next = words.map((w, i) => (i === index ? updated : w));
   return { ok: true, deck: replaceWords(deck, next) };

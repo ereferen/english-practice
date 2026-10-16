@@ -13,7 +13,11 @@ import {
   type ManualWordInput,
 } from "../domain/manualDeck";
 import { localProgress } from "../storage/localProgress";
-import { partOfSpeechLabel } from "../domain/partOfSpeech";
+import {
+  PART_OF_SPEECH_LABELS,
+  partOfSpeechFromInput,
+  partOfSpeechLabel,
+} from "../domain/partOfSpeech";
 import ConfirmDialog from "./ConfirmDialog";
 import styles from "./DeckHome.module.css";
 
@@ -143,6 +147,9 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       term: w.term,
       meaning: w.meaning,
       example: w.examples[0]?.en ?? "",
+      // Issue #191: "—" はプレースホルダ（＝未設定）なので空欄で見せる。
+      reading: w.reading && w.reading !== "—" ? w.reading : "",
+      partOfSpeech: w.partOfSpeech,
     });
   };
 
@@ -299,6 +306,37 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
                         setWordDraft({ ...wordDraft, example: e.target.value })
                       }
                     />
+                    {/* Issue #191: 読み（任意）。未入力ならカード裏に読みを出さない。 */}
+                    <input
+                      className={styles.input}
+                      aria-label="読み"
+                      placeholder="読み（任意・カタカナ）"
+                      value={wordDraft.reading ?? ""}
+                      maxLength={80}
+                      onChange={(e) =>
+                        setWordDraft({ ...wordDraft, reading: e.target.value })
+                      }
+                    />
+                    <select
+                      className={styles.input}
+                      aria-label="品詞"
+                      value={wordDraft.partOfSpeech ?? ""}
+                      onChange={(e) =>
+                        setWordDraft({
+                          ...wordDraft,
+                          partOfSpeech: partOfSpeechFromInput(e.target.value),
+                        })
+                      }
+                    >
+                      <option value="">品詞（任意）</option>
+                      {Object.entries(PART_OF_SPEECH_LABELS)
+                        .filter(([, label]) => label)
+                        .map(([pos, label]) => (
+                          <option key={pos} value={pos}>
+                            {label}
+                          </option>
+                        ))}
+                    </select>
                     <div className={styles.wordActions}>
                       <button
                         className="ghost"

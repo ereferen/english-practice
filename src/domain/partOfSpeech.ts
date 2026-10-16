@@ -28,3 +28,21 @@ export function partOfSpeechLabel(
 ): string {
   return pos ? PART_OF_SPEECH_LABELS[pos] : "";
 }
+
+/**
+ * Issue #191: 手入力の語に品詞を入れられるようにするための逆引き。
+ * 「名詞」「noun」どちらでも受け付け、未知の語は undefined（未設定扱い）。
+ */
+export function partOfSpeechFromInput(
+  input: string | undefined,
+): Word["partOfSpeech"] | undefined {
+  const key = input?.trim();
+  if (!key) return undefined;
+  const lower = key.toLowerCase();
+  for (const [pos, label] of Object.entries(PART_OF_SPEECH_LABELS)) {
+    if (label && (label === key || pos === lower)) {
+      return pos as NonNullable<Word["partOfSpeech"]>;
+    }
+  }
+  return undefined;
+}
