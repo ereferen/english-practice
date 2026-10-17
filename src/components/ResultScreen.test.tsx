@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { AppState } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -245,5 +246,73 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
       cleanup();
       restore();
     }
+  });
+
+  // Issue #194: 誤答語がある画面から、その語だけをやり直せる導線を出す。
+  it("offers a retry button that starts a quiz scoped to the wrong words (#194)", async () => {
+    const dispatch = vi.fn();
+    const quizAnswers: AnswerRecord[] = [
+      { quizId: "q0", wordId: "w0", choiceId: "c1", correct: false, latencyMs: 900 },
+    ];
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={quizAnswers}
+        progress={makeProgress([])}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /誤答した 1 語だけをもう一度/ }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "quiz",
+        deckId: "test-deck",
+        lessonId: "lesson-1",
+        focusWordIds: ["w0"],
+      },
+    });
+  });
+
+  it("hides the retry button when every answer was correct (#194)", async () => {
+    renderResult(answers([true, true]), []);
+    expect(
+      screen.queryByRole("button", { name: /もう一度/ }),
+    ).toBeNull();
+  });
+
+  it("offers a card retry that opens flash cards for the wrong words (#194)", async () => {
+    const dispatch = vi.fn();
+    const quizAnswers: AnswerRecord[] = [
+      { quizId: "q0", wordId: "w0", choiceId: "c1", correct: false, latencyMs: 900 },
+    ];
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={quizAnswers}
+        progress={makeProgress([])}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードで確認/ }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "flash",
+        deckId: "test-deck",
+        lessonId: "lesson-1",
+        focusWordIds: ["w0"],
+      },
+    });
   });
 });

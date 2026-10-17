@@ -149,6 +149,7 @@ export default function App() {
             localProgress={localProgress}
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
+            focusWordIds={state.screen.focusWordIds}
           />
         );
       case "quiz":
@@ -160,6 +161,7 @@ export default function App() {
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
             gen={state.screen.gen}
+            focusWordIds={state.screen.focusWordIds}
           />
         );
       case "result":

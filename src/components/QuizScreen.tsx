@@ -22,6 +22,8 @@ interface Props {
   lessonId: string;
   /** LLM生成クイズモード（issue #15）。未指定なら静的デッキ内クイズ */
   gen?: GeneratedQuizSource;
+  /** Issue #194: 誤答語だけをやり直すときの対象語（未指定なら全語） */
+  focusWordIds?: string[];
 }
 
 export default function QuizScreen({
@@ -31,6 +33,7 @@ export default function QuizScreen({
   deckId,
   lessonId,
   gen,
+  focusWordIds,
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
@@ -60,8 +63,14 @@ export default function QuizScreen({
   const items = useMemo(() => {
     if (!deck || gen) return []; // 生成モードは genQuizzes を使う
     const quizzes = generateQuizzesForLesson(deck, lessonId);
-    return buildSessionQuizItems(quizzes, { shuffle: true });
-  }, [deck, lessonId, gen]);
+    // Issue #194: 誤答語だけのやり直しは、対象語の問題だけに絞って出題する。
+    const focus =
+      focusWordIds && focusWordIds.length > 0 ? new Set(focusWordIds) : null;
+    const scoped = focus
+      ? quizzes.filter((q) => focus.has(q.wordId))
+      : quizzes;
+    return buildSessionQuizItems(scoped, { shuffle: true });
+  }, [deck, lessonId, gen, focusWordIds]);
 
   useEffect(() => {
     askedAtRef.current = Date.now();
@@ -365,6 +374,17 @@ export default function QuizScreen({
           進捗
         </button>
       </div>
+
+      {/* Issue #194: 誤答語だけをやり直すセッションであることを明示する */}
+      {!gen && focusWordIds && focusWordIds.length > 0 && (
+        <p
+          className={styles.hint}
+          data-testid="quiz-retry-badge"
+          role="status"
+        >
+          誤答した語（{focusWordIds.length} 語）だけをやり直しています
+        </p>
+      )}
 
       {/* Issue #132: quiz progress is answered right here — leaving the
           screen used to throw away the whole session. */}

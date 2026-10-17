@@ -5,6 +5,7 @@ import type { AppState } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { fixtureWords } from "../app/fixtures";
 import type { Deck } from "../content/schema";
+import { generateQuizzesForLesson } from "../content/loader";
 import QuizScreen from "./QuizScreen";
 
 // ---------------------------------------------------------------------------
@@ -305,6 +306,41 @@ describe("QuizScreen", () => {
       type: "go",
       screen: { name: "progress" },
     });
+  });
+
+  // Issue #194: 誤答語だけのやり直しは、対象語の問題だけを出題する。
+  it("limits the session to focusWordIds and announces the retry (#194)", async () => {
+    const deck = makeTestDeck();
+    const focusWordIds = [fixtureWords[0].wordId, fixtureWords[1].wordId];
+    const expected = generateQuizzesForLesson(deck, "lesson-1").filter((q) =>
+      focusWordIds.includes(q.wordId),
+    ).length;
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        focusWordIds={focusWordIds}
+      />,
+    );
+    expect(
+      await screen.findByText(/誤答した語（2 語）だけをやり直しています/),
+    ).toBeTruthy();
+    expect(screen.getByText(`(1/${expected})`)).toBeTruthy();
+    // 出題されるプロンプトは対象語のものだけ（choose-meaning = 語 / fill-blank = 例文の空欄化）
+    const focusPrompts = new Set<string>();
+    for (const w of deck.lessons[0].words.filter((w) =>
+      focusWordIds.includes(w.wordId),
+    )) {
+      focusPrompts.add(w.term);
+      focusPrompts.add(
+        w.examples[0].en.replace(new RegExp(`\\b${w.term}\\b`, "i"), "___"),
+      );
+    }
+    const prompt = document.querySelector(".quiz-prompt")?.textContent ?? "";
+    expect(focusPrompts.has(prompt)).toBe(true);
   });
 });
 
