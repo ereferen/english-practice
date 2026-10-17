@@ -276,7 +276,7 @@ describe("helpers", () => {
 });
 
 describe("generateQuizzesForLesson", () => {
-  it("returns existing quizzes when the lesson already has them", () => {
+  it("keeps existing quizzes and supplements words they do not cover (issue #193)", () => {
     const deckWithQuizzes: Deck = {
       ...baseDeck,
       lessons: [
@@ -301,8 +301,29 @@ describe("generateQuizzesForLesson", () => {
       ],
     };
     const quizzes = generateQuizzesForLesson(deckWithQuizzes, "l1");
-    expect(quizzes).toHaveLength(1);
+    // 既存クイズは先頭で保持され、未カバーの 3 語が自動生成で補完される
     expect(quizzes[0].quizId).toBe("existing");
+    const coveredWordIds = new Set(quizzes.map((q) => q.wordId));
+    expect(coveredWordIds).toEqual(
+      new Set(baseDeck.lessons[0].words.map((w) => w.wordId)),
+    );
+  });
+
+  it("generates at least one quiz per lesson word even when the lesson has explicit quizzes", async () => {
+    const { decks } = await loadBundledDecks();
+    for (const { deck } of decks) {
+      for (const lesson of deck.lessons) {
+        const quizzes = generateQuizzesForLesson(deck, lesson.lessonId);
+        if (lesson.words.length < 4) continue;
+        const covered = new Set(quizzes.map((q) => q.wordId));
+        for (const word of lesson.words) {
+          expect(
+            covered.has(word.wordId),
+            `${deck.deckId}/${lesson.lessonId}: ${word.term} はクイズに出題されない`,
+          ).toBe(true);
+        }
+      }
+    }
   });
 
   it("generates choose-meaning and fill-blank quizzes when quizzes array is empty", () => {
