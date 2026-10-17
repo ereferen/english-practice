@@ -239,22 +239,22 @@ export function wordById(deck: Deck, wordId: string): Word | undefined {
 export function generateQuizzesForLesson(deck: Deck, lessonId: string): Quiz[] {
   const lesson = deck.lessons.find((l) => l.lessonId === lessonId);
   if (!lesson) return [];
-  if ((lesson.quizzes?.length ?? 0) > 0) return lesson.quizzes;
+
+  // issue #193: レッスン JSON に quizzes がある場合も、出題されない語を自動生成で補完する。
+  // 「5 語のレッスンなのにクイズは 3 問」を防ぎ、最低でも全語が 1 回は出るようにする。
+  const explicit = lesson.quizzes ?? [];
+  const covered = new Set(explicit.map((q) => q.wordId));
+  const uncovered = lesson.words.filter((w) => !covered.has(w.wordId));
+  if (uncovered.length === 0) return explicit;
 
   const pool = allWords(deck);
-  if (pool.length < MIN_QUIZ_WORDS) return [];
+  if (pool.length < MIN_QUIZ_WORDS) return explicit;
 
-  const quizzes: Quiz[] = [];
+  const quizzes: Quiz[] = [...explicit];
   const usedDistractors = new Map<string, string[]>();
 
-  for (const word of lesson.words) {
-    const meaningQuiz = makeChooseMeaning(
-      word,
-      pool,
-      usedDistractors,
-      lessonId,
-    );
-    quizzes.push(meaningQuiz);
+  for (const word of uncovered) {
+    quizzes.push(makeChooseMeaning(word, pool, usedDistractors, lessonId));
 
     const fb = makeFillBlank(word, pool, lessonId);
     if (fb) quizzes.push(fb);

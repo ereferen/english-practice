@@ -58,7 +58,7 @@ describe("generateQuizzesForLesson", () => {
     expect(validateDeckConsistency(deckWithQuizzes)).toEqual([]);
   });
 
-  it("returns existing quizzes when lesson already has them", () => {
+  it("keeps existing quizzes and supplements words they do not cover", () => {
     const existing: Quiz = {
       quizId: "existing",
       type: "choose-meaning",
@@ -75,8 +75,10 @@ describe("generateQuizzesForLesson", () => {
     const words = ["a", "b", "c", "d"].map((id) => makeWord(id));
     const deck = makeDeck(words, [existing]);
     const quizzes = generateQuizzesForLesson(deck, "l1");
-    expect(quizzes).toHaveLength(1);
     expect(quizzes[0].quizId).toBe("existing");
+    expect(new Set(quizzes.map((q) => q.wordId))).toEqual(
+      new Set(["a", "b", "c", "d"]),
+    );
   });
 
   it("returns empty array for unknown lesson", () => {
