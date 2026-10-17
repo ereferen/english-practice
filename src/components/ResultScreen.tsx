@@ -220,22 +220,40 @@ export default function ResultScreen({
           )}
           {/* Issue #194: 誤答語は「今日いちばん覚えたい語」なのに、ここから
               やり直す導線が無く、カードを全枚めくり直す必要があった。 */}
-          <button
-            className={`primary ${styles.retryButton}`}
-            onClick={() =>
-              dispatch({
-                type: "go",
-                screen: {
-                  name: "quiz",
-                  deckId,
-                  lessonId,
-                  focusWordIds: wrongIds,
-                },
-              })
-            }
-          >
-            🔁 誤答した {wrongIds.length} 語だけをもう一度
-          </button>
+          <div className={styles.retryActions}>
+            <button
+              className={`primary ${styles.retryButton}`}
+              onClick={() =>
+                dispatch({
+                  type: "go",
+                  screen: {
+                    name: "quiz",
+                    deckId,
+                    lessonId,
+                    focusWordIds: wrongIds,
+                  },
+                })
+              }
+            >
+              🔁 誤答した {wrongIds.length} 語だけをもう一度
+            </button>
+            <button
+              className={`ghost ${styles.retryButton}`}
+              onClick={() =>
+                dispatch({
+                  type: "go",
+                  screen: {
+                    name: "flash",
+                    deckId,
+                    lessonId,
+                    focusWordIds: wrongIds,
+                  },
+                })
+              }
+            >
+              🃏 誤答した {wrongIds.length} 語をカードで確認
+            </button>
+          </div>
         </div>
       )}
 

@@ -285,4 +285,34 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
       screen.queryByRole("button", { name: /もう一度/ }),
     ).toBeNull();
   });
+
+  it("offers a card retry that opens flash cards for the wrong words (#194)", async () => {
+    const dispatch = vi.fn();
+    const quizAnswers: AnswerRecord[] = [
+      { quizId: "q0", wordId: "w0", choiceId: "c1", correct: false, latencyMs: 900 },
+    ];
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={quizAnswers}
+        progress={makeProgress([])}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードで確認/ }),
+    );
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "flash",
+        deckId: "test-deck",
+        lessonId: "lesson-1",
+        focusWordIds: ["w0"],
+      },
+    });
+  });
 });

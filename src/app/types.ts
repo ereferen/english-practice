@@ -29,7 +29,7 @@ export type Screen =
   | { name: "home" }
   | { name: "deckList" }
   | { name: "deckHome"; deckId: string }
-  | { name: "flash"; deckId: string; lessonId: string }
+  | { name: "flash"; deckId: string; lessonId: string; focusWordIds?: string[] }
   | {
       name: "quiz";
       deckId: string;

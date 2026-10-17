@@ -682,4 +682,56 @@ describe("FlashScreen — 文法訂正カード (issue #192)", () => {
     expect(screen.queryByTestId("grammar-front")).toBeNull();
     expect(screen.getByText(deck.lessons[0].words[0].meaning)).toBeTruthy();
   });
+
+  // Issue #194: 誤答した語だけのやり直しは、対象語のカードだけをめくる。
+  it("shows only the focus words when focusWordIds is given (#194)", () => {
+    const deck = makeTestDeck();
+    const focusWordIds = [deck.lessons[0].words[1].wordId];
+    render(
+      <FlashScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        localProgress={makeMockProgress()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        focusWordIds={focusWordIds}
+      />,
+    );
+    expect(screen.getByText("フラッシュカード (1/1)")).toBeTruthy();
+    expect(
+      screen.getByText(/誤答した語（1 語）だけをカードで確認しています/),
+    ).toBeTruthy();
+    expect(screen.getByText(deck.lessons[0].words[1].term)).toBeTruthy();
+    expect(screen.queryByText(deck.lessons[0].words[0].term)).toBeNull();
+  });
+
+  // 誤答語のカードをめくり切ったあとの「クイズへ」も同じ語だけに絞る。
+  it("keeps the quiz scoped to the focus words after the last card (#194)", async () => {
+    const deck = makeTestDeck();
+    const focusWordIds = [deck.lessons[0].words[1].wordId];
+    const dispatch = vi.fn();
+    render(
+      <FlashScreen
+        state={makeState(deck)}
+        dispatch={dispatch}
+        localProgress={makeMockProgress()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        focusWordIds={focusWordIds}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /クイズへ/ }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: {
+        name: "quiz",
+        deckId: "test-deck",
+        lessonId: "lesson-1",
+        focusWordIds,
+      },
+    });
+  });
 });

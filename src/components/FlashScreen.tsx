@@ -15,6 +15,8 @@ interface Props {
   localProgress: LocalProgressStore;
   deckId: string;
   lessonId: string;
+  /** Issue #194: 誤答語だけをやり直すときの対象語（未指定ならレッスン全語） */
+  focusWordIds?: string[];
 }
 
 /**
@@ -28,6 +30,7 @@ export default function FlashScreen({
   localProgress,
   deckId,
   lessonId,
+  focusWordIds,
 }: Props) {
   const deck = state.decks.find((d) => d.deckId === deckId);
   const lessonWithDeck = deck ? pickLesson(deck, lessonId) : undefined;
@@ -35,10 +38,14 @@ export default function FlashScreen({
   // yields no quiz items — finding out after the click is a dead end.
   const quizItemCount = useMemo(() => {
     if (!deck) return 0;
-    return buildSessionQuizItems(generateQuizzesForLesson(deck, lessonId), {
-      shuffle: false,
-    }).length;
-  }, [deck, lessonId]);
+    const quizzes = generateQuizzesForLesson(deck, lessonId);
+    // Issue #194: 誤答語のやり直しでは、対象語ぶんだけを数える。
+    const scoped =
+      focusWordIds && focusWordIds.length > 0
+        ? quizzes.filter((q) => focusWordIds.includes(q.wordId))
+        : quizzes;
+    return buildSessionQuizItems(scoped, { shuffle: false }).length;
+  }, [deck, lessonId, focusWordIds]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   // Issue #45: brief gold-rim pulse while the card face changes.
@@ -89,9 +96,16 @@ export default function FlashScreen({
   }, [deckId, lessonId]);
 
   const lesson = lessonWithDeck?.lesson;
-  const words = lesson?.words ?? [];
+  // Issue #194: 誤答語だけのやり直しでは、対象語のカードだけをめくる。
+  const focusIds =
+    focusWordIds && focusWordIds.length > 0 ? new Set(focusWordIds) : null;
+  const words = (lesson?.words ?? []).filter(
+    (w) => !focusIds || focusIds.has(w.wordId),
+  );
   const word = words[Math.min(index, Math.max(words.length - 1, 0))];
-  const isLast = lesson ? index === lesson.words.length - 1 : false;
+  const isLast = words.length > 0 && index === words.length - 1;
+  // 誤答語のやり直し中は、カード後のクイズも同じ語だけに絞る。
+  const quizFocus = focusIds ? focusWordIds : undefined;
   // Issue #192: 会話から拾った文法訂正は「語のカード」ではなく「訂正文のカード」として
   // 見せる。表=✗自分の文 / 裏=✓訂正文＋解説＋ノート（読み・品詞・例文リストは出さない）。
   const isGrammarCorrection =
@@ -141,7 +155,10 @@ export default function FlashScreen({
     }
     markCurrentLearned();
     if (isLast) {
-      dispatch({ type: "go", screen: { name: "quiz", deckId, lessonId } });
+      dispatch({
+        type: "go",
+        screen: { name: "quiz", deckId, lessonId, focusWordIds: quizFocus },
+      });
     } else {
       goTo(index + 1);
     }
@@ -193,7 +210,7 @@ export default function FlashScreen({
     <div className="container">
       <div className="nav-header">
         <h2>
-          フラッシュカード ({index + 1}/{lesson.words.length})
+          フラッシュカード ({index + 1}/{words.length})
         </h2>
         {/* Issue #75: one clearly-labelled exit button (was 中断, which
             confused users looking for 戻る — aborting keeps learned words). */}
@@ -219,6 +236,13 @@ export default function FlashScreen({
         </button>
       </div>
 
+      {/* Issue #194: 誤答語だけのカード復習であることを明示する */}
+      {focusIds && words.length > 0 && (
+        <p className={styles.sessionInfoList} role="status">
+          誤答した語（{words.length} 語）だけをカードで確認しています
+        </p>
+      )}
+
       {/* Issue #132: session-scoped progress, shown without leaving the card */}
       {showSessionInfo && (
         <div
@@ -230,7 +254,7 @@ export default function FlashScreen({
           <h3 className={styles.sessionInfoTitle}>このセッションの進み具合</h3>
           <ul className={styles.sessionInfoList}>
             <li>
-              フラッシュカード {index + 1}/{lesson.words.length} 枚目
+              フラッシュカード {index + 1}/{words.length} 枚目
             </li>
             <li>
               このセッションで意味を確認した語: {learnedRef.current.size} 語
@@ -240,7 +264,7 @@ export default function FlashScreen({
             <>
               <p className={styles.sessionInfoWarn} role="alert">
                 ⚠ 「学習の記録」を開くとこのフラッシュカードは閉じます（
-                {index + 1}/{lesson.words.length}
+                {index + 1}/{words.length}
                 から再開はできません）。このセッションを続けますか？
               </p>
               <div className={styles.actions}>

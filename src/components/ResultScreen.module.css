@@ -77,8 +77,14 @@
 }
 
 /* Issue #194: 誤答した語だけをその場でやり直す導線。誤答語リストの直下に
-   置き、カードをめくり直さずにクイズへ直行できるようにする。 */
-.retryButton {
+   置き、カードをめくり直さずにクイズ／カードへ直行できるようにする。 */
+.retryActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 0.9rem;
+}
+
+.retryButton {
   width: 100%;
 }
