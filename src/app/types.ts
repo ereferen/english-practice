@@ -36,6 +36,8 @@ export type Screen =
       lessonId: string;
       /** LLM生成クイズモード (issue #15)。未指定なら静的クイズ */
       gen?: "llm-supplement" | "llm-wrong-focus";
+      /** Issue #194: 誤答語だけをやり直すときの対象語（未指定なら全語） */
+      focusWordIds?: string[];
     }
   | {
       name: "result";

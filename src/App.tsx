@@ -160,6 +160,7 @@ export default function App() {
             deckId={state.screen.deckId}
             lessonId={state.screen.lessonId}
             gen={state.screen.gen}
+            focusWordIds={state.screen.focusWordIds}
           />
         );
       case "result":
