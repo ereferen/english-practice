@@ -147,6 +147,11 @@ export default function FlashScreen({
   // the hint stays on screen instead of timing out.
   const canAdvance = flipped || (word ? flippedRef.current.has(word.wordId) : false);
 
+  // Issue #203: 語数不足のレッスンで「クイズへ」を押すと、クイズ画面が
+  // 問題ゼロで即座に戻ってきて「何も起きない＋カードが表に戻る」ように見えていた。
+  // 押せないことを見た目で示し、補充問題の生成導線へ 1 クリックで送る。
+  const quizReady = quizItemCount > 0;
+
   const handleNext = () => {
     if (!lesson) return;
     if (!canAdvance) {
@@ -155,10 +160,12 @@ export default function FlashScreen({
     }
     markCurrentLearned();
     if (isLast) {
-      dispatch({
-        type: "go",
-        screen: { name: "quiz", deckId, lessonId, focusWordIds: quizFocus },
-      });
+      if (quizReady) {
+        dispatch({
+          type: "go",
+          screen: { name: "quiz", deckId, lessonId, focusWordIds: quizFocus },
+        });
+      }
     } else {
       goTo(index + 1);
     }
@@ -408,25 +415,31 @@ export default function FlashScreen({
         <button
           className={`primary ${styles.nextButton}`}
           onClick={handleNext}
-          disabled={!canAdvance}
+          disabled={!canAdvance || (isLast && !quizReady)}
           data-testid="flash-next-button"
+          title={isLast && !quizReady ? "語数が足りないためクイズを作れません" : undefined}
         >
           {isLast ? "クイズへ" : "次の語"}
         </button>
       </div>
       {/* Issue #134: pressing クイズへ used to land on a bare "クイズがありません"
-          dead end. Say it up front, with the one action that unlocks a quiz. */}
-      {isLast && quizItemCount === 0 && (
-        <p
-          className={styles.quizUnavailable}
-          role="status"
-          data-testid="quiz-unavailable"
-        >
-          ⚠ このレッスンはクイズを作れる語数に足りていません（4語以上必要）。
-          デッキ画面の「✨
-          LLMで補充問題を生成」で語と問題を足すと、そのままクイズを
-          始められます。
-        </p>
+          dead end. Say it up front, with the one action that unlocks a quiz.
+          Issue #203: その場で次の一手を押せるようにボタンを並べる。 */}
+      {isLast && !quizReady && (
+        <div className={styles.quizUnavailable} data-testid="quiz-unavailable">
+          <p role="status">
+            ⚠ このレッスンはクイズを作れる語数に足りていません（4語以上必要）。
+          </p>
+          <button
+            className="ghost"
+            data-testid="quiz-unavailable-generate"
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "deckHome", deckId } })
+            }
+          >
+            ✨ LLMで補充問題を生成（デッキ画面へ）
+          </button>
+        </div>
       )}
       {!canAdvance && (
         <p
