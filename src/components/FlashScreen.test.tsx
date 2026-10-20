@@ -297,15 +297,17 @@ describe("FlashScreen", () => {
   });
 
   it("dispatches quiz navigation when clicking クイズへ on the last word", async () => {
-    const threeWordDeck = makeTestDeck();
-    const state = makeState(threeWordDeck);
+    // Issue #203: クイズを作れる語数（4語以上）が必要。3 語デッキでは クイズへ は無効。
+    const quizDeck = makeTestDeck();
+    quizDeck.lessons[0].words = fixtureWords.slice(0, 5);
+    const state = makeState(quizDeck);
     const user = userEvent.setup();
     const { dispatch } = renderFlashScreen(state);
     // Advance to last word
-    await flipCard(user);
-    await user.click(screen.getByRole("button", { name: "次の語" }));
-    await flipCard(user);
-    await user.click(screen.getByRole("button", { name: "次の語" }));
+    for (let i = 0; i < 4; i++) {
+      await flipCard(user);
+      await user.click(screen.getByRole("button", { name: "次の語" }));
+    }
     // Flip the last card too (issue #124 gate applies to クイズへ), then click
     await flipCard(user);
     await user.click(screen.getByRole("button", { name: "クイズへ" }));
@@ -608,6 +610,30 @@ describe("FlashScreen", () => {
     await userEvent.keyboard(" ");
     expect(screen.queryByTestId("quiz-unavailable")).toBeNull();
   });
+
+  // Issue #203: 押しても無反応＋カードが表に戻る、を解消する
+  it("disables クイズへ when the lesson cannot build a quiz, and offers the generate path (#203)", async () => {
+    const tiny = makeTestDeck(); // 3 words
+    const { dispatch } = renderFlashScreen(makeState(tiny));
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("n");
+    await userEvent.keyboard(" ");
+    const next = screen.getByTestId("flash-next-button");
+    expect(next).toBeDisabled();
+    await userEvent.click(next);
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        screen: expect.objectContaining({ name: "quiz" }),
+      }),
+    );
+    await userEvent.click(screen.getByTestId("quiz-unavailable-generate"));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "deckHome", deckId: tiny.deckId },
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -708,6 +734,8 @@ describe("FlashScreen — 文法訂正カード (issue #192)", () => {
   // 誤答語のカードをめくり切ったあとの「クイズへ」も同じ語だけに絞る。
   it("keeps the quiz scoped to the focus words after the last card (#194)", async () => {
     const deck = makeTestDeck();
+    // Issue #203: クイズ生成には 4 語以上のプールが必要（3 語だと クイズへ が無効）
+    deck.lessons[0].words = fixtureWords.slice(0, 6);
     const focusWordIds = [deck.lessons[0].words[1].wordId];
     const dispatch = vi.fn();
     render(
