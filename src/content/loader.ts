@@ -252,10 +252,16 @@ export function generateQuizzesForLesson(deck: Deck, lessonId: string): Quiz[] {
 
   const quizzes: Quiz[] = [...explicit];
   const usedDistractors = new Map<string, string[]>();
+  // issue #202: 明示クイズがあるレッスンでは未カバー語 1 語につき 1 問だけ足す。
+  // 以前は choose-meaning と fill-blank の 2 問を足していたため「5 語のレッスンで
+  // クイズ 6 問 / 同じ語が 2 回出る」状態になっていた（問題数 ≠ 語数）。
+  // quizzes が空のレッスン（＝全問自動生成）では、従来どおり 2 種類で出題する。
+  const fillBlankForUncovered = explicit.length === 0;
 
   for (const word of uncovered) {
     quizzes.push(makeChooseMeaning(word, pool, usedDistractors, lessonId));
 
+    if (!fillBlankForUncovered) continue;
     const fb = makeFillBlank(word, pool, lessonId);
     if (fb) quizzes.push(fb);
   }

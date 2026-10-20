@@ -201,6 +201,21 @@ describe("extractedToWord", () => {
     const w = extractedToWord({ ...base, reading: undefined }, 2);
     expect(() => wordSchema.parse(w)).not.toThrow();
   });
+
+  // issue #201: 和訳欄に会話の英語原文 (sourceText) が入っていた回帰
+  it("sourceText は和訳欄に入れない（英語が出る回帰の防止）", () => {
+    const w = extractedToWord(base, 0);
+    expect(w.examples[0].ja).toBeUndefined();
+  });
+
+  it("exampleJa があるときだけ和訳欄に入れる", () => {
+    const w = extractedToWord(
+      { ...base, exampleJa: "戦利品が落ちた？" },
+      0,
+    );
+    expect(w.examples[0].ja).toBe("戦利品が落ちた？");
+    expect(() => wordSchema.parse(w)).not.toThrow();
+  });
 });
 
 describe("termToWordId", () => {

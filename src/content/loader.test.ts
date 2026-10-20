@@ -326,6 +326,47 @@ describe("generateQuizzesForLesson", () => {
     }
   });
 
+  // issue #202: 明示クイズありのレッスンで、未カバー語 1 語につき 2 問足されて
+  // 「5 語のレッスンで 6 問 / 同じ語が 2 回」になっていた回帰の防止
+  it("adds exactly one quiz per uncovered word when the lesson has explicit quizzes", () => {
+    const fiveWords: Deck = {
+      ...baseDeck,
+      lessons: [
+        {
+          ...baseDeck.lessons[0],
+          words: [
+            ...baseDeck.lessons[0].words,
+            {
+              wordId: "egg",
+              term: "egg",
+              reading: "エッグ",
+              meaning: "卵",
+              examples: [{ en: "I ate an egg." }],
+            },
+          ],
+          quizzes: ["apple", "banana", "date"].map((wordId) => ({
+            quizId: `explicit-${wordId}`,
+            type: "choose-meaning" as const,
+            wordId,
+            prompt: wordId,
+            choices: [
+              { choiceId: "c1", text: "a" },
+              { choiceId: "c2", text: "b" },
+              { choiceId: "c3", text: "c" },
+              { choiceId: "c4", text: "d" },
+            ],
+            answerChoiceId: "c1",
+          })),
+        },
+      ],
+    };
+    const quizzes = generateQuizzesForLesson(fiveWords, "l1");
+    expect(quizzes).toHaveLength(fiveWords.lessons[0].words.length);
+    const wordIds = quizzes.map((q) => q.wordId);
+    expect(new Set(wordIds).size).toBe(wordIds.length);
+    expect(quizzes.filter((q) => q.wordId === "egg")).toHaveLength(1);
+  });
+
   it("generates choose-meaning and fill-blank quizzes when quizzes array is empty", () => {
     const quizzes = generateQuizzesForLesson(baseDeck, "l1");
     expect(quizzes.length).toBeGreaterThan(0);

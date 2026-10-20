@@ -69,6 +69,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [selfImproveEnabled, setSelfImproveEnabled] = useState(false);
   // issue #177: 直近30日の回答数（低サンプル判定）と今週（直近7日）の学習量
   const [recentAnswers, setRecentAnswers] = useState<number | null>(null);
+  // issue #205: 正答率の分母・分子（直近30日の回答数と正解数）
+  const [periodStats, setPeriodStats] = useState({ total: 0, correct: 0 });
   const [weekAnswers, setWeekAnswers] = useState(0);
   const [weekStudyDays, setWeekStudyDays] = useState(0);
   // issue #177: 直近30日の学習日（カレンダー表示用）
@@ -100,6 +102,10 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       if (!mounted) return;
       setSelfImproveEnabled(settings.selfImproveEnabled);
       setRecentAnswers(answers30.length);
+      setPeriodStats({
+        total: answers30.length,
+        correct: answers30.filter((a) => a.correct).length,
+      });
       setWeekAnswers(answers7.length);
       setWeekStudyDays(countStudyDays(answers7));
       setStudyDates(Array.from(studyDateSet(answers30)));
@@ -117,13 +123,14 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
     0,
   );
   const totalSessions = sessions.length;
-  const scored = sessions.filter((s) => s.scoreRate !== null);
-  const avgScore =
-    scored.length > 0
-      ? Math.round(
-          (scored.reduce((a, s) => a + (s.scoreRate ?? 0), 0) / scored.length) *
-            100,
-        )
+  // issue #205: 「平均正答率」はセッションごとの正答率の単純平均だったため、
+  // 問題数の多いセッションも少ないセッションも同じ重みになり、
+  // 画面の「今週の回答」から暗算した値（正解数 / 回答数）と食い違っていた。
+  // 指標を「直近30日の回答のうち正解だった割合」に変え、分母（回答数）と
+  // 分子（正解数）を画面にも出す。
+  const overallAccuracy =
+    periodStats.total > 0
+      ? Math.round((periodStats.correct / periodStats.total) * 100)
       : 0;
   // issue #177: 回答が少ないうちは平均正答率を断定しない
   const lowSample = recentAnswers !== null && isLowSample(recentAnswers);
@@ -283,8 +290,13 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             <div className={styles.statValue}>{totalSessions} 回</div>
           </div>
           <div>
-            <div className="badge">平均正答率</div>
-            <div className={styles.statValue}>{avgScore}%</div>
+            <div className="badge">正答率（直近30日）</div>
+            <div className={styles.statValue}>{overallAccuracy}%</div>
+            <div className={styles.statNote}>
+              {periodStats.total > 0
+                ? `${periodStats.total} 問中 ${periodStats.correct} 問正解`
+                : "まだ回答がありません"}
+            </div>
             {lowSample && (
               <div className={styles.statNote}>参考値（サンプル少なめ）</div>
             )}

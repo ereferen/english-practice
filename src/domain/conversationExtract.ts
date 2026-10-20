@@ -48,6 +48,8 @@ export interface ExtractedContent {
   reading?: string;
   meaning: string;
   example: string;
+  /** issue #201: 例文の和訳。未提供なら ja 欄は出さない（英語を和訳欄に出さない） */
+  exampleJa?: string;
   correctedVersion?: string;
   explanation?: string;
   partOfSpeech?: (typeof POS_VALUES)[number];
@@ -66,6 +68,7 @@ const extractedItemSchema = z.object({
   reading: z.string().max(MAX_TERM_LEN).optional(),
   meaning: z.string().min(1).max(MAX_TEXT_LEN),
   example: z.string().max(MAX_TEXT_LEN).default(""),
+  exampleJa: z.string().max(MAX_TEXT_LEN).optional(),
   correctedVersion: z.string().max(MAX_TEXT_LEN).optional(),
   explanation: z.string().max(MAX_TEXT_LEN).optional(),
   partOfSpeech: z.enum(POS_VALUES).optional(),
@@ -114,6 +117,8 @@ Extract at most 5 items that are worth REVIEWING as flashcards. Only pick things
 Rules:
 - meaning: a short Japanese definition or explanation.
 - example: a natural example sentence taken from or adapted from the transcript.
+- exampleJa: the Japanese translation of "example". Always provide it (the learner reads this as the example's translation). Do NOT copy English source text here.
+- sourceText: the transcript fragment the item came from (kept for reference; never shown as a translation).
 - correctedVersion: REQUIRED for grammar-correction (the fixed sentence); omit otherwise.
 - explanation: for grammar-correction, a 1-sentence Japanese explanation of the mistake.
 - partOfSpeech: for vocabulary/expression items, one of "noun","verb","adjective","adverb","preposition","conjunction","pronoun","determiner","exclamation","other". Use "other" only if unsure.
@@ -213,6 +218,7 @@ export function parseExtractionResult(
       ...(item.reading ? { reading: cleanText(item.reading) } : {}),
       meaning,
       example: cleanText(item.example),
+      ...(item.exampleJa ? { exampleJa: cleanText(item.exampleJa) } : {}),
       ...(item.correctedVersion
         ? { correctedVersion: cleanText(item.correctedVersion) }
         : {}),
@@ -301,8 +307,10 @@ export function extractedToWord(item: ExtractedContent, index: number): Word {
     examples: [
       {
         en: item.example || (item.correctedVersion ?? term),
-        ...(item.sourceText
-          ? { ja: item.sourceText.slice(0, MAX_TEXT_LEN) }
+        // issue #201: ここには以前 sourceText（会話の英語原文）を入れていたため、
+        // カードの和訳欄に英語が出ていた。和訳は LLM から受け取った exampleJa のみ。
+        ...(item.exampleJa
+          ? { ja: item.exampleJa.slice(0, MAX_TEXT_LEN) }
           : {}),
       },
     ],
