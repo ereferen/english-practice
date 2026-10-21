@@ -113,3 +113,70 @@ describe("ReviewSession (issue #114)", () => {
     expect(screen.getByText(/今日の復習はすべて終わっています/)).toBeTruthy();
   });
 });
+
+describe("ReviewSession completion (issue #204)", () => {
+  async function finishSingleWordSession(storage: StorageProvider) {
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+    await userEvent.click(screen.getAllByRole("button", { name: /選択肢/ })[0]);
+    await screen.findByText(/[○×] (正解|不正解)/);
+    await userEvent.click(screen.getByRole("button", { name: "完了する" }));
+    expect(await screen.findByText("復習セッション完了")).toBeTruthy();
+  }
+
+  it("explains the leftover due words and offers a second round in place", async () => {
+    const storage = makeStorageMock();
+    await finishSingleWordSession(storage);
+
+    const note = await screen.findByTestId("review-remaining-note");
+    expect(note).toHaveTextContent("今日の復習はあと 1 語");
+    const again = await screen.findByTestId("review-again");
+    expect(again).toHaveTextContent("もう一周（1 語）");
+
+    // 2周目 stays in the same screen and shows the round marker.
+    await userEvent.click(again);
+    expect(await screen.findByText("2周目")).toBeTruthy();
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+  });
+
+  it("celebrates when nothing is left due and links back home", async () => {
+    const reviews = await makeStorageMock().loadDueReviews(null, "2026-10-21");
+    const storage = makeStorageMock();
+    let calls = 0;
+    storage.loadDueReviews = vi.fn(async () => {
+      calls += 1;
+      return calls === 1 ? reviews : [];
+    });
+    const dispatch = vi.fn();
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={dispatch}
+        storage={storage}
+      />,
+    );
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+    await userEvent.click(screen.getAllByRole("button", { name: /選択肢/ })[0]);
+    await screen.findByText(/[○×] (正解|不正解)/);
+    await userEvent.click(screen.getByRole("button", { name: "完了する" }));
+
+    expect(
+      await screen.findByTestId("review-remaining-note"),
+    ).toHaveTextContent("今日の復習はすべて完了しました");
+    expect(screen.queryByTestId("review-again")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "ホームへ" }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "home" },
+    });
+  });
+});
