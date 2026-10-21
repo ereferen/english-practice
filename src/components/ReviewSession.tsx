@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { buildReviewItems, type ReviewItem } from "../domain/review";
@@ -35,9 +35,15 @@ export default function ReviewSession({
   const [showFeedback, setShowFeedback] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [finished, setFinished] = useState(false);
-  const [startedAt] = useState(() => new Date().toISOString());
+  // Issue #204: 完了時点の残 due 語数。null = 集計中。
+  const [remainingDue, setRemainingDue] = useState<number | null>(null);
+  // Issue #204: 同日 2 周目を同じ画面で回すためのラウンド番号。
+  const [round, setRound] = useState(1);
+  const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const askedAtRef = useRef<number>(Date.now());
-  const sessionId = useMemo(() => uuid(), []);
+  const [sessionId, setSessionId] = useState(() => uuid());
+  // Issue #204: 完了時に残数を数える前に、回答の SRS 書き込みを待つ。
+  const pendingWritesRef = useRef<Promise<unknown>[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +60,8 @@ export default function ReviewSession({
       cancelled = true;
     };
     // decks are loaded once per screen mount by design (App fetches before render)
-  }, [deckId]);
+    // round: 「もう一周」で同じデッキ条件のまま期限語を読み直す
+  }, [deckId, round]);
 
   useEffect(() => {
     askedAtRef.current = Date.now();
@@ -83,7 +90,7 @@ export default function ReviewSession({
     setLastCorrect(correct);
     setShowFeedback(true);
 
-    void (async () => {
+    const write = (async () => {
       const settings = await storage.loadSettings();
       const existing = await storage.loadReview(
         current.deckId,
@@ -113,7 +120,9 @@ export default function ReviewSession({
         correct,
         latencyMs,
       });
-    })().catch(() => {});
+    })();
+    pendingWritesRef.current.push(write);
+    void write.catch(() => {});
   };
 
   const handleNext = () => {
@@ -139,6 +148,43 @@ export default function ReviewSession({
       setLastCorrect(null);
     }
   };
+
+  // Issue #204: 完了時点で「今日の復習があと何語か」を数える。SRS の同日 2 周目
+  // （level 1 の間隔 0 日）を仕様として画面で説明し、そのまま回せるようにする。
+  useEffect(() => {
+    if (!finished) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.allSettled(pendingWritesRef.current);
+      const reviews = await storage.loadDueReviews(
+        deckId ?? null,
+        systemClock.today(),
+      );
+      if (cancelled) return;
+      setRemainingDue(buildReviewItems(state.decks, reviews).length);
+    })().catch(() => {
+      if (!cancelled) setRemainingDue(0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [finished, deckId]);
+
+  const handleRestart = () => {
+    pendingWritesRef.current = [];
+    setItems(null);
+    setAnswers([]);
+    setIndex(0);
+    setShowFeedback(false);
+    setLastCorrect(null);
+    setRemainingDue(null);
+    setFinished(false);
+    setSessionId(uuid());
+    setStartedAt(new Date().toISOString());
+    setRound((r) => r + 1);
+  };
+
+  const goHome: Action = { type: "go", screen: { name: "home" } };
 
   useKeyboardShortcuts({
     "1": () => handleChooseById(current?.item.choices[0]?.choiceId),
@@ -185,6 +231,7 @@ export default function ReviewSession({
 
   if (finished) {
     const rate = scoreRate(answers);
+    const correctCount = answers.filter((a) => a.correct).length;
     return (
       <div className="container">
         <div className="nav-header">
@@ -195,12 +242,33 @@ export default function ReviewSession({
             {Math.round(rate * 100)}%
           </p>
           <p>
-            {answers.length} 語中 {answers.filter((a) => a.correct).length}{" "}
-            語正解
+            {answers.length} 語中 {correctCount} 語正解
           </p>
+          {remainingDue === null ? (
+            <p aria-live="polite">今日の残りを確認しています…</p>
+          ) : remainingDue > 0 ? (
+            <p data-testid="review-remaining-note" aria-live="polite">
+              今日の復習はあと {remainingDue} 語。もう一周すると今日は終わりです
+              （1
+              回正解した語は同じ日にもう一度出て、翌日以降に間隔が伸びます）。
+            </p>
+          ) : (
+            <p data-testid="review-remaining-note" aria-live="polite">
+              今日の復習はすべて完了しました。お疲れさまでした！
+            </p>
+          )}
           <div className="menu-grid">
-            <button className="menu-item" onClick={() => dispatch(goBack)}>
-              戻る
+            {remainingDue !== null && remainingDue > 0 && (
+              <button
+                className="menu-item primary"
+                data-testid="review-again"
+                onClick={handleRestart}
+              >
+                もう一周（{remainingDue} 語）
+              </button>
+            )}
+            <button className="menu-item" onClick={() => dispatch(goHome)}>
+              ホームへ
             </button>
             <button
               className="menu-item"
@@ -210,6 +278,11 @@ export default function ReviewSession({
             >
               進捗ダッシュボード
             </button>
+            {deckId && (
+              <button className="menu-item" onClick={() => dispatch(goBack)}>
+                デッキへ
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -237,6 +310,7 @@ export default function ReviewSession({
       <div className="nav-header">
         <h2>
           復習セッション{" "}
+          {round > 1 && <span className="badge">{round}周目</span>}{" "}
           <span className={styles.progressCount}>
             ({index + 1}/{items.length})
           </span>
