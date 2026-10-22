@@ -34,6 +34,20 @@
   border-color: var(--color-danger);
 }
 
+/* Issue #213: 「未設定」は異常ではなくニュートラルな状態として見せる */
+.testStatusNeutral {
+  color: var(--color-muted);
+  border-color: var(--color-border, rgba(255, 255, 255, 0.12));
+}
+
+/* Issue #213: 統合ステータスの補足文（ラベルの下に1行） */
+.statusDetail {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
 .field {
   display: block;
   width: 100%;

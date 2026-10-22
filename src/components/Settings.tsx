@@ -192,6 +192,42 @@ export default function Settings({
     }
   };
 
+  // Issue #213: 「保存済み」「未検証」「初期値のまま」が3行並んで現在地が
+  // 読めなかった。設定の実状態を 未設定 / 保存済み（未検証）/ 検証済み の
+  // 3状態に畳み、1行のステータスだけを出す。
+  const endpointValue = settings.llmApiEndpoint.trim();
+  const isDefaultEndpoint =
+    endpointValue === DEFAULT_SETTINGS.llmApiEndpoint.trim();
+  const isVerified =
+    endpointValue !== "" && settings.llmVerifiedEndpoint.trim() === endpointValue;
+  const llmStatus: {
+    kind: "unset" | "saved" | "verified";
+    label: string;
+    detail: string;
+    tone: string;
+  } = isVerified
+    ? {
+        kind: "verified",
+        label: "✓ 検証済み",
+        detail: "このエンドポイントで接続テストに成功しています。",
+        tone: styles.testStatusOk,
+      }
+    : isDefaultEndpoint
+      ? {
+          kind: "unset",
+          label: "未設定",
+          detail:
+            "エンドポイントは初期値（localhost）のままです。このPC上のローカルサーバを指すプレースホルダのため、このアプリを開いている端末からは接続できません。LAN IP（例: http://192.168.68.52:11434/v1）や外部エンドポイントを指定してください。",
+          tone: styles.testStatusNeutral,
+        }
+      : {
+          kind: "saved",
+          label: "保存済み（未検証）",
+          detail:
+            "入力内容はこの端末のブラウザ内DBに自動保存されています。まだ接続テストに成功していないので、下の「接続テスト（プライマリ）」を実行してください。",
+          tone: styles.testStatusFail,
+        };
+
   return (
     <div className="container">
       <div className="nav-header">
@@ -314,33 +350,17 @@ export default function Settings({
 
         <div className="card">
           <h3>英会話 AI 設定</h3>
-          {/* Issue #115: inputs auto-save on every change (to IndexedDB, not
-              localStorage) — make that visible so users stop hunting for a
-              保存 button and stop trusting localStorage keys. */}
-          <p className={styles.hint}>
-            入力は自動保存されます（この端末のブラウザ内DBに保存。保存済み:{" "}
-            {settings.llmApiEndpoint.trim() ? "✓ エンドポイント記録" : "—"}）
+          {/* Issue #213: 状態表示は1行に統合（未設定 / 保存済み（未検証）/
+              検証済み）。入力の自動保存は下の detail で説明する。 */}
+          <p
+            className={`${styles.testStatus} ${llmStatus.tone}`}
+            role="status"
+            data-testid="llm-config-status"
+            data-state={llmStatus.kind}
+          >
+            <strong>{llmStatus.label}</strong>
+            <span className={styles.statusDetail}>{llmStatus.detail}</span>
           </p>
-          {/* Issue #123: 「記録済み」と「接続確認済み」は別物 — show which
-              endpoint passed the last live test, badge when unverified. */}
-          {settings.llmApiEndpoint.trim() &&
-            (settings.llmVerifiedEndpoint.trim() ===
-            settings.llmApiEndpoint.trim() ? (
-              <p
-                className={`${styles.testStatus} ${styles.testStatusOk}`}
-                role="status"
-              >
-                ✓ 接続確認済み（このエンドポイントで接続テスト成功）
-              </p>
-            ) : (
-              <p
-                className={`${styles.testStatus} ${styles.testStatusFail}`}
-                role="status"
-              >
-                ⚠ 未検証: 接続テストに成功していません。下の
-                「接続テスト（プライマリ）」を実行してください。
-              </p>
-            ))}
           <label>
             API エンドポイント
             <input
@@ -351,24 +371,6 @@ export default function Settings({
               className={styles.fieldSpaced}
             />
           </label>
-          {/* Issue #113: warn at save-time when the value is still the
-              localhost placeholder default — silently unusable remotely.
-              Issue #130: suppressed once a live test proved the value works
-              (e.g. a local LLM actually listening on this PC). */}
-          {settings.llmApiEndpoint.trim() ===
-            DEFAULT_SETTINGS.llmApiEndpoint.trim() &&
-            settings.llmVerifiedEndpoint.trim() !==
-              settings.llmApiEndpoint.trim() && (
-              <p
-                className={`${styles.testStatus} ${styles.testStatusFail}`}
-                role="status"
-              >
-                ⚠ 初期値（localhost）のままです。このPC上のローカルサーバを指す
-                プレースホルダのため、このアプリを開いている端末からは接続できません。
-                LAN IP（例:
-                http://192.168.68.52:11434/v1）や外部エンドポイントを指定してください。
-              </p>
-            )}
           <label>
             モデル名
             <input

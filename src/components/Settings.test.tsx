@@ -56,6 +56,50 @@ describe("Settings (issue #170 戻り先)", () => {
   });
 });
 
+// Issue #213: 「保存済み: ✓ エンドポイント記録」「⚠ 未検証」「⚠ 初期値のまま」が
+// 3行並び、現在地が読めなかった。実状態を1行のステータスに畳む。
+describe("Settings LLM 設定ステータス (issue #213)", () => {
+  async function renderWith(overrides: Partial<typeof DEFAULT_SETTINGS>) {
+    const storage = {
+      loadSettings: vi.fn(async () => ({ ...DEFAULT_SETTINGS, ...overrides })),
+      saveSettings: vi.fn(async () => {}),
+    } as unknown as StorageProvider;
+    render(
+      <Settings state={initialState} dispatch={vi.fn()} storage={storage} />,
+    );
+    return screen.findByTestId("llm-config-status");
+  }
+
+  it("初期値のままなら「未設定」だけを出す", async () => {
+    const status = await renderWith({});
+    expect(status).toHaveAttribute("data-state", "unset");
+    expect(status).toHaveTextContent("未設定");
+    expect(status).toHaveTextContent("初期値（localhost）のまま");
+    // 「保存済み」「未検証」を別行で並べない
+    expect(status).not.toHaveTextContent("エンドポイント記録");
+    expect(screen.queryByText(/⚠ 未検証/)).toBeNull();
+    expect(screen.getAllByTestId("llm-config-status")).toHaveLength(1);
+  });
+
+  it("自前のエンドポイントで未検証なら「保存済み（未検証）」", async () => {
+    const status = await renderWith({
+      llmApiEndpoint: "http://example.test:11434/v1",
+    });
+    expect(status).toHaveAttribute("data-state", "saved");
+    expect(status).toHaveTextContent("保存済み（未検証）");
+    expect(status).toHaveTextContent("接続テスト");
+  });
+
+  it("接続テスト済みのエンドポイントなら「検証済み」", async () => {
+    const status = await renderWith({
+      llmApiEndpoint: "http://example.test:11434/v1",
+      llmVerifiedEndpoint: "http://example.test:11434/v1",
+    });
+    expect(status).toHaveAttribute("data-state", "verified");
+    expect(status).toHaveTextContent("検証済み");
+  });
+});
+
 // Issue #183: 壊れた JSON を貼ると英語の生エラー（Expected property name...）が
 // そのまま学習アプリの画面に出ていた。日本語1行に言い換える。
 describe("describeImportError (issue #183)", () => {
