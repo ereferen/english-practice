@@ -12,6 +12,7 @@ import {
 import { providersFromSettings } from "../domain/llm";
 import { systemClock } from "../domain/srs";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
+import AnswerDetail from "./AnswerDetail";
 import styles from "./QuizScreen.module.css";
 
 interface Props {
@@ -500,32 +501,7 @@ export default function QuizScreen({
           </p>
           {current.explanation && !lastCorrect && <p>{current.explanation}</p>}
           {/* Issue #182: 解答後に出題語の例文（と意味・ノート）を1行で見せる */}
-          {answerWord && (
-            <div className={styles.answerDetail}>
-              <p className={styles.answerWord}>
-                {answerWord.term}
-                {answerWord.reading && (
-                  <span className={styles.answerReading}>
-                    （{answerWord.reading}）
-                  </span>
-                )}
-                <span className={styles.answerMeaning}>
-                  {answerWord.meaning}
-                </span>
-              </p>
-              {answerWord.examples.slice(0, 1).map((ex, i) => (
-                <div key={i} className={styles.answerExample}>
-                  <div>{ex.en}</div>
-                  {ex.ja && (
-                    <div className={styles.answerExampleJa}>{ex.ja}</div>
-                  )}
-                </div>
-              ))}
-              {answerWord.note && (
-                <p className={styles.answerNote}>ノート: {answerWord.note}</p>
-              )}
-            </div>
-          )}
+          {answerWord && <AnswerDetail word={answerWord} />}
           <button
             className={`primary ${styles.nextButton}`}
             onClick={handleNext}

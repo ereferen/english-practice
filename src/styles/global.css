@@ -415,6 +415,19 @@ p {
   }
 }
 
+/* Issue #211: スマホ幅（〜480px）では 3 列 97px に潰れて補足文が縦積みに
+   なっていた。先頭の主役カードを横長の 1 列にし、残り 2 枚を 2 列に置く。 */
+@media (max-width: 480px) {
+  .card-grid.stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .card-grid.stats-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Issue #41: DESIGN.md panel-frame — double gold frame (outer border-gold,
    inner border-gold-dim 4px apart) + faint inner glow, on every .card.
    The inner ring is drawn with inset box-shadows (gap filled with the panel
