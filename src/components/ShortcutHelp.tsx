@@ -26,6 +26,14 @@ const SHORTCUTS: { section: string; items: [string, string][] }[] = [
     ],
   },
   {
+    section: "復習セッション",
+    items: [
+      ["1 - 4", "選択肢を選ぶ"],
+      ["Enter / →", "次へ"],
+      ["Esc", "やめる"],
+    ],
+  },
+  {
     section: "英会話",
     items: [
       ["Enter", "メッセージ送信"],

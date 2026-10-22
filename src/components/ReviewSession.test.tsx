@@ -114,6 +114,44 @@ describe("ReviewSession (issue #114)", () => {
   });
 });
 
+describe("ReviewSession feedback parity (issue #210 / #212)", () => {
+  it("shows the word's reading, meaning and example after answering", async () => {
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+      />,
+    );
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+    await userEvent.click(screen.getAllByRole("button", { name: /選択肢/ })[0]);
+
+    const detail = await screen.findByTestId("answer-detail");
+    expect(detail).toHaveTextContent("ability");
+    expect(detail).toHaveTextContent("アビリティ");
+    expect(detail).toHaveTextContent("能力");
+    expect(detail).toHaveTextContent(
+      "She has the ability to speak four languages.",
+    );
+  });
+
+  it("advertises the 1-4 key hint like the quiz screen", async () => {
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+      />,
+    );
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+    expect(
+      screen.getByText("1 - 4 キーでも選べます（? でショートカット一覧）"),
+    ).toBeTruthy();
+  });
+});
+
 describe("ReviewSession completion (issue #204)", () => {
   async function finishSingleWordSession(storage: StorageProvider) {
     const deck = makeTestDeck();

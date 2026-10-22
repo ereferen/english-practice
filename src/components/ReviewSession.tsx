@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { buildReviewItems, type ReviewItem } from "../domain/review";
 import { isCorrect, scoreRate, type AnswerRecord } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { uuid } from "../domain/uuid";
+import { allWords } from "../content/loader";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
+import AnswerDetail from "./AnswerDetail";
 import styles from "./QuizScreen.module.css";
 
 interface Props {
@@ -69,6 +71,16 @@ export default function ReviewSession({
 
   const current = items?.[index];
   const isLast = items ? index === items.length - 1 : false;
+
+  // Issue #210: 正解でも誤答でも、出題語の読み・意味・例文を出す。
+  // クイズ画面（#182）と同じ情報量に揃える。
+  const answerWord = useMemo(() => {
+    if (!current) return undefined;
+    const deck = state.decks.find((d) => d.deckId === current.deckId);
+    return deck
+      ? allWords(deck).find((w) => w.wordId === current.item.wordId)
+      : undefined;
+  }, [current, state.decks]);
 
   // deckId 指定（DeckHome 入口）ならそのデッキ詳細へ、横断セッションならホームへ戻る
   const goBack: Action = deckId
@@ -355,6 +367,10 @@ export default function ReviewSession({
             );
           })}
         </div>
+        {/* Issue #212: クイズと同じキー操作の案内。動くのに教えていなかった */}
+        <p className={styles.keyHint}>
+          1 - 4 キーでも選べます（? でショートカット一覧）
+        </p>
       </div>
 
       {showFeedback && (
@@ -363,6 +379,9 @@ export default function ReviewSession({
             {lastCorrect ? "○ 正解" : "× 不正解"}
           </p>
           {item.explanation && !lastCorrect && <p>{item.explanation}</p>}
+          {/* Issue #210: 正解時も語・読み・意味・例文を出す。explanation が
+              無い語でも例文でフォールバックされる。 */}
+          {answerWord && <AnswerDetail word={answerWord} />}
           <button
             className={`primary ${styles.nextButton}`}
             onClick={handleNext}
