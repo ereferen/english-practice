@@ -153,3 +153,53 @@ describe("DeckHome 自分のデッキを直す (issue #181)", () => {
     expect(screen.queryByTestId("deck-edit-card")).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #209: LLM未設定のとき、押す前に「設定が必要」と分かる
+// ---------------------------------------------------------------------------
+describe("DeckHome LLM未設定時の補充問題ボタン (issue #209)", () => {
+  const sample: Deck = { ...manualDeck(), deckId: "sample", source: "bundled" };
+
+  function renderDeck(storage: StorageProvider) {
+    render(
+      <DeckHome
+        state={makeState(sample)}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId={sample.deckId}
+      />,
+    );
+  }
+
+  it("未設定（初期値エンドポイント）なら LLM ボタンが disabled で理由を出す", async () => {
+    renderDeck(fakeStorage());
+
+    const supplement = await screen.findByRole("button", {
+      name: /LLMで補充問題を生成/,
+    });
+    const focus = screen.getByRole("button", { name: /苦手語集中トレーニング/ });
+    await waitFor(() => expect(supplement).toBeDisabled());
+    expect(focus).toBeDisabled();
+    expect(supplement.getAttribute("title")).toContain("設定が必要");
+    expect(screen.getByTestId("deck-llm-hint")).toBeTruthy();
+  });
+
+  it("接続テスト成功済みなら LLM ボタンは押せて、理由表示は出ない", async () => {
+    renderDeck(
+      fakeStorage({
+        loadSettings: vi.fn().mockResolvedValue({
+          ...DEFAULT_SETTINGS,
+          llmApiEndpoint: "https://api.example.com/v1",
+          llmVerifiedEndpoint: "https://api.example.com/v1",
+        }),
+      }),
+    );
+
+    const supplement = await screen.findByRole("button", {
+      name: /LLMで補充問題を生成/,
+    });
+    await waitFor(() => expect(supplement).toBeEnabled());
+    expect(supplement.getAttribute("title")).toBeNull();
+    expect(screen.queryByTestId("deck-llm-hint")).toBeNull();
+  });
+});

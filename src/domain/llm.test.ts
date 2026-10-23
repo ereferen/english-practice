@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  LLM_REQUIRED_TOOLTIP,
+  LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT,
   friendlyLlmError,
   isTransportFailure,
+  llmReadiness,
   providersFromSettings,
   requestLlmChat,
   splitSendError,
@@ -83,6 +86,59 @@ describe("providersFromSettings", () => {
         llmApiKey: "",
       }),
     ).toHaveLength(0);
+  });
+});
+
+describe("llmReadiness (issue #209)", () => {
+  const EMPTY = "";
+  const base = {
+    llmApiEndpoint: "https://api.example.com/v1",
+    llmModel: "m",
+    llmApiKey: EMPTY,
+    llmFallbackApiEndpoint: "",
+  };
+
+  it("接続テスト成功済みのエンドポイントなら ready", () => {
+    const r = llmReadiness({
+      ...base,
+      llmVerifiedEndpoint: "https://api.example.com/v1",
+    });
+    expect(r.ready).toBe(true);
+    expect(r.message).toBeNull();
+  });
+
+  it("エンドポイントが空なら未設定メッセージを返す", () => {
+    const r = llmReadiness({ ...base, llmApiEndpoint: "  " });
+    expect(r.ready).toBe(false);
+    expect(r.message).toContain("未設定");
+  });
+
+  it("初期値（localhost:11434）のままならプレースホルダ扱いで ready にしない", () => {
+    const r = llmReadiness({
+      ...base,
+      llmApiEndpoint: LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT,
+    });
+    expect(r.ready).toBe(false);
+    expect(r.message).toContain("初期値");
+  });
+
+  it("接続確認が済んでいないエンドポイントは未検証として ready にしない", () => {
+    const r = llmReadiness({ ...base, llmVerifiedEndpoint: "" });
+    expect(r.ready).toBe(false);
+    expect(r.message).toContain("接続確認");
+  });
+
+  it("初期値でも接続テストに成功したなら ready（ローカルLLMは正当な設定）", () => {
+    const r = llmReadiness({
+      ...base,
+      llmApiEndpoint: LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT,
+      llmVerifiedEndpoint: LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT,
+    });
+    expect(r.ready).toBe(true);
+  });
+
+  it("ツールチップ文言は「設定が必要」を含む", () => {
+    expect(LLM_REQUIRED_TOOLTIP).toContain("設定が必要");
   });
 });
 

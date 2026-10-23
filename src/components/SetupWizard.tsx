@@ -272,6 +272,11 @@ export default function SetupWizard({
           </button>
         </div>
 
+        {/* Issue #209: スキップが何を止めるのかを押す前に書いておく */}
+        <p className={styles.note} data-testid="setup-wizard-skip-note">
+          「あとで」を選ぶと、英会話・LLMでの補充問題・弱点分析は設定するまで使えません（通常の学習・クイズ・復習は使えます）。
+        </p>
+
         {result && (
           <div
             role="status"

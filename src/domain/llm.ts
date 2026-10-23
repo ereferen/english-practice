@@ -72,6 +72,68 @@ export function providersFromSettings(settings: {
   return providers;
 }
 
+/**
+ * 初期値（保存しただけ未設定）のエンドポイント。この値のままなら
+ * 「設定したつもり」で LLM 依存ボタンを押せてしまうため、プレースホルダとして扱う。
+ */
+export const LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT = "http://localhost:11434/v1";
+
+/** 未設定・未検証のボタンに付ける共通ツールチップ（issue #209）。 */
+export const LLM_REQUIRED_TOOLTIP =
+  "設定が必要（設定画面でLLMの接続テストを成功させてください）";
+
+export interface LlmReadiness {
+  /** 英会話・補充問題・弱点分析を実行してよいか。 */
+  ready: boolean;
+  /** 押せない理由（設定画面のバナーと同じ文言）。ready のとき null。 */
+  message: string | null;
+}
+
+/**
+ * Issue #209: 「LLMが使える状態か」の単一判断源。
+ *
+ * 以前は英会話だけが未設定を検知してボタンを disabled にし、補充問題・弱点分析は
+ * 押させてから失敗画面に飛ばしていた。同じ判定を共有して、押す前に状態が分かる
+ * ようにする。判定は会話送信ゲート（#130）と同じ「接続テストが成功した endpoint か」。
+ */
+export function llmReadiness(
+  settings: {
+    llmApiEndpoint: string;
+    llmModel: string;
+    llmApiKey: string;
+    llmFallbackApiEndpoint?: string;
+    llmFallbackModel?: string;
+    llmFallbackApiKey?: string;
+    llmVerifiedEndpoint?: string;
+  },
+): LlmReadiness {
+  const chain = providersFromSettings(settings);
+  if (chain.length === 0) {
+    return {
+      ready: false,
+      message:
+        "⚠ APIエンドポイントが未設定です。設定画面からLLMのエンドポイントを指定してください。",
+    };
+  }
+  if (
+    (settings.llmVerifiedEndpoint ?? "").trim() ===
+    chain[0].apiEndpoint.trim()
+  ) {
+    return { ready: true, message: null };
+  }
+  if (chain[0].apiEndpoint.trim() === LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT) {
+    return {
+      ready: false,
+      message: `⚠ 保存されているエンドポイントが初期値（${LOCAL_OLLAMA_PLACEHOLDER_ENDPOINT}）のままです。このPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: 別PCのOllama や OpenRouter 等）を入力するか、この端末のローカルサーバ相手に「接続テスト（プライマリ）」を成功させてください。`,
+    };
+  }
+  return {
+    ready: false,
+    message:
+      "⚠ このエンドポイントはまだ接続確認が済んでいません。設定画面の「接続テスト（プライマリ）」に成功すると、この警告は消えます。",
+  };
+}
+
 export class LlmUserAbortError extends Error {
   constructor() {
     super("Aborted by user");

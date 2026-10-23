@@ -30,6 +30,27 @@
   padding: 0.5rem 0.75rem;
 }
 
+/* Issue #209: LLM未設定時に「押せない理由」と設定への導線を出す */
+.llmHint {
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.llmHintLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent, #7ac786);
+  text-decoration: underline;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
 /* Issue #181: 自分のデッキを後から直す（名前変更・語の編集/削除） */
 .editHeading {
   margin: 0 0 0.5rem;
