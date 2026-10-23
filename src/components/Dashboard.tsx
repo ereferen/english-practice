@@ -7,7 +7,7 @@ import type {
   SessionRecord,
 } from "../storage/types";
 import { allWords } from "../content/loader";
-import { providersFromSettings } from "../domain/llm";
+import { LLM_REQUIRED_TOOLTIP, llmReadiness, providersFromSettings } from "../domain/llm";
 import { countStudyDays, isLowSample, lastNDates, streakDays, studyDateSet } from "../domain/progress";
 import {
   analyzeWeaknessWithLlm,
@@ -67,6 +67,9 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [improvements, setImprovements] = useState<ImprovementAction[]>([]);
   // issue #20: Self-Improveが設定でオフなら提案UIを出さない（デフォルト=オフ）
   const [selfImproveEnabled, setSelfImproveEnabled] = useState(false);
+  // Issue #209: 英会話と同じ判定。未設定・未検証のまま「今すぐ分析」を押して
+  // エラー画面に飛ぶのを防ぐ。
+  const [llmReady, setLlmReady] = useState(false);
   // issue #177: 直近30日の回答数（低サンプル判定）と今週（直近7日）の学習量
   const [recentAnswers, setRecentAnswers] = useState<number | null>(null);
   // issue #205: 正答率の分母・分子（直近30日の回答数と正解数）
@@ -101,6 +104,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       ]);
       if (!mounted) return;
       setSelfImproveEnabled(settings.selfImproveEnabled);
+      setLlmReady(llmReadiness(settings).ready);
       setRecentAnswers(answers30.length);
       setPeriodStats({
         total: answers30.length,
@@ -345,10 +349,26 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             <span>直近30日の回答データから苦手パターンを分析できます。</span>
             <button
               className={`primary ${styles.analyzeButton}`}
+              disabled={!llmReady}
+              title={llmReady ? undefined : LLM_REQUIRED_TOOLTIP}
               onClick={() => void handleAnalyze()}
             >
               今すぐ分析
             </button>
+            {!llmReady && (
+              <span className={styles.llmHint} data-testid="dashboard-llm-hint">
+                LLMの設定が必要です。
+                <button
+                  type="button"
+                  className={styles.llmHintLink}
+                  onClick={() =>
+                    dispatch({ type: "go", screen: { name: "settings" } })
+                  }
+                >
+                  設定を開く
+                </button>
+              </span>
+            )}
           </div>
         )}
         {analyzing && (
@@ -398,7 +418,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             <button
               className="ghost"
               onClick={() => void handleAnalyze()}
-              disabled={analyzing}
+              disabled={analyzing || !llmReady}
+              title={!llmReady ? LLM_REQUIRED_TOOLTIP : undefined}
             >
               再分析
             </button>
@@ -508,10 +529,26 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             {!srsOptimizing && !pendingSrs && (
               <button
                 className={`primary ${styles.analyzeButton}`}
+                disabled={!llmReady}
+                title={llmReady ? undefined : LLM_REQUIRED_TOOLTIP}
                 onClick={() => void handleOptimizeSrs()}
               >
                 {srsApplied ? "もう一度提案させる" : "SRS調整案を出してもらう"}
               </button>
+            )}
+            {!llmReady && (
+              <p className={styles.llmHint}>
+                LLMの設定が必要です。
+                <button
+                  type="button"
+                  className={styles.llmHintLink}
+                  onClick={() =>
+                    dispatch({ type: "go", screen: { name: "settings" } })
+                  }
+                >
+                  設定を開く
+                </button>
+              </p>
             )}
           </>
         )}

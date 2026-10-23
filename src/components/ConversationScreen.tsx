@@ -5,7 +5,6 @@ import {
   type ConversationSessionMeta,
   type StorageProvider,
 } from "../storage/types";
-import { DEFAULT_SETTINGS } from "../storage/types";
 import {
   type ChatMessage,
   type ConversationTopic,
@@ -20,6 +19,7 @@ import {
 import {
   type LlmProviderConfig,
   friendlyLlmError,
+  llmReadiness,
   providersFromSettings,
   requestLlmChat,
   splitSendError,
@@ -253,40 +253,10 @@ export default function ConversationScreen({
       const settings = await storage.loadSettings();
       if (!mounted) return;
       const chain = providersFromSettings(settings);
-      if (chain.length === 0) {
-        setConfigError(
-          "⚠ APIエンドポイントが未設定です。設定画面からLLMのエンドポイントを指定してください。",
-        );
-        // Issue #111: while this banner is up, sending can only fail.
-        setNeedsConfig(true);
-      } else if (
-        // Issue #130: gate on "did this endpoint actually answer a test?",
-        // not on matching the placeholder string. A local LLM behind
-        // http://localhost:11434/v1 is a valid setup — once a live test
-        // passed, sending must be unlocked.
-        settings.llmVerifiedEndpoint.trim() === chain[0].apiEndpoint.trim()
-      ) {
-        setConfigError(null);
-        setNeedsConfig(false);
-      } else if (
-        // Issue #113: the saved value equals the placeholder default
-        // (localhost:11434) — the user "saved" without actually configuring.
-        // Say so honestly instead of the generic 未設定 message.
-        chain[0].apiEndpoint.trim() === DEFAULT_SETTINGS.llmApiEndpoint.trim()
-      ) {
-        setConfigError(
-          "⚠ 保存されているエンドポイントが初期値（http://localhost:11434/v1）のままです。このPC上のローカルサーバを指すプレースホルダで、デプロイ先からは使えません。設定画面で実際に接続できるエンドポイント（例: http://192.168.x.x:11434/v1 や OpenRouter 等）を入力するか、この端末のローカルサーバ相手に「接続テスト（プライマリ）」を成功させてください。",
-        );
-        setNeedsConfig(true);
-      } else {
-        // Issue #123: banner keyed on the last connection-test result, not
-        // just "is it the default" — an endpoint that was saved but never
-        // tested (or failed a test) must keep warning the user.
-        setConfigError(
-          "⚠ このエンドポイントはまだ接続確認が済んでいません。設定画面の「接続テスト（プライマリ）」に成功すると、この警告は消えます。",
-        );
-        setNeedsConfig(true);
-      }
+      // Issue #209: 判定は llmReadiness() に集約（補充問題・弱点分析と同じ）.
+      const readiness = llmReadiness(settings);
+      setConfigError(readiness.message);
+      setNeedsConfig(!readiness.ready);
       setProviders(chain);
     })();
     return () => {

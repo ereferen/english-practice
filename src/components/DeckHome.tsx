@@ -19,6 +19,7 @@ import {
   partOfSpeechLabel,
 } from "../domain/partOfSpeech";
 import ConfirmDialog from "./ConfirmDialog";
+import { LLM_REQUIRED_TOOLTIP, llmReadiness } from "../domain/llm";
 import styles from "./DeckHome.module.css";
 
 interface Props {
@@ -37,6 +38,9 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
   const [reviews, setReviews] = useState<ReviewState[]>([]);
   const [todayAnswered, setTodayAnswered] = useState(0);
   const [goal, setGoal] = useState(10);
+  // Issue #209: LLM未設定のまま「補充問題を生成」を押してエラー画面に飛ぶのを
+  // 防ぐ。英会話と同じ判定（接続テスト成功済みか）を共有する。
+  const [llmReady, setLlmReady] = useState(false);
 
   // Issue #181: 自分のデッキを後から直す（名前変更・語の編集・語の削除）。
   const [titleDraft, setTitleDraft] = useState("");
@@ -71,6 +75,7 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       setReviews(all);
       setTodayAnswered(count);
       setGoal(settings.dailyGoalWords);
+      setLlmReady(llmReadiness(settings).ready);
     })();
     return () => {
       mounted = false;
@@ -432,6 +437,8 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
               <div className={styles.genRow}>
                 <button
                   className="ghost"
+                  disabled={!llmReady}
+                  title={llmReady ? undefined : LLM_REQUIRED_TOOLTIP}
                   onClick={() =>
                     dispatch({
                       type: "startGeneratedQuiz",
@@ -445,6 +452,8 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
                 </button>
                 <button
                   className="ghost"
+                  disabled={!llmReady}
+                  title={llmReady ? undefined : LLM_REQUIRED_TOOLTIP}
                   onClick={() =>
                     dispatch({
                       type: "startGeneratedQuiz",
@@ -457,6 +466,20 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
                   🎯 苦手語集中トレーニング
                 </button>
               </div>
+              {!llmReady && (
+                <p className={styles.llmHint} data-testid="deck-llm-hint">
+                  補充問題・苦手語トレーニングはLLMの設定が必要です。
+                  <button
+                    type="button"
+                    className={styles.llmHintLink}
+                    onClick={() =>
+                      dispatch({ type: "go", screen: { name: "settings" } })
+                    }
+                  >
+                    設定を開く
+                  </button>
+                </p>
+              )}
             </div>
           </div>
         ))}
