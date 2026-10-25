@@ -121,6 +121,15 @@ export function lastNDates(today: string, n: number): string[] {
   return out;
 }
 
+/**
+ * Issue #219: 週の区切り（月曜始まり）でカレンダーを折り返すための曜日番号。
+ * 月=0 … 日=6。日曜始まりにしたくなったらここだけ変える。
+ */
+export function mondayWeekdayIndex(date: string): number {
+  const d = new Date(`${date}T00:00:00`);
+  return (d.getDay() + 6) % 7;
+}
+
 function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);

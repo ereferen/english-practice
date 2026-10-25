@@ -8,6 +8,7 @@ import {
   isLowSample,
   lastNDates,
   LOW_SAMPLE_ANSWER_THRESHOLD,
+  mondayWeekdayIndex,
   streakDays,
   studyDateSet,
 } from "./progress";
@@ -247,5 +248,15 @@ describe("deckListStat (issue #195)", () => {
     const stat = deckListStat(0, [], "2026-10-16");
     expect(stat.completion).toBe(0);
     expect(stat.dueToday).toBe(0);
+  });
+});
+
+describe("mondayWeekdayIndex (issue #219)", () => {
+  it("月曜始まりの曜日番号を返す（月=0 … 日=6）", () => {
+    // 2026-10-19 は月曜、2026-10-25 は日曜
+    expect(mondayWeekdayIndex("2026-10-19")).toBe(0);
+    expect(mondayWeekdayIndex("2026-10-20")).toBe(1);
+    expect(mondayWeekdayIndex("2026-10-24")).toBe(5);
+    expect(mondayWeekdayIndex("2026-10-25")).toBe(6);
   });
 });

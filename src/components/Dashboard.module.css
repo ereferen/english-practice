@@ -17,10 +17,23 @@
 /* Issue #177: 学習カレンダー（直近30日のマス目） */
 .calendar {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 4px;
   margin: 10px 0 8px;
-  max-width: 320px;
+  max-width: 224px;
+}
+
+/* Issue #219: 月〜日の見出しと、月初までの詰め物（週の塊を見せる） */
+.calWeekday {
+  font-family: var(--font-rune, inherit);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.calPad {
+  aspect-ratio: 1;
 }
 
 .calDay {
