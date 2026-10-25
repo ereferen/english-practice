@@ -8,7 +8,14 @@ import type {
 } from "../storage/types";
 import { allWords } from "../content/loader";
 import { LLM_REQUIRED_TOOLTIP, llmReadiness, providersFromSettings } from "../domain/llm";
-import { countStudyDays, isLowSample, lastNDates, streakDays, studyDateSet } from "../domain/progress";
+import {
+  countStudyDays,
+  isLowSample,
+  lastNDates,
+  mondayWeekdayIndex,
+  streakDays,
+  studyDateSet,
+} from "../domain/progress";
 import {
   analyzeWeaknessWithLlm,
   buildWeaknessInput,
@@ -142,6 +149,10 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const todayStr = daysAgoDate(new Date(), 0);
   const studiedSet = new Set(studyDates);
   const calendarDays = lastNDates(todayStr, 30);
+  // Issue #219: 30日を等間隔に並べるだけだと週の塊が見えないので、月曜始まりの
+  // 7列に折り返す（先頭は曜日ぶん空ける）。行＝週で「今週はこの行」と読める。
+  const calendarPad = mondayWeekdayIndex(calendarDays[0]);
+  const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
   const streak = streakDays(studyDates, todayStr);
   const handleAnalyze = async () => {
     setAnalyzing(true);
@@ -286,11 +297,13 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       <div className="card">
         <div className="card-grid stats-grid">
           <div>
-            <div className="badge">登録語数</div>
+            {/* Issue #219: どの数値が「いつからいつまで」か分からない、という指摘。
+                数字カードに期間を明記する。 */}
+            <div className="badge">登録語数（全期間）</div>
             <div className={styles.statValue}>{totalWords} 語</div>
           </div>
           <div>
-            <div className="badge">セッション数</div>
+            <div className="badge">セッション数（直近50件）</div>
             <div className={styles.statValue}>{totalSessions} 回</div>
           </div>
           <div>
@@ -306,9 +319,14 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             )}
           </div>
           <div>
-            <div className="badge">今週の回答</div>
+            {/* Issue #219: 「今週」は実装が直近7日（ローリング）で、週の起点が
+                月曜か日曜かで意味が変わる曖昧なラベルだった。実装に合わせて
+                「直近7日」と明記する。 */}
+            <div className="badge">直近7日の回答</div>
             <div className={styles.statValue}>{weekAnswers} 回</div>
-            <div className={styles.statNote}>{weekStudyDays} 日学習</div>
+            <div className={styles.statNote}>
+              {weekStudyDays} 日学習（今日を含む7日間）
+            </div>
           </div>
         </div>
       </div>
@@ -323,6 +341,18 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           </span>
         </p>
         <div className={styles.calendar}>
+          {WEEKDAYS.map((label) => (
+            <span key={`w-${label}`} className={styles.calWeekday}>
+              {label}
+            </span>
+          ))}
+          {Array.from({ length: calendarPad }, (_, i) => (
+            <span
+              key={`pad-${i}`}
+              className={styles.calPad}
+              aria-hidden="true"
+            />
+          ))}
           {calendarDays.map((date) => (
             <span
               key={date}
@@ -337,7 +367,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           ))}
         </div>
         <div className={styles.statNote}>
-          塗りつぶし＝学習した日（右端が今日）
+          塗りつぶし＝学習した日 ・ 行＝週（月〜日、右端が今日）
         </div>
       </div>
 
