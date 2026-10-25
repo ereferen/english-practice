@@ -100,6 +100,75 @@ describe("ReviewSession (issue #114)", () => {
     expect(await screen.findByText("復習セッション完了")).toBeTruthy();
   });
 
+  it("shows the source deck badge on each question (issue #221)", async () => {
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+      />,
+    );
+    const badge = await screen.findByTestId("review-deck-badge");
+    expect(badge.textContent).toBe("Test Deck");
+  });
+
+  it("summarises which deck each reviewed word came from (issue #221)", async () => {
+    const deckA = makeTestDeck();
+    const deckB: Deck = {
+      ...makeTestDeck(),
+      deckId: "other-deck",
+      title: "Other Deck",
+    };
+    const reviews: ReviewState[] = [
+      {
+        deckId: "test-deck",
+        wordId: "ability",
+        level: 1,
+        lastResult: "correct",
+        lastSeenAt: "2026-09-01T00:00:00.000Z",
+        dueAt: "2026-09-20",
+        correctStreak: 1,
+        wrongTotal: 0,
+      },
+      {
+        deckId: "other-deck",
+        wordId: "ability",
+        level: 1,
+        lastResult: "correct",
+        lastSeenAt: "2026-09-01T00:00:00.000Z",
+        dueAt: "2026-09-20",
+        correctStreak: 1,
+        wrongTotal: 0,
+      },
+    ];
+    const user = userEvent.setup();
+    render(
+      <ReviewSession
+        state={{ ...makeState(deckA), decks: [deckA, deckB] }}
+        dispatch={vi.fn()}
+        storage={makeStorageMock(reviews)}
+      />,
+    );
+    const badge = await screen.findByTestId("review-deck-badge");
+    expect(badge.textContent).toBeTruthy();
+    // 2問とも答えて完了画面へ
+    for (let i = 0; i < 2; i += 1) {
+      const choices = await screen.findAllByRole("button", {
+        name: /選択肢/,
+      });
+      await user.click(choices[0]);
+      await screen.findByText(/[○×] (正解|不正解)/);
+      const next = screen.getByRole("button", {
+        name: i === 0 ? "次へ" : "完了する",
+      });
+      await user.click(next);
+    }
+    const breakdown = await screen.findByTestId("review-deck-breakdown");
+    expect(breakdown.textContent).toContain("Test Deck");
+    expect(breakdown.textContent).toContain("Other Deck");
+  });
+
   it("shows the all-clear card when nothing is due", async () => {
     const deck = makeTestDeck();
     render(

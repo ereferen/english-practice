@@ -220,10 +220,11 @@ export default function DeckList({
       <button
         className={`ghost ${styles.hideButton}`}
         type="button"
-        title="一覧から非表示にする（データは残る）"
+        title="このデッキを一覧から隠す（データは残る）"
+        aria-label="このデッキを一覧から隠す"
         onClick={() => setHidden(deck.deckId, true)}
       >
-        非表示
+        隠す
       </button>
     </div>
     );

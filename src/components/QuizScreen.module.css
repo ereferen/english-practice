@@ -17,6 +17,27 @@
   color: var(--color-accent-gold);
 }
 
+/* Issue #221: 復習セッションは複数デッキをまたぐので、いま出ている語が
+   どのデッキのものかをヘッダに常時出す（チップは控えめに、長い名前は省略）。 */
+.deckBadge {
+  display: inline-block;
+  max-width: 13rem;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--color-border-gold-dim, rgba(180, 150, 90, 0.35));
+  border-radius: 999px;
+  font-family: var(--font-ui, inherit);
+  font-size: 0.68em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 :global(.choice-grid) button.choiceCorrect {
   box-shadow:
     inset 0 0 0 1px var(--color-success),
