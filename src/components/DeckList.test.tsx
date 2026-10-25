@@ -180,7 +180,10 @@ describe("DeckList デッキの非表示（issue #181）", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "非表示" }));
+    // Issue #218: 「非表示」は状態に見えるので動詞「隠す」＋ aria-label にした。
+    await user.click(
+      await screen.findByRole("button", { name: "このデッキを一覧から隠す" }),
+    );
 
     expect(saveSettings).toHaveBeenCalledWith({ hiddenDeckIds: [deck.deckId] });
     // 一覧のデッキ行（ボタン）は消え、非表示セクション側に移る

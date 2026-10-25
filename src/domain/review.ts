@@ -78,6 +78,13 @@ export function buildReviewItems(
     }
     quiz ??= fallbackQuiz(deck, word);
     if (quiz) {
+      // Issue #221: 生成クイズの quizId は語基準なので、同じ語を複数デッキに
+      // 入れるとデッキ間で衝突し、出題元デッキの対応表が上書きされる
+      // （バッジが別デッキ名になる）。衝突時はデッキ名前空間を付けて一意にする。
+      const takenBy = deckIdByQuiz.get(quiz.quizId);
+      if (takenBy !== undefined && takenBy !== r.deckId) {
+        quiz = { ...quiz, quizId: `review:${r.deckId}:${quiz.quizId}` };
+      }
       quizzes.push(quiz);
       deckIdByQuiz.set(quiz.quizId, r.deckId);
     }

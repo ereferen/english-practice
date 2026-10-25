@@ -82,6 +82,28 @@ export default function ReviewSession({
       : undefined;
   }, [current, state.decks]);
 
+  // Issue #221: 復習はデッキ横断なので、いま出ている語の出所を常に出す。
+  const currentDeckTitle = useMemo(() => {
+    if (!current) return undefined;
+    return state.decks.find((d) => d.deckId === current.deckId)?.title;
+  }, [current, state.decks]);
+
+  // Issue #221: 完了時にどのデッキから何語出たかを出す（次にどこを強化するか決める）。
+  // answers は items と同じ順で積まれるので、回答済みの items を数えれば内訳になる。
+  const deckBreakdown = useMemo(() => {
+    if (!items) return [];
+    const counts = new Map<string, number>();
+    for (const item of items.slice(0, answers.length)) {
+      counts.set(item.deckId, (counts.get(item.deckId) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([deckId, count]) => ({
+      deckId,
+      count,
+      title:
+        state.decks.find((d) => d.deckId === deckId)?.title ?? "不明なデッキ",
+    }));
+  }, [items, answers.length, state.decks]);
+
   // deckId 指定（DeckHome 入口）ならそのデッキ詳細へ、横断セッションならホームへ戻る
   const goBack: Action = deckId
     ? { type: "go", screen: { name: "deckHome", deckId } }
@@ -256,6 +278,17 @@ export default function ReviewSession({
           <p>
             {answers.length} 語中 {correctCount} 語正解
           </p>
+          {/* Issue #221: デッキ横断セッションで「どこから何語出たか」を残す。
+              1デッキだけのときは冗長なので出さない。 */}
+          {deckBreakdown.length > 1 && (
+            <p
+              className={styles.sessionInfo}
+              data-testid="review-deck-breakdown"
+            >
+              内訳:{" "}
+              {deckBreakdown.map((d) => `${d.title} ${d.count}`).join(" / ")}
+            </p>
+          )}
           {remainingDue === null ? (
             <p aria-live="polite">今日の残りを確認しています…</p>
           ) : remainingDue > 0 ? (
@@ -323,6 +356,15 @@ export default function ReviewSession({
         <h2>
           復習セッション{" "}
           {round > 1 && <span className="badge">{round}周目</span>}{" "}
+          {currentDeckTitle && (
+            <span
+              className={styles.deckBadge}
+              title={`出題元: ${currentDeckTitle}`}
+              data-testid="review-deck-badge"
+            >
+              {currentDeckTitle}
+            </span>
+          )}{" "}
           <span className={styles.progressCount}>
             ({index + 1}/{items.length})
           </span>
