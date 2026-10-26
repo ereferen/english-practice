@@ -79,6 +79,35 @@ describe("loadBundledDecks", () => {
       expect(d.deck.lessons.length).toBeGreaterThan(0);
     }
   });
+
+  // issue #217: 中級デッキが schedule/colleague/careful のような既知の単語ばかりで
+  // 「初級→中級の架け橋」になっていなかった。仕事で使う塊 (動詞句) 中心に戻す。
+  it("intermediate deck leads with workplace chunks, not easy single words", async () => {
+    const { decks } = await loadBundledDecks();
+    const deck = decks.find(
+      (d) => d.deck.deckId === "intermediate-workplace",
+    )?.deck;
+    expect(deck).toBeDefined();
+    const words = deck!.lessons.flatMap((l) => l.words);
+    const chunks = words.filter((w) => w.term.includes(" "));
+    expect(chunks.length).toBeGreaterThanOrEqual(7);
+    const tooEasy = [
+      "schedule",
+      "colleague",
+      "deadline",
+      "improve",
+      "careful",
+      "probably",
+      "agree",
+      "different",
+      "decide",
+      "enough",
+    ];
+    for (const w of words) {
+      expect(tooEasy).not.toContain(w.term.toLowerCase());
+      expect(w.note, `${w.term} に使い方のノートが無い`).toBeTruthy();
+    }
+  });
 });
 
 describe("validateDeckConsistency", () => {
