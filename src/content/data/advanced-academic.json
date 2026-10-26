@@ -16,6 +16,7 @@
           "wordId": "hypothesis",
           "term": "hypothesis",
           "reading": "ハイポセシス",
+          "ipa": "/haɪˈpɑːθəsɪs/",
           "meaning": "仮説",
           "partOfSpeech": "noun",
           "examples": [
@@ -30,6 +31,7 @@
           "wordId": "significant",
           "term": "significant",
           "reading": "シグニフィカント",
+          "ipa": "/sɪɡˈnɪfɪkənt/",
           "meaning": "重要な; (統計的に) 有意な",
           "partOfSpeech": "adjective",
           "examples": [
@@ -43,6 +45,7 @@
           "wordId": "acknowledge",
           "term": "acknowledge",
           "reading": "アクノリッジ",
+          "ipa": "/əkˈnɑːlɪdʒ/",
           "meaning": "認める; 謝意を示す",
           "partOfSpeech": "verb",
           "examples": [
@@ -56,6 +59,7 @@
           "wordId": "subsequent",
           "term": "subsequent",
           "reading": "サブシークエント",
+          "ipa": "/ˈsʌbsɪkwənt/",
           "meaning": "その後の, 続く",
           "partOfSpeech": "adjective",
           "examples": [
@@ -69,6 +73,7 @@
           "wordId": "implication",
           "term": "implication",
           "reading": "インプリケーション",
+          "ipa": "/ˌɪmplɪˈkeɪʃən/",
           "meaning": "含意; (複数で) 影響・帰結",
           "partOfSpeech": "noun",
           "examples": [
@@ -82,6 +87,7 @@
           "wordId": "explicitly",
           "term": "explicitly",
           "reading": "エクスプリシットリー",
+          "ipa": "/ɪkˈsplɪsɪtli/",
           "meaning": "明確に, はっきりと",
           "partOfSpeech": "adverb",
           "examples": [
@@ -96,6 +102,7 @@
           "wordId": "bias",
           "term": "bias",
           "reading": "バイアス",
+          "ipa": "/ˈbaɪəs/",
           "meaning": "偏り; 先入観",
           "partOfSpeech": "noun",
           "examples": [
@@ -109,6 +116,7 @@
           "wordId": "comprehensive",
           "term": "comprehensive",
           "reading": "コンプリヘンシブ",
+          "ipa": "/ˌkɑːmprɪˈhensɪv/",
           "meaning": "包括的な",
           "partOfSpeech": "adjective",
           "examples": [
@@ -122,6 +130,7 @@
           "wordId": "derive",
           "term": "derive",
           "reading": "デライヴ",
+          "ipa": "/dɪˈraɪv/",
           "meaning": "導く; 得る",
           "partOfSpeech": "verb",
           "examples": [
@@ -136,6 +145,7 @@
           "wordId": "feasible",
           "term": "feasible",
           "reading": "フィージブル",
+          "ipa": "/ˈfiːzəbəl/",
           "meaning": "実行可能な",
           "partOfSpeech": "adjective",
           "examples": [

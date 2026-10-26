@@ -146,6 +146,14 @@ button.choiceWrong :global(.choice-marker) {
   color: var(--color-muted);
 }
 
+/* Issue #220: IPA 併記（TTS が無い環境でも発音の手がかりを残す）。 */
+.answerIpa {
+  margin-left: 0.4rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
 .answerMeaning {
   margin-left: 0.6rem;
   font-weight: 400;

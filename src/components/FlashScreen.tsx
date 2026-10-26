@@ -359,8 +359,17 @@ export default function FlashScreen({
           </>
         ) : (
           <>
-            {/* Issue #191: 読み未設定（"—" プレースホルダ）なら行ごと出さない。 */}
-            {word.reading && word.reading !== "—" && (
+            {/* Issue #191: 読み未設定（"—" プレースホルダ）なら行ごと出さない。
+                Issue #220: カタカナは日本語の音に丸められるため IPA を併記する。 */}
+            {word.ipa && (
+              <div className={styles.readingBack} data-testid="card-ipa">
+                {word.reading && word.reading !== "—" && (
+                  <span className={styles.readingKana}>{word.reading}</span>
+                )}
+                <span className={styles.ipa}>{word.ipa}</span>
+              </div>
+            )}
+            {!word.ipa && word.reading && word.reading !== "—" && (
               <div className={styles.readingBack}>{word.reading}</div>
             )}
             <div className={styles.meaning}>{word.meaning}</div>
@@ -404,7 +413,7 @@ export default function FlashScreen({
         </button>
         {ttsNotice && (
           <span className={styles.ttsNotice} role="status" aria-live="polite">
-            このブラウザは音声未対応です（TTSボイスがありません）
+            このブラウザは音声未対応です（TTSボイスがありません）。カード裏の IPA で発音を確認してください。
           </span>
         )}
         {isLast && (

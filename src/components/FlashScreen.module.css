@@ -95,6 +95,17 @@
   margin-bottom: 0.25rem;
 }
 
+/* Issue #220: IPA をカタカナの隣に併記する（カタカナだけだと実際の音とずれる）。 */
+.readingKana {
+  margin-right: 0.5rem;
+}
+
+.ipa {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
 /* Issue #72: hint that the card must be flipped to see the meaning. */
 .flipHint {
   margin-top: 1rem;

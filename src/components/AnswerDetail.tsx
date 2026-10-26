@@ -17,6 +17,7 @@ export default function AnswerDetail({ word }: Props) {
         {word.reading && (
           <span className={styles.answerReading}>（{word.reading}）</span>
         )}
+        {word.ipa && <span className={styles.answerIpa}>{word.ipa}</span>}
         <span className={styles.answerMeaning}>{word.meaning}</span>
       </p>
       {word.examples.slice(0, 1).map((ex, i) => (
