@@ -3,206 +3,270 @@
   "schemaVersion": "1.0",
   "deckId": "intermediate-workplace",
   "level": "intermediate",
-  "title": "職場・日常中級語彙 (サンプル)",
-  "description": "職場・日常会話で頻出する、やや抽象的な語10語。2レッスンで初級から中級への架け橋になります。",
+  "title": "仕事で使う動詞句 (中級サンプル)",
+  "description": "会議・メール・交渉でそのまま使う動詞句と決まり文句10語。単語単体ではなく「塊」で覚えるので、仕事の雑談から実務へ移る橋渡しになります。",
   "source": "サンプルcontent (自作のプレースホルダ。本番は公開単語リストをF6のCSV取り込みで生成する。独自コンテンツ制作は行わない=前提A4)",
   "lessons": [
     {
       "lessonId": "l01-workplace",
-      "title": "職場で",
+      "title": "会議・メールで使う動詞句",
       "theme": "仕事",
       "words": [
         {
-          "wordId": "schedule",
-          "term": "schedule",
-          "reading": "スケジュール",
-          "ipa": "/ˈskedʒuːl/",
-          "meaning": "予定; 計画を立てる",
-          "partOfSpeech": "noun",
-          "examples": [
-            {
-              "en": "Let's reschedule the meeting for Friday.",
-              "ja": "会議を金曜日に組み直しましょう。"
-            }
-          ],
-          "note": "米発音 /skedʒuːl/、英発音 /ʃedjuːl/。"
-        },
-        {
-          "wordId": "colleague",
-          "term": "colleague",
-          "reading": "コリーグ",
-          "ipa": "/ˈkɑːliːɡ/",
-          "meaning": "同僚",
-          "partOfSpeech": "noun",
-          "examples": [
-            {
-              "en": "A colleague of mine recommended this app.",
-              "ja": "同僚がこのアプリを教えてくれました。"
-            }
-          ],
-          "tags": ["people"]
-        },
-        {
-          "wordId": "deadline",
-          "term": "deadline",
-          "reading": "デッドライン",
-          "ipa": "/ˈdedlaɪn/",
-          "meaning": "締切",
-          "partOfSpeech": "noun",
-          "examples": [
-            {
-              "en": "We need to meet the deadline by Monday.",
-              "ja": "月曜日までに締切に間に合わせる必要があります。"
-            }
-          ]
-        },
-        {
-          "wordId": "improve",
-          "term": "improve",
-          "reading": "インプルーブ",
-          "ipa": "/ɪmˈpruːv/",
-          "meaning": "改善する",
+          "wordId": "follow-up",
+          "term": "follow up",
+          "reading": "フォローアップ",
+          "ipa": "/ˈfɑːloʊ ʌp/",
+          "meaning": "〜について後で確認する; 追跡する",
           "partOfSpeech": "verb",
           "examples": [
             {
-              "en": "I want to improve my English vocabulary.",
-              "ja": "英語の語彙を改善したいです。"
+              "en": "I'll follow up on the pricing question after the call.",
+              "ja": "価格の件は通話のあとで追って確認します。"
+            },
+            {
+              "en": "Just following up on my last email about the invoice.",
+              "ja": "請求書についての前回のメール、その後いかがでしょうか。"
             }
-          ]
+          ],
+          "note": "follow up on + 話題。名詞は follow-up（ハイフンあり）。催促メールの書き出しの定番。",
+          "tags": ["email", "meeting"]
         },
         {
-          "wordId": "careful",
-          "term": "careful",
-          "reading": "ケアフル",
-          "ipa": "/ˈkerfəl/",
-          "meaning": "注意深い; 慎重な",
-          "partOfSpeech": "adjective",
+          "wordId": "circle-back",
+          "term": "circle back",
+          "reading": "サークルバック",
+          "ipa": "/ˈsɜːrkl bæk/",
+          "meaning": "（話題に）後で戻る; 改めて話す",
+          "partOfSpeech": "verb",
           "examples": [
             {
-              "en": "Be careful when you cross the street.",
-              "ja": "道路を渡るときは注意してください。"
+              "en": "Let's circle back to the budget on Thursday.",
+              "ja": "予算の話は木曜に戻りましょう。"
             }
-          ]
+          ],
+          "note": "circle back to + 話題。「今は決めない」をやわらかく伝える言い方。",
+          "tags": ["meeting"]
+        },
+        {
+          "wordId": "touch-base",
+          "term": "touch base",
+          "reading": "タッチベース",
+          "ipa": "/tʌtʃ beɪs/",
+          "meaning": "（人と）短く連絡を取り合う",
+          "partOfSpeech": "verb",
+          "examples": [
+            {
+              "en": "I'll touch base with the design team this afternoon.",
+              "ja": "午後にデザインチームと軽く状況を確認します。"
+            }
+          ],
+          "note": "touch base with + 人。長い会議ではなく短いすり合わせを指す。",
+          "tags": ["meeting"]
+        },
+        {
+          "wordId": "push-back",
+          "term": "push back",
+          "reading": "プッシュバック",
+          "ipa": "/pʊʃ bæk/",
+          "meaning": "（案などに）異議を唱える; 延期する",
+          "partOfSpeech": "verb",
+          "examples": [
+            {
+              "en": "The client pushed back on the timeline, so we moved the launch.",
+              "ja": "顧客がスケジュールに難色を示したので、公開を後ろにずらしました。"
+            }
+          ],
+          "note": "push back on + 対象。「反対する」より角が立たない。名詞は pushback（反発）。",
+          "tags": ["negotiation"]
+        },
+        {
+          "wordId": "loop-in",
+          "term": "loop in",
+          "reading": "ループイン",
+          "ipa": "/luːp ɪn/",
+          "meaning": "（人を）会話やメールに加える",
+          "partOfSpeech": "verb",
+          "examples": [
+            {
+              "en": "Can you loop in legal before we send the contract?",
+              "ja": "契約書を送る前に法務も入れてくれますか。"
+            }
+          ],
+          "note": "loop someone in (on 〜)。「共有しておく」の実務版。逆は leave someone out of the loop。",
+          "tags": ["email", "meeting"]
         }
       ],
       "quizzes": [
         {
           "quizId": "q-i01",
           "type": "choose-meaning",
-          "wordId": "deadline",
-          "prompt": "deadline",
+          "wordId": "loop-in",
+          "prompt": "loop in",
           "choices": [
-            { "choiceId": "c1", "text": "締切" },
-            { "choiceId": "c2", "text": "降誕祭" },
-            { "choiceId": "c3", "text": "死線 (比喩)" },
-            { "choiceId": "c4", "text": "定期試験" }
+            { "choiceId": "c1", "text": "（人を）会話やメールに加える" },
+            { "choiceId": "c2", "text": "会議を中止する" },
+            { "choiceId": "c3", "text": "録音を止める" },
+            { "choiceId": "c4", "text": "資料を破棄する" }
           ],
           "answerChoiceId": "c1"
         },
         {
           "quizId": "q-i02",
           "type": "fill-blank",
-          "wordId": "colleague",
-          "prompt": "A ___ of mine recommended this app.",
+          "wordId": "follow-up",
+          "prompt": "I'll ___ on the pricing question after the call.",
           "choices": [
-            { "choiceId": "c1", "text": "colleague" },
-            { "choiceId": "c2", "text": "college" },
-            { "choiceId": "c3", "text": "community" },
-            { "choiceId": "c4", "text": "company" }
+            { "choiceId": "c1", "text": "follow up" },
+            { "choiceId": "c2", "text": "give up" },
+            { "choiceId": "c3", "text": "turn up" },
+            { "choiceId": "c4", "text": "keep up" }
           ],
           "answerChoiceId": "c1",
-          "explanation": "colleague=同僚。college (大学)・company (会社) と綴りが近く紛らわしい。"
+          "explanation": "follow up on 〜=後で確認する。give up (諦める)・turn up (現れる)・keep up (遅れずについていく) と前置きが同じでも意味が変わる。"
         },
         {
           "quizId": "q-i03",
           "type": "choose-term",
-          "wordId": "improve",
-          "prompt": "改善する",
+          "wordId": "push-back",
+          "prompt": "（案などに）異議を唱える",
           "choices": [
-            { "choiceId": "c1", "text": "imagine" },
-            { "choiceId": "c2", "text": "improve" },
-            { "choiceId": "c3", "text": "include" },
-            { "choiceId": "c4", "text": "introduce" }
+            { "choiceId": "c1", "text": "push back" },
+            { "choiceId": "c2", "text": "back up" },
+            { "choiceId": "c3", "text": "put off" },
+            { "choiceId": "c4", "text": "bring up" }
           ],
-          "answerChoiceId": "c2"
+          "answerChoiceId": "c1"
         }
       ]
     },
     {
       "lessonId": "l02-opinions",
-      "title": "意見を知る",
-      "theme": "思考・表現",
+      "title": "調整・進捗の言い回し",
+      "theme": "仕事",
       "words": [
         {
-          "wordId": "probably",
-          "term": "probably",
-          "reading": "プロバブリー",
-          "ipa": "/ˈprɑːbəbli/",
-          "meaning": "おそらく",
-          "partOfSpeech": "adverb",
-          "examples": [
-            {
-              "en": "It will probably rain this afternoon.",
-              "ja": "午後はたぶん雨が降るでしょう。"
-            }
-          ]
-        },
-        {
-          "wordId": "agree",
-          "term": "agree",
-          "reading": "アグリー",
-          "ipa": "/əˈɡriː/",
-          "meaning": "同意する",
+          "wordId": "align-on",
+          "term": "align on",
+          "reading": "アラインオン",
+          "ipa": "/əˈlaɪn ɑːn/",
+          "meaning": "〜について認識を揃える",
           "partOfSpeech": "verb",
           "examples": [
             {
-              "en": "I agree with your idea.",
-              "ja": "あなたの考えに同意します。"
+              "en": "Let's align on the scope before the sprint starts.",
+              "ja": "スプリントが始まる前にスコープの認識を揃えましょう。"
             }
           ],
-          "note": "「〜に同意する」は agree with + 人/意見。"
+          "note": "align on + 論点。「合意する」より前段階の「ずれを無くす」ニュアンス。",
+          "tags": ["meeting", "negotiation"]
         },
         {
-          "wordId": "different",
-          "term": "different",
-          "reading": "ディファレント",
-          "ipa": "/ˈdɪfrənt/",
-          "meaning": "異なる",
-          "partOfSpeech": "adjective",
-          "examples": [
-            {
-              "en": "This result is different from the previous one.",
-              "ja": "この結果は以前のものとは異なります。"
-            }
-          ]
-        },
-        {
-          "wordId": "decide",
-          "term": "decide",
-          "reading": "ディサイド",
-          "ipa": "/dɪˈsaɪd/",
-          "meaning": "決める; 決定する",
+          "wordId": "take-it-offline",
+          "term": "take it offline",
+          "reading": "テイクイットオフライン",
+          "ipa": "/teɪk ɪt ˈɔːflaɪn/",
+          "meaning": "（議論を）別の場で話す; 場外で詰める",
           "partOfSpeech": "verb",
           "examples": [
             {
-              "en": "We decided to launch the feature next month.",
-              "ja": "私たちは来月その機能を公開することに決めました。"
+              "en": "This is getting detailed — let's take it offline.",
+              "ja": "細かい話になってきたので、これは別途話しましょう。"
             }
-          ]
+          ],
+          "note": "会議で脱線を止めるときの定番。相手を否定せずに持ち帰れる。",
+          "tags": ["meeting"]
         },
         {
-          "wordId": "enough",
-          "term": "enough",
-          "reading": "イナフ",
-          "ipa": "/ɪˈnʌf/",
-          "meaning": "十分な; 十分に",
-          "partOfSpeech": "adjective",
+          "wordId": "bandwidth",
+          "term": "bandwidth",
+          "reading": "バンドウィズ",
+          "ipa": "/ˈbændwɪdθ/",
+          "meaning": "（対応できる）余力; 手が空く度合い",
+          "partOfSpeech": "noun",
           "examples": [
             {
-              "en": "Do we have enough time before the meeting?",
-              "ja": "会議までに十分な時間はありますか。"
+              "en": "I don't have the bandwidth to take another project this quarter.",
+              "ja": "今四半期は別のプロジェクトを抱える余力がありません。"
             }
-          ]
+          ],
+          "note": "本来は回線の帯域幅。ビジネスでは「余力」の比喩でよく使う。断る時のやわらかい言い方。",
+          "tags": ["workload"]
+        },
+        {
+          "wordId": "blocker",
+          "term": "blocker",
+          "reading": "ブロッカー",
+          "ipa": "/ˈblɑːkər/",
+          "meaning": "進行を止めている障害; 阻害要因",
+          "partOfSpeech": "noun",
+          "examples": [
+            {
+              "en": "The API key is the only blocker for the release.",
+              "ja": "リリースを止めているのは API キーだけです。"
+            }
+          ],
+          "note": "「blocker はある?」= 詰まっていることはある? デイリーで頻出。",
+          "tags": ["status"]
+        },
+        {
+          "wordId": "heads-up",
+          "term": "heads-up",
+          "reading": "ヘッズアップ",
+          "ipa": "/ˌhedz ˈʌp/",
+          "meaning": "事前の注意喚起; 予告",
+          "partOfSpeech": "noun",
+          "examples": [
+            {
+              "en": "Thanks for the heads-up about the schedule change.",
+              "ja": "スケジュール変更を事前に教えてくれてありがとう。"
+            }
+          ],
+          "note": "give someone a heads-up の形で使う。「先に言っておくね」の一言。",
+          "tags": ["email"]
+        }
+      ],
+      "quizzes": [
+        {
+          "quizId": "q-i04",
+          "type": "choose-meaning",
+          "wordId": "bandwidth",
+          "prompt": "bandwidth",
+          "choices": [
+            { "choiceId": "c1", "text": "（対応できる）余力; 手が空く度合い" },
+            { "choiceId": "c2", "text": "通信速度" },
+            { "choiceId": "c3", "text": "作業机" },
+            { "choiceId": "c4", "text": "予算枠" }
+          ],
+          "answerChoiceId": "c1",
+          "explanation": "ビジネスでは「余力」の比喩。I don't have the bandwidth = 手が回らない。"
+        },
+        {
+          "quizId": "q-i05",
+          "type": "fill-blank",
+          "wordId": "align-on",
+          "prompt": "Let's ___ the scope before the sprint starts.",
+          "choices": [
+            { "choiceId": "c1", "text": "align on" },
+            { "choiceId": "c2", "text": "rely on" },
+            { "choiceId": "c3", "text": "look on" },
+            { "choiceId": "c4", "text": "count on" }
+          ],
+          "answerChoiceId": "c1"
+        },
+        {
+          "quizId": "q-i06",
+          "type": "choose-term",
+          "wordId": "heads-up",
+          "prompt": "事前の注意喚起; 予告",
+          "choices": [
+            { "choiceId": "c1", "text": "heads-up" },
+            { "choiceId": "c2", "text": "hands-on" },
+            { "choiceId": "c3", "text": "check-in" },
+            { "choiceId": "c4", "text": "follow-up" }
+          ],
+          "answerChoiceId": "c1",
+          "explanation": "heads-up=事前の予告。check-in=進捗確認、follow-up=後追い、hands-on=実務を自分でやる、と時間軸が違う。"
         }
       ]
     }
