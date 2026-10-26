@@ -126,6 +126,32 @@ describe("FlashScreen", () => {
     expect(screen.getByText(word0.reading)).toBeTruthy();
   });
 
+  it("shows IPA next to the kana reading on the card back (issue #220)", async () => {
+    const base = makeTestDeck();
+    const deckWithIpa: Deck = {
+      ...base,
+      lessons: [
+        {
+          ...base.lessons[0],
+          words: [
+            { ...base.lessons[0].words[0], ipa: "/ˈtestɪŋ/" },
+            ...base.lessons[0].words.slice(1),
+          ],
+        },
+      ],
+    };
+    renderFlashScreen(makeState(deckWithIpa));
+    // IPA is answer-side information: it must not leak on the card front.
+    expect(screen.queryByText("/ˈtestɪŋ/")).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    expect(screen.getByTestId("card-ipa")).toBeTruthy();
+    expect(screen.getByText("/ˈtestɪŋ/")).toBeTruthy();
+    expect(screen.getByText(deckWithIpa.lessons[0].words[0].reading)).toBeTruthy();
+  });
+
   it("shows progress counter", () => {
     renderFlashScreen(makeState(deck));
     expect(screen.getByText(/1\/3/)).toBeTruthy();

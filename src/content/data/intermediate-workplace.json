@@ -16,6 +16,7 @@
           "wordId": "schedule",
           "term": "schedule",
           "reading": "スケジュール",
+          "ipa": "/ˈskedʒuːl/",
           "meaning": "予定; 計画を立てる",
           "partOfSpeech": "noun",
           "examples": [
@@ -30,6 +31,7 @@
           "wordId": "colleague",
           "term": "colleague",
           "reading": "コリーグ",
+          "ipa": "/ˈkɑːliːɡ/",
           "meaning": "同僚",
           "partOfSpeech": "noun",
           "examples": [
@@ -44,6 +46,7 @@
           "wordId": "deadline",
           "term": "deadline",
           "reading": "デッドライン",
+          "ipa": "/ˈdedlaɪn/",
           "meaning": "締切",
           "partOfSpeech": "noun",
           "examples": [
@@ -57,6 +60,7 @@
           "wordId": "improve",
           "term": "improve",
           "reading": "インプルーブ",
+          "ipa": "/ɪmˈpruːv/",
           "meaning": "改善する",
           "partOfSpeech": "verb",
           "examples": [
@@ -70,6 +74,7 @@
           "wordId": "careful",
           "term": "careful",
           "reading": "ケアフル",
+          "ipa": "/ˈkerfəl/",
           "meaning": "注意深い; 慎重な",
           "partOfSpeech": "adjective",
           "examples": [
@@ -132,6 +137,7 @@
           "wordId": "probably",
           "term": "probably",
           "reading": "プロバブリー",
+          "ipa": "/ˈprɑːbəbli/",
           "meaning": "おそらく",
           "partOfSpeech": "adverb",
           "examples": [
@@ -145,6 +151,7 @@
           "wordId": "agree",
           "term": "agree",
           "reading": "アグリー",
+          "ipa": "/əˈɡriː/",
           "meaning": "同意する",
           "partOfSpeech": "verb",
           "examples": [
@@ -159,6 +166,7 @@
           "wordId": "different",
           "term": "different",
           "reading": "ディファレント",
+          "ipa": "/ˈdɪfrənt/",
           "meaning": "異なる",
           "partOfSpeech": "adjective",
           "examples": [
@@ -172,6 +180,7 @@
           "wordId": "decide",
           "term": "decide",
           "reading": "ディサイド",
+          "ipa": "/dɪˈsaɪd/",
           "meaning": "決める; 決定する",
           "partOfSpeech": "verb",
           "examples": [
@@ -185,6 +194,7 @@
           "wordId": "enough",
           "term": "enough",
           "reading": "イナフ",
+          "ipa": "/ɪˈnʌf/",
           "meaning": "十分な; 十分に",
           "partOfSpeech": "adjective",
           "examples": [

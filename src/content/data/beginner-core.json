@@ -16,6 +16,7 @@
           "wordId": "breakfast",
           "term": "breakfast",
           "reading": "ブレックファスト",
+          "ipa": "/ˈbrekfəst/",
           "meaning": "朝食",
           "partOfSpeech": "noun",
           "examples": [
@@ -29,6 +30,7 @@
           "wordId": "library",
           "term": "library",
           "reading": "ライブラリー",
+          "ipa": "/ˈlaɪbreri/",
           "meaning": "図書館",
           "partOfSpeech": "noun",
           "examples": [
@@ -42,6 +44,7 @@
           "wordId": "weather",
           "term": "weather",
           "reading": "ウェザー",
+          "ipa": "/ˈweðər/",
           "meaning": "天気",
           "partOfSpeech": "noun",
           "examples": [
@@ -56,6 +59,7 @@
           "wordId": "friendly",
           "term": "friendly",
           "reading": "フレンドリー",
+          "ipa": "/ˈfrendli/",
           "meaning": "親しみやすい",
           "partOfSpeech": "adjective",
           "examples": [
@@ -69,6 +73,7 @@
           "wordId": "travel",
           "term": "travel",
           "reading": "トラベル",
+          "ipa": "/ˈtrævəl/",
           "meaning": "旅行する; 旅行",
           "partOfSpeech": "verb",
           "examples": [
@@ -145,6 +150,7 @@
           "wordId": "bridge",
           "term": "bridge",
           "reading": "ブリッジ",
+          "ipa": "/brɪdʒ/",
           "meaning": "橋",
           "partOfSpeech": "noun",
           "examples": [
@@ -158,6 +164,7 @@
           "wordId": "station",
           "term": "station",
           "reading": "ステーション",
+          "ipa": "/ˈsteɪʃən/",
           "meaning": "駅",
           "partOfSpeech": "noun",
           "examples": [
@@ -171,6 +178,7 @@
           "wordId": "quiet",
           "term": "quiet",
           "reading": "クワイエット",
+          "ipa": "/ˈkwaɪət/",
           "meaning": "静かな",
           "partOfSpeech": "adjective",
           "examples": [
@@ -184,6 +192,7 @@
           "wordId": "expensive",
           "term": "expensive",
           "reading": "エクスペンシブ",
+          "ipa": "/ɪkˈspensɪv/",
           "meaning": "高価な",
           "partOfSpeech": "adjective",
           "examples": [
@@ -198,6 +207,7 @@
           "wordId": "help",
           "term": "help",
           "reading": "ヘルプ",
+          "ipa": "/help/",
           "meaning": "助ける; 手伝い",
           "partOfSpeech": "verb",
           "examples": [
@@ -218,6 +228,7 @@
           "wordId": "tired",
           "term": "tired",
           "reading": "タイアード",
+          "ipa": "/ˈtaɪərd/",
           "meaning": "疲れた",
           "partOfSpeech": "adjective",
           "examples": [
@@ -231,6 +242,7 @@
           "wordId": "water",
           "term": "water",
           "reading": "ウォーター",
+          "ipa": "/ˈwɔːtər/",
           "meaning": "水",
           "partOfSpeech": "noun",
           "examples": [
@@ -244,6 +256,7 @@
           "wordId": "exercise",
           "term": "exercise",
           "reading": "エクササイズ",
+          "ipa": "/ˈeksərsaɪz/",
           "meaning": "運動する; 運動",
           "partOfSpeech": "verb",
           "examples": [
@@ -257,6 +270,7 @@
           "wordId": "doctor",
           "term": "doctor",
           "reading": "ドクター",
+          "ipa": "/ˈdɑːktər/",
           "meaning": "医者",
           "partOfSpeech": "noun",
           "examples": [
@@ -270,6 +284,7 @@
           "wordId": "head",
           "term": "head",
           "reading": "ヘッド",
+          "ipa": "/hed/",
           "meaning": "頭",
           "partOfSpeech": "noun",
           "examples": [

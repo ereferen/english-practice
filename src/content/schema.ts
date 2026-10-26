@@ -43,6 +43,8 @@ export const wordSchema = z
     wordId: slugSchema,
     term: z.string().min(1),
     reading: z.string().min(1),
+    // Issue #220: IPA 併記。カタカナだけだと実際の音からずれるため任意項目で持つ。
+    ipa: z.string().min(1).optional(),
     meaning: z.string().min(1),
     partOfSpeech: z
       .enum([
