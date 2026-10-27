@@ -7,6 +7,7 @@ import type {
   SessionRecord,
 } from "../storage/types";
 import { allWords } from "../content/loader";
+import { isAbortedSession } from "../domain/session";
 import { LLM_REQUIRED_TOOLTIP, llmReadiness, providersFromSettings } from "../domain/llm";
 import {
   countStudyDays,
@@ -101,7 +102,9 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const list = await storage.listSessions(50);
+      const list = (await storage.listSessions(50)).filter(
+        (s) => !isAbortedSession(s),
+      );
       const settings = await storage.loadSettings();
       // issue #177: 直近30日の回答数（低サンプル判定）と今週分を一度に取得
       const weekStart = daysAgoDate(new Date(), 6);

@@ -5,7 +5,6 @@ import type { AppState } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { fixtureWords } from "../app/fixtures";
 import type { Deck } from "../content/schema";
-import { generateQuizzesForLesson } from "../content/loader";
 import QuizScreen from "./QuizScreen";
 
 // ---------------------------------------------------------------------------
@@ -309,12 +308,11 @@ describe("QuizScreen", () => {
   });
 
   // Issue #194: 誤答語だけのやり直しは、対象語の問題だけを出題する。
+  // Issue #228: 1 語 = 1 問に揃えたので、出題数は対象語数と同じ。
   it("limits the session to focusWordIds and announces the retry (#194)", async () => {
     const deck = makeTestDeck();
     const focusWordIds = [fixtureWords[0].wordId, fixtureWords[1].wordId];
-    const expected = generateQuizzesForLesson(deck, "lesson-1").filter((q) =>
-      focusWordIds.includes(q.wordId),
-    ).length;
+    const expected = focusWordIds.length;
     render(
       <QuizScreen
         state={makeState(deck)}

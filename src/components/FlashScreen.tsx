@@ -44,7 +44,10 @@ export default function FlashScreen({
       focusWordIds && focusWordIds.length > 0
         ? quizzes.filter((q) => focusWordIds.includes(q.wordId))
         : quizzes;
-    return buildSessionQuizItems(scoped, { shuffle: false }).length;
+    return buildSessionQuizItems(scoped, {
+      shuffle: false,
+      onePerWord: true,
+    }).length;
   }, [deck, lessonId, focusWordIds]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
