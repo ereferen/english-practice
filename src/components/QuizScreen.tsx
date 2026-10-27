@@ -70,7 +70,7 @@ export default function QuizScreen({
     const scoped = focus
       ? quizzes.filter((q) => focus.has(q.wordId))
       : quizzes;
-    return buildSessionQuizItems(scoped, { shuffle: true });
+    return buildSessionQuizItems(scoped, { shuffle: true, onePerWord: true });
   }, [deck, lessonId, gen, focusWordIds]);
 
   useEffect(() => {

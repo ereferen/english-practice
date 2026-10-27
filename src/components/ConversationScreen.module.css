@@ -5,7 +5,10 @@
 .root {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* Issue #227: 100vh だと iOS/Android のブラウザ UI ぶんも数えて画面が
+     はみ出し、開いた瞬間に自動スクロールして上のナビ（過去のセッション /
+     クリア / 戻る）が隠れていた。dvh = 実際に見えている高さ。 */
+  height: 100dvh;
 }
 
 :global(.container).root {

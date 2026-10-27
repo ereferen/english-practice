@@ -64,6 +64,11 @@ export default function ResultScreen({
 
   useEffect(() => {
     if (!deck) return;
+    // Issue #229: 1 問も答えずに結果画面へ来た場合（クイズ 0 問のレッスンや
+    // 空のセッション）は、0% のセッションとして記録しない。何も答えていない
+    // のに履歴とセッション数が増えると、ダッシュボードが「今日サボった」印象
+    // だけを残してしまう。
+    if (answers.length === 0) return;
     const endedAt = new Date().toISOString();
     try {
       const prev = progress.load();

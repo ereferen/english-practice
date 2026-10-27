@@ -254,8 +254,13 @@ export default function App() {
         {screen}
       </main>
       {/* Issue #160: 固定の「? ショートカット」ぶんの余白。ページ末尾まで
-          スクロールすれば、最後の行がボタンの下に潜らず読める。 */}
-      <div className={styles.shortcutSpacer} aria-hidden="true" />
+          スクロールすれば、最後の行がボタンの下に潜らず読める。
+          Issue #227: 英会話画面は 100dvh で画面に収める設計なので、この余白が
+          あると必ず 52px はみ出して開いた瞬間に自動スクロールし、ナビが画面外
+          へ隠れる。スクロールしない画面では余白を出さない。 */}
+      {state.screen.name !== "conversation" && (
+        <div className={styles.shortcutSpacer} aria-hidden="true" />
+      )}
       {/* Issue #121: 初回（エンドポイントが初期値のまま）は入力→接続テストを
           ホーム表示前に挟む。スキップ可。 */}
       <SetupWizard
