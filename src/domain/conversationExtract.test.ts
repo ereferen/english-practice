@@ -157,6 +157,81 @@ describe("parseExtractionResult", () => {
   });
 });
 
+// issue #226: 文法訂正カードで ✗ が「覚える表現」になり、何が間違いだったか消える
+describe("#226 文法訂正の原文解決", () => {
+  const WORK: ChatMessage[] = [
+    msg("w0", "user", "I do the server for a small team."),
+    msg(
+      "w1",
+      "assistant",
+      'Instead of "I do the server", try "I look after the servers for a small team."',
+    ),
+    msg("w2", "user", "Thanks, I will try that."),
+  ];
+
+  it("PARTNER を指す index でも原文は直前の LEARNER 発話になる", () => {
+    const items = parseExtractionResult(
+      JSON.stringify({
+        items: [
+          {
+            type: "grammar-correction",
+            sourceMessageIndex: 1,
+            term: "look after",
+            meaning: "〜の世話をする、〜を担当する",
+            example: "I look after the servers for a small team.",
+            correctedVersion: "I look after the servers for a small team.",
+            explanation: "「サーバをやっている」は do the server ではなく look after。",
+          },
+        ],
+      }),
+      WORK,
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0].sourceMessageId).toBe("w0");
+    expect(items[0].sourceText).toBe("I do the server for a small team.");
+  });
+
+  it("LLM が sourceText に訂正文を入れても学習者の原文を採る", () => {
+    const items = parseExtractionResult(
+      JSON.stringify({
+        items: [
+          {
+            type: "grammar-correction",
+            sourceMessageIndex: 0,
+            sourceText: "I look after the servers for a small team.",
+            term: "I do the server",
+            meaning: "時制ではなく語法の誤り",
+            example: "I look after the servers for a small team.",
+            correctedVersion: "I look after the servers for a small team.",
+          },
+        ],
+      }),
+      WORK,
+    );
+    expect(items[0].sourceText).toBe("I do the server for a small team.");
+  });
+
+  it("note の ✗ は学習者の原文、✓ は訂正文になる", () => {
+    const w = extractedToWord(
+      {
+        type: "grammar-correction",
+        sourceMessageId: "w0",
+        sourceText: "I do the server for a small team.",
+        term: "look after",
+        meaning: "〜の世話をする、〜を担当する",
+        example: "I look after the servers for a small team.",
+        correctedVersion: "I look after the servers for a small team.",
+        explanation: "「サーバをやっている」は do the server ではなく look after。",
+      },
+      0,
+    );
+    expect(w.note).toContain("✗ I do the server for a small team.");
+    expect(w.note).not.toContain("✗ look after");
+    expect(w.note).toContain("✓ I look after the servers for a small team.");
+    expect(() => wordSchema.parse(w)).not.toThrow();
+  });
+});
+
 describe("assertEnoughConversationMessages", () => {
   it("user 発話2回未満はエラー", () => {
     expect(() => assertEnoughConversationMessages([CONVO[0]])).toThrow(
