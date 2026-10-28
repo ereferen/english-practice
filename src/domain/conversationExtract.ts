@@ -115,10 +115,11 @@ Extract at most 5 items that are worth REVIEWING as flashcards. Only pick things
 3. "grammar-correction": a mistake in a LEARNER message, with the correct version.
 
 Rules:
+- term: the word or expression to learn. EXCEPTION for "grammar-correction": term MUST be the LEARNER's own incorrect sentence, copied from their message as written. Never put the corrected expression there.
 - meaning: a short Japanese definition or explanation.
 - example: a natural example sentence taken from or adapted from the transcript.
 - exampleJa: the Japanese translation of "example". Always provide it (the learner reads this as the example's translation). Do NOT copy English source text here.
-- sourceText: the transcript fragment the item came from (kept for reference; never shown as a translation).
+- sourceText: the transcript fragment the item came from (kept for reference; never shown as a translation). For "grammar-correction" this MUST be the LEARNER message that contains the mistake, verbatim.
 - correctedVersion: REQUIRED for grammar-correction (the fixed sentence); omit otherwise.
 - explanation: for grammar-correction, a 1-sentence Japanese explanation of the mistake.
 - partOfSpeech: for vocabulary/expression items, one of "noun","verb","adjective","adverb","preposition","conjunction","pronoun","determiner","exclamation","other". Use "other" only if unsure.
@@ -207,13 +208,43 @@ export function parseExtractionResult(
       item.sourceMessageIndex !== undefined
         ? nonSystem[item.sourceMessageIndex]
         : undefined;
+    const matched = nonSystem.find((m) =>
+      m.content.includes(cleanText(item.term)),
+    );
+    // issue #226: 文法訂正の ✗ は「学習者が実際に言った文」でなければ意味が無い。
+    // LLM は PARTNER の文や気に入った表現を term/sourceText に入れてくることがあるため、
+    // grammar-correction の原文は必ず LEARNER (role="user") の発話から解決する。
+    const learnerMessages = nonSystem.filter((m) => m.role === "user");
+    const llmSourceText = cleanText(item.sourceText);
+    // 直接の手がかり（index / term一致 / sourceText一致）が PARTNER を指す場合は採らない。
+    let grammarSource = [indexed, matched, llmSourceText
+      ? learnerMessages.find((m) => m.content.includes(llmSourceText))
+      : undefined
+    ].find((m) => m?.role === "user");
+    if (item.type === "grammar-correction" && !grammarSource && indexed) {
+      // PARTNER の直後に「訂正」が来る並びなので、直前の LEARNER 発話を原文とみなす。
+      for (let i = nonSystem.indexOf(indexed); i >= 0; i--) {
+        if (nonSystem[i].role === "user") {
+          grammarSource = nonSystem[i];
+          break;
+        }
+      }
+    }
     const source =
-      indexed ??
-      nonSystem.find((m) => m.content.includes(cleanText(item.term)));
+      item.type === "grammar-correction" ? grammarSource : (indexed ?? matched);
+    const rawSourceText = cleanText(llmSourceText || source?.content || "");
+    // LLM の sourceText が学習者の発話に含まれない（＝訂正文や PARTNER の文）なら、
+    // 学習者のメッセージ本文を採る。断片が含まれるなら断片のほうが読みやすい。
+    const sourceText =
+      item.type === "grammar-correction" &&
+      source?.role === "user" &&
+      !source.content.includes(rawSourceText)
+        ? cleanText(source.content)
+        : rawSourceText;
     out.push({
       type: item.type,
       sourceMessageId: source?.id ?? "",
-      sourceText: cleanText(item.sourceText || source?.content || ""),
+      sourceText,
       term,
       ...(item.reading ? { reading: cleanText(item.reading) } : {}),
       meaning,
@@ -318,7 +349,15 @@ export function extractedToWord(item: ExtractedContent, index: number): Word {
     tags: ["conversation", item.type],
   };
   if (item.correctedVersion) {
-    word.note = `✗ ${item.term}\n✓ ${item.correctedVersion}${item.explanation ? `\n${item.explanation}` : ""}`;
+    // issue #226: ✗ には「覚える表現 (term)」ではなく学習者が実際に言った文を出す。
+    // grammar-correction では sourceText が学習者の原文。無ければ term が誤文。
+    const wrong =
+      item.type === "grammar-correction" && item.sourceText.trim()
+        ? item.sourceText
+        : item.term;
+    const showWrong =
+      normalizeTermKey(wrong) !== normalizeTermKey(item.correctedVersion);
+    word.note = `${showWrong ? `✗ ${wrong}\n` : ""}✓ ${item.correctedVersion}${item.explanation ? `\n${item.explanation}` : ""}`;
   } else if (item.explanation) {
     word.note = item.explanation;
   }
