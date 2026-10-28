@@ -61,6 +61,19 @@ function daysAgoDate(today: Date, days: number): string {
   return new Date(d.getTime() - offset * 60_000).toISOString().slice(0, 10);
 }
 
+// 復習セッションは lessonId が "review" 固定でデッキのレッスンに一致しないため、
+// lessonId の生値を出さずにセッション種別の日本語ラベルへ落とす。
+function sessionKindLabel(kind: SessionRecord["kind"]): string {
+  switch (kind) {
+    case "review":
+      return "復習";
+    case "quiz":
+      return "クイズ";
+    case "learn":
+      return "学習";
+  }
+}
+
 export default function Dashboard({ state, dispatch, storage }: Props) {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [report, setReport] = useState<WeaknessReport | null>(null);
@@ -638,7 +651,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             {state.decks
               .find((d) => d.deckId === s.deckId)
               ?.lessons.find((l) => l.lessonId === s.lessonId)?.title ??
-              s.lessonId}
+              sessionKindLabel(s.kind)}
           </div>
         </div>
       ))}
