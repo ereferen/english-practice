@@ -29,6 +29,7 @@ import {
   CONVERSATION_DECK_ID,
   ExtractionError,
   buildConversationDeck,
+  containsPhrase,
   dedupeExtracted,
   extractContentWithLlm,
   mergeIntoConversationDeck,
@@ -1048,6 +1049,26 @@ export default function ConversationScreen({
                       {item.meaning}
                     </span>
                   </label>
+                  {/* Issue #233: どの発言から拾った項目なのか分からないと、
+                      LLM が別の文を拾っていても気づけないまま暗記することになる。
+                      元の発言を引用ブロックで出し、会話に無い語なら警告する。 */}
+                  {item.sourceText && (
+                    <p className={styles.extractSource}>
+                      <span className={styles.extractSourceLabel}>
+                        元の発言
+                      </span>
+                      「{item.sourceText}」
+                      {item.type === "grammar-correction" &&
+                        !containsPhrase(item.sourceText, item.term) && (
+                          <span
+                            className={styles.extractSourceWarn}
+                            role="status"
+                          >
+                            ⚠ この文には「{item.term}」が含まれていません
+                          </span>
+                        )}
+                    </p>
+                  )}
                   {item.example && (
                     <p className={styles.extractExample}>
                       {item.type === "grammar-correction" &&

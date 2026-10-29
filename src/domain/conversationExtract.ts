@@ -361,12 +361,30 @@ export function extractedToWord(item: ExtractedContent, index: number): Word {
   } else if (item.explanation) {
     word.note = item.explanation;
   }
+  // Issue #233: どの発言から拾った語なのかをカード裏にも残す。LLM が別の文を
+  // 拾っていても、カード単体で「会話に無い語だ」と気づけるようにする。
+  // grammar-correction は ✗ 行がすでに学習者の原文なので重複させない。
+  const source = item.sourceText.trim();
+  if (item.type !== "grammar-correction" && source) {
+    const quote = `出典: 「${source.slice(0, MAX_TEXT_LEN)}」`;
+    word.note = word.note ? `${word.note}\n${quote}` : quote;
+  }
   return word;
 }
 
 // ---------------------------------------------------------------------------
 // 重複チェック（既存デッキに同じ語がある場合のマージ戦略: スキップ）
 // ---------------------------------------------------------------------------
+
+/**
+ * Issue #233: 引用文（元の発言）に語句が含まれるか。記号・大文字小文字の
+ * 揺れは normalizeTermKey で吸収する。空の term は「判定不能」として true。
+ */
+export function containsPhrase(source: string, term: string): boolean {
+  const key = normalizeTermKey(term);
+  if (!key) return true;
+  return normalizeTermKey(source).includes(key);
+}
 
 /** 比較用の正規化キー（小文字化・句読点除去・空白圧縮） */
 export function normalizeTermKey(term: string): string {

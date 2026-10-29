@@ -5,6 +5,7 @@ import type { AppState } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import type { LocalProgressStore } from "../storage/localProgress";
 import type { AnswerRecord } from "../domain/session";
+import { isAbortedSession } from "../domain/session";
 import ResultScreen from "./ResultScreen";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ const deck = {
           wordId: "w0",
           term: "apple",
           reading: "アップル",
+          ipa: "/ˈæp.əl/",
           meaning: "りんご",
           partOfSpeech: "noun",
           examples: [{ en: "An apple.", ja: "りんごです。" }],
@@ -128,6 +130,93 @@ function renderResult(
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Issue #232: 0 点で完走したセッションが中断扱いで消える
+// Issue #235: 誤答語に読み・IPA・例文を出す / TTS 案内は 1 箇所だけ
+// ---------------------------------------------------------------------------
+
+describe("ResultScreen (#232 zero-score sessions stay visible)", () => {
+  it("records a real start time so a 0% completed session is not treated as aborted", async () => {
+    const storage = makeStorageMock();
+    const recordSpy = vi.spyOn(storage, "startSession");
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={answers([false, false, false])}
+        progress={makeProgress([])}
+      />,
+    );
+    await waitFor(() => expect(recordSpy).toHaveBeenCalled());
+    const record = recordSpy.mock.calls[0][0];
+    expect(record.scoreRate).toBe(0);
+    expect(record.endedAt).not.toBeNull();
+    // 全問不正解でも「回答 5 件の完走」なので中断判定に落ちてはいけない
+    expect(record.startedAt).not.toBe(record.endedAt);
+    expect(isAbortedSession(record)).toBe(false);
+  });
+
+  it("passes the quiz start time through unchanged", async () => {
+    const storage = makeStorageMock();
+    const recordSpy = vi.spyOn(storage, "startSession");
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={answers([false])}
+        startedAt="2026-10-29T10:00:00.000Z"
+        progress={makeProgress([])}
+      />,
+    );
+    await waitFor(() => expect(recordSpy).toHaveBeenCalled());
+    expect(recordSpy.mock.calls[0][0].startedAt).toBe(
+      "2026-10-29T10:00:00.000Z",
+    );
+    expect(isAbortedSession(recordSpy.mock.calls[0][0])).toBe(false);
+  });
+});
+
+describe("ResultScreen (#235 wrong-word detail)", () => {
+  it("shows reading, IPA and the example sentence for a wrong word", async () => {
+    const restore = stubVoices([VOICE]);
+    try {
+      renderResult(answers([false]), []);
+      expect(await screen.findByText("apple")).toBeTruthy();
+      expect(screen.getByText("（アップル）")).toBeTruthy();
+      expect(screen.getByText("/ˈæp.əl/")).toBeTruthy();
+      expect(screen.getByText("An apple.")).toBeTruthy();
+      expect(screen.getByText("りんごです。")).toBeTruthy();
+    } finally {
+      cleanup();
+      restore();
+    }
+  });
+
+  it("shows the no-voice notice only once (#235)", async () => {
+    const restore = stubVoices([]);
+    try {
+      renderResult(answers([false]), []);
+      const notice = screen.getAllByText(
+        "このブラウザは音声未対応です（TTSボイスがありません）",
+      );
+      expect(notice).toHaveLength(1);
+      await userEvent.click(screen.getByLabelText("apple の発音を再生"));
+      expect(
+        screen.getAllByText("このブラウザは音声未対応です（TTSボイスがありません）"),
+      ).toHaveLength(1);
+    } finally {
+      cleanup();
+      restore();
+    }
+  });
+});
 
 describe("ResultScreen (#96 celebration)", () => {
   it("counts the score up to the final percentage", async () => {

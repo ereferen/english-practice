@@ -569,6 +569,34 @@
   font-size: 0.85rem;
 }
 
+/* Issue #233: 「元の発言」の引用ブロック。どの発言から拾った項目かを
+   会話の流れに戻らずに確認できるようにする。 */
+.extractSource {
+  margin: 0.25rem 0 0 1.5rem;
+  padding: 0.3rem 0.6rem;
+  border-left: 3px solid var(--color-gold, #d4a72c);
+  background: rgba(212, 167, 44, 0.08);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.extractSourceLabel {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-family: var(--font-rune, inherit);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+.extractSourceWarn {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-accent-gold);
+  font-size: 0.78rem;
+}
+
 .extractNote {
   margin: 0.15rem 0 0 1.5rem;
   font-size: 0.8rem;
