@@ -979,3 +979,78 @@ describe("ConversationScreen (issue #186 抽出後の導線)", () => {
     });
   });
 });
+
+// Issue #234: 会話中に詰まったときのヒント。押したときだけ出し、押すと入力欄に入る。
+describe("ConversationScreen (issue #234 ヒント)", () => {
+  const convo: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "I played Hollow Knight yesterday.",
+        createdAt: "2026-10-29T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Nice! What part are you at right now?",
+        createdAt: "2026-10-29T12:00:01.000Z",
+      },
+    ],
+    draft: "",
+    updatedAt: "2026-10-29T12:00:02.000Z",
+  };
+
+  it("💡 を押すと候補が出て、押すと入力欄に入る（送信はしない）", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content: '["I am at the boss.", "It is hard but fun."]',
+    });
+    const { storage } = makeStorage(convo, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const hintButton = await screen.findByTestId("conversation-hint");
+    // 押す前は候補が出ていない（答えを見せない）
+    expect(screen.queryByText("I am at the boss.")).toBeNull();
+
+    await waitFor(() => expect(hintButton).not.toBeDisabled());
+    await user.click(hintButton);
+
+    const chip = await screen.findByText("I am at the boss.");
+    await user.click(chip);
+
+    expect(screen.getByRole("textbox")).toHaveValue("I am at the boss.");
+    // 候補は消えるが、勝手に送信はしない
+    expect(screen.queryByText("It is hard but fun.")).toBeNull();
+  });
+
+  it("LLM が候補を返さないときは案内を出す", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: "no idea" });
+    const { storage } = makeStorage(convo, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const hintButton = await screen.findByTestId("conversation-hint");
+    await waitFor(() => expect(hintButton).not.toBeDisabled());
+    await user.click(hintButton);
+
+    expect(
+      await screen.findByText(/ヒントを作れませんでした/),
+    ).toBeTruthy();
+  });
+});

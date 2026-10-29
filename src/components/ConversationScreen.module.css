@@ -609,6 +609,45 @@
   flex-wrap: wrap;
 }
 
+/* Issue #234: 会話中のヒント。💡 ボタンと候補チップを入力欄の直上に置く。 */
+.hintBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.hintButton {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.hintError {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.hintChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex: 1 1 100%;
+}
+
+.hintChip {
+  font-size: 0.85rem;
+  text-align: left;
+  border-radius: var(--radius);
+  padding: 0.3rem 0.6rem;
+}
+
+.hintClose {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--color-muted);
+}
+
 .saveAllButton {
   white-space: nowrap;
 }
