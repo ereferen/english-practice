@@ -3,6 +3,7 @@ import {
   assertEnoughConversationMessages,
   buildConversationDeck,
   buildExtractPrompt,
+  containsPhrase,
   dedupeExtracted,
   extractedToWord,
   mergeIntoConversationDeck,
@@ -290,6 +291,38 @@ describe("extractedToWord", () => {
     );
     expect(w.examples[0].ja).toBe("戦利品が落ちた？");
     expect(() => wordSchema.parse(w)).not.toThrow();
+  });
+
+  // Issue #233: カード単体で「どの発言から拾ったか」が分かるようにする。
+  it("語彙カードは note に元の発言を残す (#233)", () => {
+    const w = extractedToWord(base, 0);
+    expect(w.note).toContain("出典");
+    expect(w.note).toContain("Lucky you!");
+    expect(() => wordSchema.parse(w)).not.toThrow();
+  });
+
+  it("grammar-correction は ✗ 行が原文なので出典を重複させない (#233)", () => {
+    const w = extractedToWord(
+      {
+        ...base,
+        type: "grammar-correction",
+        term: "I go to game yesterday",
+        correctedVersion: "I went to the game yesterday",
+      },
+      1,
+    );
+    expect(w.note).not.toContain("出典");
+  });
+});
+
+describe("containsPhrase (#233)", () => {
+  it("大文字小文字・句読点の揺れを無視して含む判定をする", () => {
+    expect(containsPhrase("I very like this game.", "very like")).toBe(true);
+    expect(containsPhrase("I really like this game.", "very like")).toBe(false);
+  });
+
+  it("空の term は判定不能として true", () => {
+    expect(containsPhrase("anything", "   ")).toBe(true);
   });
 });
 

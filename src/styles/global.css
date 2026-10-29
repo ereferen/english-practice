@@ -553,12 +553,22 @@ p {
 }
 
 .wrong-word {
+  /* Issue #232/#235: 読み・IPA・意味・例文を縦に積むカードに変更。 */
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
   background: var(--color-surface-2);
   border-radius: var(--radius);
   padding: 0.5rem 0.75rem;
+}
+
+/* Issue #235: 1 行目は 語・読み・IPA・意味・発音ボタン。 */
+.wrong-word-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .wrong-word-meaning {

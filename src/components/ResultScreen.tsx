@@ -58,6 +58,10 @@ export default function ResultScreen({
     window.setTimeout(() => setTtsNotice(false), 2500);
   };
 
+  // Issue #235: 音声が無い環境では「音声未対応」の案内が静的（ヘッダ下）と
+  // 動的（🔇 押下後）の2箇所に同じ文言で出ていた。表示は1箇所にまとめる。
+  const showTtsNotice = speechAvail !== "ready" || ttsNotice;
+
   // Issue #96: compare against the previous best BEFORE this session is
   // recorded (the effect below writes it). No past sessions => no badge.
   const [isRecord, setIsRecord] = useState<boolean | null>(null);
@@ -70,6 +74,16 @@ export default function ResultScreen({
     // だけを残してしまう。
     if (answers.length === 0) return;
     const endedAt = new Date().toISOString();
+    // Issue #232: startedAt を endedAt で埋めていたため、全問不正解で完走した
+    // 回も `startedAt === endedAt && scoreRate === 0` になり、#229 の「回答0件
+    // の中断」判定でダッシュボードから消えていた。実際の開始時刻を残す
+    // （呼び出し側が渡さない場合は回答レイテンシ合計から逆算する）。
+    const sessionStartedAt =
+      startedAt ??
+      new Date(
+        Date.parse(endedAt) -
+          Math.max(1000, answers.reduce((sum, a) => sum + a.latencyMs, 0)),
+      ).toISOString();
     try {
       const prev = progress.load();
       const prevBest = prev.sessions.reduce(
@@ -89,7 +103,7 @@ export default function ResultScreen({
         id: sessionId,
         deckId,
         lessonId,
-        startedAt: endedAt,
+        startedAt: sessionStartedAt,
         endedAt,
         kind: "learn",
         scoreRate: scoreRate(answers),
@@ -193,7 +207,7 @@ export default function ResultScreen({
       {wrongWords.length > 0 && (
         <div className="card">
           <h3>誤答した語</h3>
-          {speechAvail !== "ready" && (
+          {showTtsNotice && (
             <p className={styles.ttsNotice} role="status" aria-live="polite">
               このブラウザは音声未対応です（TTSボイスがありません）
             </p>
@@ -201,28 +215,49 @@ export default function ResultScreen({
           <ul className="wrong-words-grid">
             {wrongWords.map((w) => (
               <li key={w.wordId} className="wrong-word">
-                <strong>{w.term}</strong>
-                <span className="wrong-word-meaning">{w.meaning}</span>
-                <button
-                  className="ghost"
-                  aria-label={`${w.term} の発音を再生`}
-                  title={
-                    speechAvail === "ready"
-                      ? "発音再生"
-                      : "このブラウザは音声未対応（TTSボイス0個）"
-                  }
-                  onClick={() => handleSpeak(w.term)}
-                >
-                  {speechAvail === "ready" ? "▶" : "🔇"}
-                </button>
+                <div className="wrong-word-head">
+                  <strong>{w.term}</strong>
+                  {w.reading && (
+                    <span className={styles.wrongWordReading}>
+                      （{w.reading}）
+                    </span>
+                  )}
+                  {w.ipa && (
+                    <span className={styles.wrongWordIpa}>{w.ipa}</span>
+                  )}
+                  <span className="wrong-word-meaning">{w.meaning}</span>
+                  <button
+                    className="ghost"
+                    aria-label={`${w.term} の発音を再生`}
+                    title={
+                      speechAvail === "ready"
+                        ? "発音再生"
+                        : "このブラウザは音声未対応（TTSボイス0個）"
+                    }
+                    onClick={() => handleSpeak(w.term)}
+                  >
+                    {speechAvail === "ready" ? "▶" : "🔇"}
+                  </button>
+                </div>
+                {/* Issue #235: 答え合わせ画面と揃えて、例文と和訳も出す。
+                    誤答語は「今日いちばん覚えたい語」なので、デッキへ
+                    戻らないと読み・例文が分からない状態をやめる。 */}
+                {w.examples[0] && (
+                  <div className={styles.wrongWordExample}>
+                    <div>{w.examples[0].en}</div>
+                    {w.examples[0].ja && (
+                      <div className={styles.wrongWordExampleJa}>
+                        {w.examples[0].ja}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {w.note && (
+                  <p className={styles.wrongWordNote}>ノート: {w.note}</p>
+                )}
               </li>
             ))}
           </ul>
-          {ttsNotice && (
-            <span className={styles.ttsNotice} role="status" aria-live="polite">
-              このブラウザは音声未対応です（TTSボイスがありません）
-            </span>
-          )}
           {/* Issue #194: 誤答語は「今日いちばん覚えたい語」なのに、ここから
               やり直す導線が無く、カードを全枚めくり直す必要があった。 */}
           <div className={styles.retryActions}>

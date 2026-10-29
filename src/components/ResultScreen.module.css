@@ -76,6 +76,36 @@
   font-size: 0.8rem;
 }
 
+/* Issue #235: 誤答した語に読み・IPA・例文を出す（答え合わせ画面と同じ情報量）。 */
+.wrongWordReading {
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.wrongWordIpa {
+  font-family: var(--font-mono, monospace);
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.wrongWordExample {
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.wrongWordExampleJa {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.wrongWordNote {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
 /* Issue #194: 誤答した語だけをその場でやり直す導線。誤答語リストの直下に
    置き、カードをめくり直さずにクイズ／カードへ直行できるようにする。 */
 .retryActions {
