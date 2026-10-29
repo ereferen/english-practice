@@ -35,6 +35,7 @@ import {
   mergeIntoConversationDeck,
 } from "../domain/conversationExtract";
 import { MIN_QUIZ_WORDS } from "../content/loader";
+import { applyHint, requestReplyHints } from "../domain/conversationHints";
 import { partOfSpeechLabel } from "../domain/partOfSpeech";
 import { deckSchema } from "../content/schema";
 import type { Deck } from "../content/schema";
@@ -144,6 +145,11 @@ export default function ConversationScreen({
     wordCount: number;
   } | null>(null);
   const extractControllerRef = useRef<AbortController | null>(null);
+  // Issue #234: 会話中に詰まったときの「こう返せます」候補。押したときだけ生成する。
+  const [hints, setHints] = useState<string[]>([]);
+  const [hintsLoading, setHintsLoading] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
+  const hintControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -548,6 +554,51 @@ export default function ConversationScreen({
       else next.add(i);
       return next;
     });
+  };
+
+  // --- Issue #234: 会話中に詰まったときの返答案（押したときだけ生成） ---
+
+  // 新しい発言が入ったら、前の候補は古い文脈なので捨てる。
+  useEffect(() => {
+    setHints([]);
+    setHintError(null);
+  }, [messages.length]);
+
+  const handleHint = useCallback(async () => {
+    if (providers.length === 0 || hintsLoading) return;
+    if (!messages.some((m) => m.role === "assistant" && m.kind !== "error")) {
+      setHintError("相手の発言がまだありません。");
+      return;
+    }
+    setHintsLoading(true);
+    setHintError(null);
+    const controller = new AbortController();
+    hintControllerRef.current = controller;
+    try {
+      const next = await requestReplyHints({
+        providers,
+        messages,
+        topic: topic ?? undefined,
+        signal: controller.signal,
+      });
+      if (next.length === 0) {
+        setHintError("ヒントを作れませんでした。もう一度お試しください。");
+      }
+      setHints(next);
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      setHintError(friendlyLlmError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setHintsLoading(false);
+      hintControllerRef.current = null;
+    }
+  }, [providers, messages, topic, hintsLoading]);
+
+  // 候補チップは入力欄に入れるだけ（送信は本人が決める）。
+  const useHint = (hint: string) => {
+    setInput((prev) => applyHint(prev, hint));
+    setHints([]);
+    inputRef.current?.focus();
   };
 
   const handleSaveExtracted = useCallback(async () => {
@@ -1160,6 +1211,52 @@ export default function ConversationScreen({
           )}
         </div>
       )}
+
+      {/* Issue #234: 詰まったときの逃げ道。出しっぱなしにすると答えを見て
+          しまうので、💡 を押したときだけ候補を出す。押すと入力欄に入るだけ。 */}
+      <div className={styles.hintBar}>
+        <button
+          type="button"
+          className={`ghost ${styles.hintButton}`}
+          data-testid="conversation-hint"
+          onClick={handleHint}
+          disabled={hintsLoading || providers.length === 0 || needsConfig}
+          title={
+            needsConfig
+              ? "設定画面でAPIエンドポイントを指定してください"
+              : "直近の相手の発言への返し方を3つ提案します"
+          }
+        >
+          {hintsLoading ? "考え中..." : "💡 ヒント"}
+        </button>
+        {hintError && (
+          <span className={styles.hintError} role="status">
+            {hintError}
+          </span>
+        )}
+        {hints.length > 0 && (
+          <div className={styles.hintChips}>
+            {hints.map((h, i) => (
+              <button
+                key={`${i}-${h}`}
+                type="button"
+                className={`ghost ${styles.hintChip}`}
+                onClick={() => useHint(h)}
+              >
+                {h}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`ghost ${styles.hintClose}`}
+              aria-label="ヒントを閉じる"
+              onClick={() => setHints([])}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Input */}
       <div className={styles.inputBar}>
