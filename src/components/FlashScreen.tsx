@@ -68,12 +68,27 @@ export default function FlashScreen({
   // in THIS session, with the global record reachable explicitly.
   const [showSessionInfo, setShowSessionInfo] = useState(false);
   const [pendingProgressNav, setPendingProgressNav] = useState(false);
+  // Pending timers are tracked so unmounting the screen mid-animation can't
+  // fire setState on a dead component (leaked timeouts surfaced as a
+  // post-teardown error in the test suite).
+  const flipTimerRef = useRef<number | null>(null);
+  const ttsTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (flipTimerRef.current !== null)
+        window.clearTimeout(flipTimerRef.current);
+      if (ttsTimerRef.current !== null) window.clearTimeout(ttsTimerRef.current);
+    },
+    [],
+  );
 
   const handleSpeak = (text: string) => {
     const played = speak(text);
     if (!played) {
       setTtsNotice(true);
-      window.setTimeout(() => setTtsNotice(false), 2500);
+      if (ttsTimerRef.current !== null) window.clearTimeout(ttsTimerRef.current);
+      ttsTimerRef.current = window.setTimeout(() => setTtsNotice(false), 2500);
     }
   };
 
@@ -88,7 +103,8 @@ export default function FlashScreen({
     setFlipping(true);
     // Issue #94: matches the paperFlip animation (320ms) so the rim glow
     // persists for the full sweep.
-    window.setTimeout(() => setFlipping(false), 320);
+    if (flipTimerRef.current !== null) window.clearTimeout(flipTimerRef.current);
+    flipTimerRef.current = window.setTimeout(() => setFlipping(false), 320);
   };
 
   useEffect(() => {
