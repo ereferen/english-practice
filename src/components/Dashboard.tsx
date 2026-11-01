@@ -8,7 +8,11 @@ import type {
 } from "../storage/types";
 import { allWords } from "../content/loader";
 import { isAbortedSession } from "../domain/session";
-import { LLM_REQUIRED_TOOLTIP, llmReadiness, providersFromSettings } from "../domain/llm";
+import {
+  LLM_REQUIRED_TOOLTIP,
+  llmReadiness,
+  providersFromSettings,
+} from "../domain/llm";
 import {
   countStudyDays,
   isLowSample,
@@ -168,6 +172,13 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   // Issue #219: 30日を等間隔に並べるだけだと週の塊が見えないので、月曜始まりの
   // 7列に折り返す（先頭は曜日ぶん空ける）。行＝週で「今週はこの行」と読める。
   const calendarPad = mondayWeekdayIndex(calendarDays[0]);
+  // Issue #239: マスに日付が無いと塗りの位置から日付を推測するしかない。
+  // 日の数字を出し、今日だけ枠で示し、今週の起点も文字で言う。
+  const dayOfMonth = (date: string) => Number(date.slice(8, 10));
+  const shortDate = (date: string) =>
+    `${Number(date.slice(5, 7))}/${dayOfMonth(date)}`;
+  const weekStart =
+    calendarDays[calendarDays.length - 1 - mondayWeekdayIndex(todayStr)];
   const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
   const streak = streakDays(studyDates, todayStr);
   const handleAnalyze = async () => {
@@ -372,18 +383,27 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           {calendarDays.map((date) => (
             <span
               key={date}
-              className={
-                studiedSet.has(date)
-                  ? `${styles.calDay} ${styles.calDayOn}`
-                  : styles.calDay
-              }
+              className={[
+                styles.calDay,
+                studiedSet.has(date) ? styles.calDayOn : "",
+                date === todayStr ? styles.calDayToday : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               title={date}
-              aria-label={`${date}${studiedSet.has(date) ? " 学習あり" : ""}`}
-            />
+              aria-label={`${date}${studiedSet.has(date) ? " 学習あり" : ""}${
+                date === todayStr ? " 今日" : ""
+              }`}
+            >
+              <span className={styles.calDayNum}>{dayOfMonth(date)}</span>
+            </span>
           ))}
         </div>
         <div className={styles.statNote}>
-          塗りつぶし＝学習した日 ・ 行＝週（月〜日、右端が今日）
+          数字＝日 ・ 塗りつぶし＝学習した日 ・ 枠＝今日 ・ 行＝週（月〜日）
+          {weekStart
+            ? `、今週は ${shortDate(weekStart)}〜${shortDate(todayStr)}`
+            : ""}
         </div>
       </div>
 

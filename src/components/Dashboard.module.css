@@ -20,7 +20,7 @@
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
   margin: 10px 0 8px;
-  max-width: 224px;
+  max-width: 260px;
 }
 
 /* Issue #219: 月〜日の見出しと、月初までの詰め物（週の塊を見せる） */
@@ -38,14 +38,45 @@
 
 .calDay {
   aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 3px;
   background: rgba(127, 127, 127, 0.18);
   border: 1px solid transparent;
+  /* Issue #239: マスの中に日を読める大きさで出す */
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Issue #239: 学習の有無とは別の軸で「今日」を示す（学習済みでも枠は残す） */
+.calDayToday {
+  border-color: var(--color-accent-gold, #e8c56b);
+  box-shadow: 0 0 0 1px var(--color-accent-gold, #e8c56b);
+  color: var(--color-accent-gold, #e8c56b);
+  font-weight: 700;
+}
+
+.calDayNum {
+  opacity: 0.85;
 }
 
 .calDayOn {
   background: var(--color-accent, #7ac786);
   border-color: var(--color-accent, #7ac786);
+}
+
+/* 学習済みのマスは塗りが濃いので、数字は暗い色で読ませる */
+.calDayOn .calDayNum {
+  color: #14202f;
+  opacity: 0.9;
+}
+
+.calDayOn.calDayToday {
+  border-color: var(--color-accent-gold, #e8c56b);
+  box-shadow: 0 0 0 1px var(--color-accent-gold, #e8c56b);
 }
 
 .sessionRow {

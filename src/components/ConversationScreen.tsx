@@ -100,6 +100,19 @@ function restoreNoticeText(topic: ConversationTopic | null): string {
     : `💾 前回の会話を復元しました（${tail}）`;
 }
 
+/**
+ * Issue #238: LLM が返した「文法訂正」の元の発言に、直そうとしている語が
+ * 実際に含まれていない＝会話に無い文を作った可能性が高い項目。
+ * 警告を出すだけでなく、既定のチェックを外す判断にも使う。
+ */
+function needsSourceWarning(item: ExtractedContent): boolean {
+  return (
+    item.type === "grammar-correction" &&
+    Boolean(item.sourceText) &&
+    !containsPhrase(item.sourceText as string, item.term)
+  );
+}
+
 export default function ConversationScreen({
   state,
   dispatch,
@@ -367,7 +380,10 @@ export default function ConversationScreen({
         setFailedSendText(text);
         // Issue #111: kind="error" renders the card without read-aloud.
         // Issue #122: details go on the message for the 詳しく disclosure.
-        const errorMsg = { ...createAssistantMessage(summary, "error"), details };
+        const errorMsg = {
+          ...createAssistantMessage(summary, "error"),
+          details,
+        };
         // Issue #166: 再送で置き換える対象（自分の発言 + エラーカード）を覚える。
         setFailedSendIds(note ? [errorMsg.id] : [nextMsg.id, errorMsg.id]);
         setMessages((prev) => [...prev, errorMsg]);
@@ -529,7 +545,15 @@ export default function ConversationScreen({
         );
       } else {
         setExtracted(fresh);
-        setChecked(new Set(fresh.map((_, i) => i)));
+        // Issue #238: 元の発言に根拠が見つからない項目（幻覚の疑い）は
+        // 既定でチェックOFF。押せば入れられるが、既定は追加しない側に倒す。
+        setChecked(
+          new Set(
+            fresh
+              .map((item, i) => (needsSourceWarning(item) ? -1 : i))
+              .filter((i) => i >= 0),
+          ),
+        );
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
@@ -587,7 +611,9 @@ export default function ConversationScreen({
       setHints(next);
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
-      setHintError(friendlyLlmError(e instanceof Error ? e.message : String(e)));
+      setHintError(
+        friendlyLlmError(e instanceof Error ? e.message : String(e)),
+      );
     } finally {
       setHintsLoading(false);
       hintControllerRef.current = null;
@@ -645,8 +671,16 @@ export default function ConversationScreen({
         updatedAt: now,
       });
       dispatch({ type: "setDecks", decks: updatedDecks });
+      // Issue #238: 根拠が見つからず除外した件数を結果に出す
+      const unverifiedSkipped = extracted.filter(
+        (item, i) => needsSourceWarning(item) && !checked.has(i),
+      ).length;
       setSavedMessage(
-        `✓ ${approved.length} 件を「${parsed.data.title}」に追加しました。`,
+        `✓ ${approved.length} 件を「${parsed.data.title}」に追加しました。${
+          unverifiedSkipped > 0
+            ? `（根拠が見つからない ${unverifiedSkipped} 件は除外しました）`
+            : ""
+        }`,
       );
       // Issue #141: 追加した語にその場で入れるよう、遷移先（デッキ/レッスン）を覚えておく
       const firstLesson = parsed.data.lessons[0];
@@ -754,7 +788,10 @@ export default function ConversationScreen({
 
       {/* Issue #148: 過去のセッション（日付つきで選ぶと読み込む） */}
       {sessionPickerOpen && (
-        <div className={`card ${styles.sessionPicker}`} data-testid="session-picker">
+        <div
+          className={`card ${styles.sessionPicker}`}
+          data-testid="session-picker"
+        >
           <div className={styles.sessionPickerHeader}>
             <strong>過去のセッション</strong>
             <button
@@ -779,7 +816,9 @@ export default function ConversationScreen({
                   <button
                     type="button"
                     className={`ghost ${styles.sessionItem} ${
-                      s.id === sessionIdRef.current ? styles.sessionItemCurrent : ""
+                      s.id === sessionIdRef.current
+                        ? styles.sessionItemCurrent
+                        : ""
                     }`}
                     data-testid={`session-item-${s.id}`}
                     aria-current={s.id === sessionIdRef.current}
@@ -827,7 +866,9 @@ export default function ConversationScreen({
             <div className={styles.topicPicker}>
               {/* Issue #175: 未設定ではチップが disabled で使えないので、話題の
                   問いかけは出さない（警告の重複を避ける）。設定後は従来どおり。 */}
-              {!needsConfig && <p className={styles.topicIntro}>今日は何を話す？</p>}
+              {!needsConfig && (
+                <p className={styles.topicIntro}>今日は何を話す？</p>
+              )}
               <div className={styles.topicButtons}>
                 {CONVERSATION_TOPICS.map((t) => (
                   <button
@@ -950,7 +991,9 @@ export default function ConversationScreen({
           <div className={styles.retryBar}>
             <button
               className={`primary ${styles.retryButton}`}
-              onClick={() => sendMessage(failedSendText, undefined, undefined, failedSendIds)}
+              onClick={() =>
+                sendMessage(failedSendText, undefined, undefined, failedSendIds)
+              }
             >
               再送
             </button>
@@ -1109,15 +1152,15 @@ export default function ConversationScreen({
                         元の発言
                       </span>
                       「{item.sourceText}」
-                      {item.type === "grammar-correction" &&
-                        !containsPhrase(item.sourceText, item.term) && (
-                          <span
-                            className={styles.extractSourceWarn}
-                            role="status"
-                          >
-                            ⚠ この文には「{item.term}」が含まれていません
-                          </span>
-                        )}
+                      {needsSourceWarning(item) && (
+                        <span
+                          className={styles.extractSourceWarn}
+                          role="status"
+                        >
+                          ⚠ この文には「{item.term}」が含まれていません
+                          （既定では追加しません）
+                        </span>
+                      )}
                     </p>
                   )}
                   {item.example && (
@@ -1206,7 +1249,8 @@ export default function ConversationScreen({
           </div>
           {topicsDisabled && (
             <span className={styles.topicDisabledHint} role="status">
-              ⚠ 先に設定（APIエンドポイント）が必要です。選んだ話題は設定後から使えます。
+              ⚠
+              先に設定（APIエンドポイント）が必要です。選んだ話題は設定後から使えます。
             </span>
           )}
         </div>
