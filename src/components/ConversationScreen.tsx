@@ -35,7 +35,11 @@ import {
   mergeIntoConversationDeck,
 } from "../domain/conversationExtract";
 import { MIN_QUIZ_WORDS } from "../content/loader";
-import { applyHint, requestReplyHints } from "../domain/conversationHints";
+import {
+  HintFormatError,
+  applyHint,
+  requestReplyHints,
+} from "../domain/conversationHints";
 import { partOfSpeechLabel } from "../domain/partOfSpeech";
 import { deckSchema } from "../content/schema";
 import type { Deck } from "../content/schema";
@@ -162,6 +166,8 @@ export default function ConversationScreen({
   const [hints, setHints] = useState<string[]>([]);
   const [hintsLoading, setHintsLoading] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
+  // Issue #240: 失敗理由だけでなく、LLM の生の返答も「詳しく」に残す
+  const [hintErrorDetails, setHintErrorDetails] = useState<string | null>(null);
   const hintControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -586,6 +592,7 @@ export default function ConversationScreen({
   useEffect(() => {
     setHints([]);
     setHintError(null);
+    setHintErrorDetails(null);
   }, [messages.length]);
 
   const handleHint = useCallback(async () => {
@@ -596,6 +603,7 @@ export default function ConversationScreen({
     }
     setHintsLoading(true);
     setHintError(null);
+    setHintErrorDetails(null);
     const controller = new AbortController();
     hintControllerRef.current = controller;
     try {
@@ -606,14 +614,23 @@ export default function ConversationScreen({
         signal: controller.signal,
       });
       if (next.length === 0) {
-        setHintError("ヒントを作れませんでした。もう一度お試しください。");
+        setHintError(
+          "ヒントを作れませんでした。LLMの返答が空でした。もう一度押すか、話題を変えてみてください。",
+        );
       }
       setHints(next);
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return;
-      setHintError(
-        friendlyLlmError(e instanceof Error ? e.message : String(e)),
-      );
+      // Issue #240: 「形式が違う」失敗は理由を言い、生の返答を折りたたみに残す
+      if (e instanceof HintFormatError) {
+        setHintError(`${e.message} もう一度押すか、話題を変えてみてください。`);
+        setHintErrorDetails(e.raw.slice(0, 400));
+      } else {
+        setHintError(
+          friendlyLlmError(e instanceof Error ? e.message : String(e)),
+        );
+        setHintErrorDetails(null);
+      }
     } finally {
       setHintsLoading(false);
       hintControllerRef.current = null;
@@ -1276,6 +1293,13 @@ export default function ConversationScreen({
         {hintError && (
           <span className={styles.hintError} role="status">
             {hintError}
+            {/* Issue #240: 原因を隠さない。生の返答は技術情報として折りたたむ */}
+            {hintErrorDetails && (
+              <details className={styles.hintErrorDetails}>
+                <summary>詳しく</summary>
+                <pre className={styles.hintErrorRaw}>{hintErrorDetails}</pre>
+              </details>
+            )}
           </span>
         )}
         {hints.length > 0 && (

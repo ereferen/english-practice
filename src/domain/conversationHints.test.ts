@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatMessage, ConversationTopic } from "./conversation";
 import {
   MAX_HINTS,
+  HintFormatError,
   applyHint,
   buildHintPrompt,
   parseHintResult,
@@ -80,5 +81,15 @@ describe("applyHint (#234)", () => {
 
   it("書きかけの文は消さず後ろに足す", () => {
     expect(applyHint("I think", "it is fun.")).toBe("I think it is fun.");
+  });
+});
+
+describe("HintFormatError (#240)", () => {
+  it("失敗理由を文言に持ち、生の返答を保持する", () => {
+    const err = new HintFormatError("I very like this game.");
+    expect(err.name).toBe("HintFormatError");
+    expect(err.message).toContain("ヒントを作れませんでした");
+    expect(err.message).toContain("形式");
+    expect(err.raw).toBe("I very like this game.");
   });
 });
