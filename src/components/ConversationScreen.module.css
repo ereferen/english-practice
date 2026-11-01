@@ -628,6 +628,27 @@
   color: var(--color-muted);
 }
 
+/* Issue #240: 失敗の生データは普段は畳んでおく */
+.hintErrorDetails {
+  margin-top: 4px;
+}
+
+.hintErrorDetails summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--color-accent-gold, #e8c56b);
+}
+
+.hintErrorRaw {
+  margin: 4px 0 0;
+  max-height: 8rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+}
+
 .hintChips {
   display: flex;
   flex-wrap: wrap;

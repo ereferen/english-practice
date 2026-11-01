@@ -12,7 +12,26 @@ import { requestLlmChat } from "./llm";
 export const MAX_HINTS = 3;
 export const MAX_HINT_LEN = 140;
 
-export function buildHintPrompt(messages: ChatMessage[], topic?: ConversationTopic): string {
+/**
+ * Issue #240: LLM が応答を返したのにヒント形式（JSON 配列の英文）に
+ * ならなかったときのエラー。生の応答を持って回ることで、画面が
+ * 「なぜ失敗したか」を1行で言える。
+ */
+export class HintFormatError extends Error {
+  readonly raw: string;
+  constructor(raw: string) {
+    super(
+      "ヒントを作れませんでした。LLMの返答がヒントの形式（短い英文3つの配列）になっていませんでした。",
+    );
+    this.name = "HintFormatError";
+    this.raw = raw;
+  }
+}
+
+export function buildHintPrompt(
+  messages: ChatMessage[],
+  topic?: ConversationTopic,
+): string {
   // 直近 6 往復だけ渡す（長い会話でもトークンを食わない・文脈は十分）
   const recent = messages
     .filter((m) => m.kind !== "note" && m.content.trim())
@@ -67,13 +86,22 @@ export async function requestReplyHints(opts: {
   if (!lastPartner) return [];
   const result = await requestLlmChat({
     providers: opts.providers,
-    messages: [{ role: "user", content: buildHintPrompt(opts.messages, opts.topic) }],
+    messages: [
+      { role: "user", content: buildHintPrompt(opts.messages, opts.topic) },
+    ],
     maxTokens: 300,
     temperature: 0.8,
     timeoutMs: opts.timeoutMs ?? 20_000,
     signal: opts.signal,
   });
-  return parseHintResult(result.content);
+  const hints = parseHintResult(result.content);
+  // Issue #240: 何か返ってきたのに形式が違う＝原因が分かる失敗。
+  // 空配列で返すと画面が「もう一度お試しください」しか言えなくなる。
+  if (hints.length === 0) {
+    const raw = result.content.trim();
+    if (raw) throw new HintFormatError(raw);
+  }
+  return hints;
 }
 
 /**
