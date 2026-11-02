@@ -1,6 +1,7 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { reducer, initialState } from "./app/types";
-import type { Action, Screen } from "./app/types";
+import type { Action, AppState, Screen } from "./app/types";
+import { hashToScreen, screenDeckId, screenToHash } from "./app/route";
 import { loadBundledDecks } from "./content/loader";
 import { storage } from "./storage/dexieProvider";
 import { localProgress } from "./storage/localProgress";
@@ -29,7 +30,11 @@ import { createSkyTintController } from "./app/skyTint";
 import styles from "./App.module.css";
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined, (): AppState => {
+    // Issue #241: 起動時はハッシュから初期画面を決める（リロードで同じ画面に戻る）。
+    const hash = typeof window === "undefined" ? "" : window.location.hash;
+    return { ...initialState, screen: hashToScreen(hash) };
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -58,6 +63,56 @@ export default function App() {
       directionFor(state.screen.name, to),
     );
   };
+
+  // Issue #241: screen → URL ハッシュの同期。pushState で履歴を積むので、
+  // ブラウザの戻る／戻るジェスチャーが「1つ前の画面」になる。
+  // popstate 経由の変更では location.hash が既に一致しているため、二重 push は
+  // 起きない（一致したら何もしない）。
+  const hashReady = useRef(false);
+  useEffect(() => {
+    const hash = screenToHash(state.screen);
+    // result など URL に載せない画面は、直前のハッシュを保持する
+    if (!hash || typeof window === "undefined") return;
+    if (window.location.hash === hash) {
+      hashReady.current = true;
+      return;
+    }
+    // 初回だけは履歴を増やさない（戻るで空ページに飛ばないように）
+    if (hashReady.current) {
+      window.history.pushState(null, "", hash);
+    } else {
+      window.history.replaceState(null, "", hash);
+    }
+    hashReady.current = true;
+  }, [state.screen]);
+
+  // Issue #241: ブラウザの戻る／進む／URL 直編集に追随する。
+  const popHandler = useRef<() => void>(() => {});
+  popHandler.current = () => {
+    if (typeof window === "undefined") return;
+    dispatchTransitioned({ type: "go", screen: hashToScreen(window.location.hash) });
+  };
+  useEffect(() => {
+    const onPop = () => popHandler.current();
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("hashchange", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("hashchange", onPop);
+    };
+  }, []);
+
+  // Issue #241: 共有 URL のデッキが消えている／間違っている場合は一覧へ落とす
+  // （存在しない deckId でデッキ画面を開くと空の画面になってしまう）。
+  useEffect(() => {
+    if (state.decks.length === 0) return;
+    const deckId = screenDeckId(state.screen);
+    if (!deckId) return;
+    if (state.decks.some((d) => d.deckId === deckId)) return;
+    dispatchTransitioned({ type: "go", screen: { name: "deckList" } });
+    // dispatchTransitioned は毎レンダー作り直されるため、依存は
+    // 画面とデッキ一覧の変化だけに絞る（無限ループ防止）。
+  }, [state.decks, state.screen]);
 
   // Global shortcuts (issue #9): h = home, ? = shortcut help.
   useKeyboardShortcuts({
