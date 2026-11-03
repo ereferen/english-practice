@@ -118,6 +118,32 @@ describe("QuizScreen", () => {
     expect(shownExample).toBe(true);
   });
 
+  // Issue #246: 答え合わせでも発音を鳴らせる（jsdom は音声非対応なので 🔇 + 案内）。
+  it("offers a speak button on the answer detail (#246)", async () => {
+    const deck = makeTestDeck();
+    render(
+      <QuizScreen
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+      />,
+    );
+    const buttons = screen.getAllByRole("button", { name: /選択肢/ });
+    await userEvent.click(buttons[0]);
+    await screen.findByText(/[○×] (正解|不正解)/);
+
+    const speak = screen.getByTestId("answer-speak");
+    expect(speak.textContent).toContain("🔇");
+    expect(speak.getAttribute("aria-label")).toMatch(/の発音を再生$/);
+
+    await userEvent.click(speak);
+    expect(
+      screen.getByText("このブラウザは音声未対応です（TTSボイスがありません）"),
+    ).toBeTruthy();
+  });
+
   // Issue #142: 1-4 キーで選べることは画面のどこにも書かれておらず、
   // 知らないと存在しないのと同じだった。
   it("shows the 1-4 key hint next to the choices (#142)", async () => {

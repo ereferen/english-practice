@@ -209,7 +209,9 @@ describe("ResultScreen (#235 wrong-word detail)", () => {
       expect(notice).toHaveLength(1);
       await userEvent.click(screen.getByLabelText("apple の発音を再生"));
       expect(
-        screen.getAllByText("このブラウザは音声未対応です（TTSボイスがありません）"),
+        screen.getAllByText(
+          "このブラウザは音声未対応です（TTSボイスがありません）",
+        ),
       ).toHaveLength(1);
     } finally {
       cleanup();
@@ -341,7 +343,13 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
   it("offers a retry button that starts a quiz scoped to the wrong words (#194)", async () => {
     const dispatch = vi.fn();
     const quizAnswers: AnswerRecord[] = [
-      { quizId: "q0", wordId: "w0", choiceId: "c1", correct: false, latencyMs: 900 },
+      {
+        quizId: "q0",
+        wordId: "w0",
+        choiceId: "c1",
+        correct: false,
+        latencyMs: 900,
+      },
     ];
     render(
       <ResultScreen
@@ -370,15 +378,19 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
 
   it("hides the retry button when every answer was correct (#194)", async () => {
     renderResult(answers([true, true]), []);
-    expect(
-      screen.queryByRole("button", { name: /もう一度/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /もう一度/ })).toBeNull();
   });
 
   it("offers a card retry that opens flash cards for the wrong words (#194)", async () => {
     const dispatch = vi.fn();
     const quizAnswers: AnswerRecord[] = [
-      { quizId: "q0", wordId: "w0", choiceId: "c1", correct: false, latencyMs: 900 },
+      {
+        quizId: "q0",
+        wordId: "w0",
+        choiceId: "c1",
+        correct: false,
+        latencyMs: 900,
+      },
     ];
     render(
       <ResultScreen
@@ -391,9 +403,7 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
         progress={makeProgress([])}
       />,
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /カードで確認/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /カードで確認/ }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "go",
       screen: {
@@ -402,6 +412,28 @@ describe("ResultScreen (#131 wrong-word TTS feedback)", () => {
         lessonId: "lesson-1",
         focusWordIds: ["w0"],
       },
+    });
+  });
+
+  // Issue #247: 結果画面の「進捗を見る」だけが簡易な #/progress に飛び、
+  // ホームのダッシュボード（カレンダー・正答率）と別物になっていた。
+  it("opens the full dashboard from 進捗を見る (#247)", async () => {
+    const dispatch = vi.fn();
+    render(
+      <ResultScreen
+        state={makeState()}
+        dispatch={dispatch}
+        storage={makeStorageMock()}
+        deckId="test-deck"
+        lessonId="lesson-1"
+        answers={answers([true])}
+        progress={makeProgress([])}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("result-dashboard-button"));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "dashboard" },
     });
   });
 });

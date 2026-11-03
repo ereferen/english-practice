@@ -467,6 +467,16 @@
   color: var(--color-muted);
 }
 
+/* Issue #248: 話題ごとにセッションが分かれるので、一覧の各回に話題を添える。 */
+.sessionTopic {
+  white-space: nowrap;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  font-size: 0.75rem;
+  color: var(--color-gold, #d4a72c);
+}
+
 .sessionPreview {
   flex: 1;
   min-width: 0;

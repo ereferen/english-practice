@@ -311,11 +311,15 @@ export default function ConversationScreen({
     // Issue #159: note を渡したときは学習者の発言ではなく system の注記行を
     // 積む（話題の開始・切替）。user バブルとして積むと、打っていない英語が
     // 保存ログ・抽出・往復数に混ざる。
+    // Issue #248: resetHistory は「話題を変えて新しいセッションを始める」用。
+    // setMessages([]) した直後はこの useCallback がまだ古い messages を掴んで
+    // いるので、履歴を明示的に空にして LLM に前の話題を渡さない。
     async (
       overrideText?: string,
       topicOverride?: ConversationTopic | null,
       note?: { content: string; instruction: string },
       pruneIds?: string[],
+      resetHistory?: boolean,
     ) => {
       const text = (overrideText ?? input).trim();
       if (!note && !text) return;
@@ -328,8 +332,9 @@ export default function ConversationScreen({
         : createUserMessage(text);
       // Issue #166: 再送時は失敗した user バブルとエラーカードを履歴から除いてから
       // 積み直す。そうしないと自分の発言が二重に残り、エラーカードも居座る。
-      const base =
-        pruneIds && pruneIds.length
+      const base = resetHistory
+        ? []
+        : pruneIds && pruneIds.length
           ? messages.filter((m) => !pruneIds.includes(m.id))
           : messages;
       const updated = [...base, nextMsg];
@@ -415,12 +420,63 @@ export default function ConversationScreen({
    */
   const topicsDisabled = providers.length === 0 || needsConfig;
 
+  /**
+   * Issue #248: 話題を切り替えるときは、今の会話を「過去のセッション」として
+   * 退避してから新しいセッションを始める。以前は同じスレッドに区切り行が
+   * 1本入るだけで、LLM にも前の話題の履歴がそのまま渡り、過去のセッション
+   * 一覧でも1本にまとまっていた。
+   */
+  const archiveCurrentSession = () => {
+    const kept = messages.filter((m) => m.kind !== "error");
+    if (kept.length === 0) return;
+    void storage.saveConversationSession({
+      id: sessionIdRef.current,
+      messages: kept,
+      draft: "",
+      topicId: topic?.id ?? null,
+      createdAt: sessionCreatedAtRef.current,
+      updatedAt: new Date().toISOString(),
+    });
+    void refreshSessions();
+  };
+
   const startTopic = (t: ConversationTopic) => {
     setTopic(t);
     if (providers.length === 0 || needsConfig || loading) return;
+    // Issue #248: 会話の途中で別の話題を選んだら、新しいセッションで始める。
+    const hasConversation = messages.some((m) => m.kind !== "note");
+    const switching = hasConversation && topic?.id !== t.id;
+    if (switching) {
+      archiveCurrentSession();
+      setMessages([]);
+      setInput("");
+      setStreamingContent("");
+      setExtracted(null);
+      setExtractError(null);
+      setSavedMessage(null);
+      setSavedDeck(null);
+      setRestoreNotice(null);
+      setSessionPickerOpen(false);
+      sessionIdRef.current = newSessionId();
+      sessionCreatedAtRef.current = new Date().toISOString();
+      // Issue #159: 開始も切替も「学習者が打った発言」ではないので、user バブルでは
+      // なく system の注記行を積み、LLM には英語の指示として渡す。
+      // 新しいセッションなので履歴は空から（前の話題を引きずらない）。
+      void sendMessage(
+        undefined,
+        t,
+        {
+          content: topicNoteContent(t, true),
+          instruction: topicNoteInstruction(t, true),
+        },
+        undefined,
+        true,
+      );
+      return;
+    }
     // Issue #159: 開始も切替も「学習者が打った発言」ではないので、user バブルでは
     // なく system の注記行を積み、LLM には英語の指示として渡す。
-    const starting = !messages.some((m) => m.kind !== "note");
+    const starting = !hasConversation;
     void sendMessage(undefined, t, {
       content: topicNoteContent(t, starting),
       instruction: topicNoteInstruction(t, starting),
@@ -844,6 +900,19 @@ export default function ConversationScreen({
                     <span className={styles.sessionDate}>
                       {formatSessionDate(s.updatedAt)}
                     </span>
+                    {/* Issue #248: 話題ごとにセッションが分かれるので、一覧でも
+                        「先週の旅行の回」を選べるように話題を出す。 */}
+                    {(() => {
+                      const t = topicFromId(s.topicId);
+                      return t ? (
+                        <span
+                          className={styles.sessionTopic}
+                          data-testid={`session-topic-${s.id}`}
+                        >
+                          {t.emoji} {t.label}
+                        </span>
+                      ) : null;
+                    })()}
                     <span className={styles.sessionTurns}>{s.turns}往復</span>
                     <span className={styles.sessionPreview}>
                       {s.preview || "(無題)"}

@@ -146,6 +146,22 @@ button.choiceWrong :global(.choice-marker) {
   color: var(--color-muted);
 }
 
+/* Issue #246: 答え合わせからも発音を鳴らせるようにする。語の直後に置き、
+   フラッシュカード裏面／結果画面の同種ボタンと同じ見た目に寄せる。 */
+.answerSpeak {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+.answerTtsNotice {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
 /* Issue #220: IPA 併記（TTS が無い環境でも発音の手がかりを残す）。 */
 .answerIpa {
   margin-left: 0.4rem;

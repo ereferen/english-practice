@@ -179,4 +179,26 @@ describe("ProgressScreen", () => {
     renderProgressScreen(undefined, progress);
     expect(screen.getByText("学習済み単語数")).toBeTruthy();
   });
+
+  // Issue #247: ダッシュボードとの違い（学習ログの簡易表示）を明示し、
+  // 詳細を見たい人をダッシュボードへ送る。
+  it("labels itself as 簡易表示 and links to the dashboard (#247)", async () => {
+    const progress = makeMockProgress({
+      load: vi.fn(() => ({
+        learnedWords: [
+          { deckId: "d1", wordId: "w1", learnedAt: "2026-09-06T10:00:00Z" },
+        ],
+        sessions: [],
+        version: 1,
+      })),
+    });
+    const { dispatch } = renderProgressScreen(undefined, progress);
+    expect(screen.getByText("簡易表示")).toBeTruthy();
+
+    await userEvent.click(screen.getByTestId("progress-dashboard-button"));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "go",
+      screen: { name: "dashboard" },
+    });
+  });
 });

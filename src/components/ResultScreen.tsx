@@ -82,7 +82,10 @@ export default function ResultScreen({
       startedAt ??
       new Date(
         Date.parse(endedAt) -
-          Math.max(1000, answers.reduce((sum, a) => sum + a.latencyMs, 0)),
+          Math.max(
+            1000,
+            answers.reduce((sum, a) => sum + a.latencyMs, 0),
+          ),
       ).toISOString();
     try {
       const prev = progress.load();
@@ -306,7 +309,10 @@ export default function ResultScreen({
         </button>
         <button
           className={`primary ${styles.actionButton}`}
-          onClick={() => dispatch({ type: "go", screen: { name: "progress" } })}
+          data-testid="result-dashboard-button"
+          onClick={() =>
+            dispatch({ type: "go", screen: { name: "dashboard" } })
+          }
         >
           進捗を見る
         </button>

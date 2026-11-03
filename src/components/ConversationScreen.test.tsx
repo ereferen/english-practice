@@ -69,6 +69,8 @@ function makeStorage(
           updatedAt: r.updatedAt,
           turns: r.messages.filter((m) => m.role === "user").length,
           preview: r.messages.find((m) => m.role === "user")?.content ?? "",
+          // Issue #248: 一覧に話題を出すため、本実装と同じく topicId を返す
+          topicId: r.topicId ?? null,
         })),
     ),
     loadConversationSession: vi.fn(async (id: string) =>
@@ -327,13 +329,15 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     ).toBe(true);
   });
 
-  it("会話中でも話題を切り替えられる（切替はシステム行・発言にはしない）", async () => {
+  // Issue #248: 話題を切り替えたら、前の話題の履歴を積み上げずに新しい
+  // セッションを始める（今の会話は「過去のセッション」に残す）。
+  it("会話中に話題を切り替えると新しいセッションになる（#248）", async () => {
     requestLlmChatMock.mockResolvedValue({
       content: "Sure, how's your week going?",
       providerId: "primary",
       providerLabel: "プライマリ",
     });
-    const { storage } = makeStorage(savedLog, true);
+    const { storage, sessionStore } = makeStorage(savedLog, true);
     const user = userEvent.setup();
 
     render(
@@ -353,15 +357,17 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     await waitFor(() =>
       expect(workChip.getAttribute("aria-pressed")).toBe("true"),
     );
-    // Issue #159: 切替の一言は「自分の発言」ではなく中央の注記行
+    // 新しいセッションの開始なので「切り替え」ではなく「開始」の注記になる
     expect(
-      await screen.findByText("— 話題を「💼 仕事の雑談」に切り替え —"),
+      await screen.findByText("— 話題「💼 仕事の雑談」で会話を開始 —"),
     ).toBeTruthy();
-    expect(screen.queryByText(/switch to work small talk/)).toBeNull();
-    expect(screen.queryByText(/Can we switch to work small talk/)).toBeNull();
     expect(
-      screen.getByText(/話題: 💼 仕事の雑談/),
-    ).toBeTruthy();
+      screen.queryByText("— 話題を「💼 仕事の雑談」に切り替え —"),
+    ).toBeNull();
+    // 前の話題の往復はこのスレッドから消える（過去のセッション側に残る）
+    expect(screen.queryByText("Hi!")).toBeNull();
+    expect(screen.getByText(/話題: 💼 仕事の雑談/)).toBeTruthy();
+
     const call = requestLlmChatMock.mock.calls[0][0];
     const system = call.messages.find(
       (m: { role: string }) => m.role === "system",
@@ -371,15 +377,33 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     expect(
       call.messages.some(
         (m: { role: string; content: string }) =>
-          m.role === "system" && m.content.includes("[Topic switch]"),
+          m.role === "system" && m.content.includes("[Topic start]"),
       ),
     ).toBe(true);
+    // 前の話題の履歴は LLM に渡さない
     expect(
-      call.messages.every(
-        (m: { content: string }) =>
-          !m.content.includes("Can we switch to work small talk"),
+      call.messages.some(
+        (m: { role: string; content: string }) => m.content === "Hi!",
       ),
-    ).toBe(true);
+    ).toBe(false);
+
+    // 今の会話は前の話題のまま退避され、新セッションが別 ID で始まる
+    const archived = sessionStore.find((r) =>
+      r.messages.some((m) => m.content === "Hi!"),
+    );
+    expect(archived).toBeTruthy();
+    expect(
+      archived?.messages.some((m) => m.content.includes("で会話を開始")),
+    ).toBe(false);
+    await waitFor(() =>
+      expect(
+        sessionStore.some(
+          (r) =>
+            r.id !== archived?.id &&
+            r.messages.some((m) => m.content.includes("で会話を開始")),
+        ),
+      ).toBe(true),
+    );
   });
 
   // Issue #173: #167 では「理由を出す」だけだったが、チップは有効に見えたまま
@@ -444,9 +468,7 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     const preset = await screen.findByTestId("topic-preset-travel");
     expect((preset as HTMLButtonElement).disabled).toBe(true);
     // Issue #175: チップ下の重複警告をやめ、「まず設定」の案内に一本化
-    expect(
-      screen.getByText(/会話を始めるには、まず上の警告/),
-    ).toBeTruthy();
+    expect(screen.getByText(/会話を始めるには、まず上の警告/)).toBeTruthy();
   });
 });
 
@@ -821,6 +843,32 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
     expect(screen.queryByTestId("session-picker")).toBeNull();
   });
 
+  // Issue #248: 話題ごとにセッションが分かれるので、一覧でも「先週の旅行の回」
+  // を選べるよう、各回に話題を出す。
+  it("セッション一覧に話題を出す（#248）", async () => {
+    const { storage } = makeStorage(undefined, false, [
+      { ...olderSession, topicId: "gaming" },
+      { ...latestSession, topicId: "travel" },
+    ]);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    await user.click(screen.getByTestId("open-session-picker"));
+
+    const oldTopic = screen.getByTestId("session-topic-sess-old");
+    expect(oldTopic.textContent).toContain("ゲーム");
+    const newTopic = screen.getByTestId("session-topic-sess-new");
+    expect(newTopic.textContent).toContain("旅行");
+  });
+
   it("旧テーブル（固定キー latest）のログをセッションとして引き継ぐ", async () => {
     // sessions は空、旧テーブルだけにログがある状態（#156 の保存層だけ入った状態）
     const { storage, saveConversationSession } = makeStorage(
@@ -1049,8 +1097,6 @@ describe("ConversationScreen (issue #234 ヒント)", () => {
     await waitFor(() => expect(hintButton).not.toBeDisabled());
     await user.click(hintButton);
 
-    expect(
-      await screen.findByText(/ヒントを作れませんでした/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/ヒントを作れませんでした/)).toBeTruthy();
   });
 });
