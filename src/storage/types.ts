@@ -141,7 +141,9 @@ export interface StorageProvider {
   // 会話セッションの複数保持（issue #148: 直近1セッションしか残らず昨日の続きができない）
   saveConversationSession(record: ConversationSessionRecord): Promise<void>;
   listConversationSessions(): Promise<ConversationSessionMeta[]>;
-  loadConversationSession(id: string): Promise<ConversationSessionRecord | undefined>;
+  loadConversationSession(
+    id: string,
+  ): Promise<ConversationSessionRecord | undefined>;
   deleteConversationSession(id: string): Promise<void>;
 
   exportAll(): Promise<unknown>;
@@ -206,6 +208,8 @@ export interface ConversationSessionMeta {
   turns: number;
   /** 一覧に出す冒頭のユーザー発話（無ければ空文字） */
   preview: string;
+  /** Issue #248: 一覧で「先週の旅行の回」を選べるように話題も返す。 */
+  topicId?: string | null;
 }
 
 /** issue #148: 保持する会話セッションの上限（これを超えたら古い順に削除） */

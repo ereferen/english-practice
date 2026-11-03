@@ -19,7 +19,12 @@ export default function ProgressScreen({ dispatch, localProgress }: Props) {
   return (
     <div className="container">
       <div className="nav-header">
-        <h2>進捗確認</h2>
+        <h2>
+          進捗確認
+          {/* Issue #247: ダッシュボードと内容が食い違って見えた（5語 vs 35語）。
+              こちらは学習ログの簡易表示だと分かるようにする。 */}
+          <span className={styles.simpleBadge}>簡易表示</span>
+        </h2>
         <button
           className="ghost"
           onClick={() => dispatch({ type: "go", screen: { name: "home" } })}
@@ -66,6 +71,15 @@ export default function ProgressScreen({ dispatch, localProgress }: Props) {
 
       {!isEmpty && (
         <div className={styles.actions}>
+          <button
+            className="primary"
+            data-testid="progress-dashboard-button"
+            onClick={() =>
+              dispatch({ type: "go", screen: { name: "dashboard" } })
+            }
+          >
+            詳しいダッシュボードへ
+          </button>
           <button
             className={styles.actionButton}
             onClick={() => dispatch({ type: "go", screen: { name: "home" } })}

@@ -18,6 +18,19 @@
   margin-top: 0.75rem;
 }
 
+/* Issue #247: 「簡易表示」だと一目で分かるようにする（h2 の隣）。 */
+.simpleBadge {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 400;
+  vertical-align: middle;
+  color: var(--color-muted);
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
 .actionButton {
   flex: 1;
 }
