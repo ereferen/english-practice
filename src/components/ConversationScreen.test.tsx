@@ -11,6 +11,25 @@ import {
   type StorageProvider,
 } from "../storage/types";
 
+/**
+ * Issue #245: 相手メッセージは語ごとにボタン分割されるため、本文全体は
+ * 単一のテキストノードでなくなる。本文の一致はバブル要素の textContent で見る。
+ */
+function bubbleByText(text: string): HTMLElement {
+  const bubbles = Array.from(
+    document.querySelectorAll<HTMLElement>(".chat-bubble-wrap .card"),
+  );
+  const hit = bubbles.find((b) => (b.textContent ?? "").trim() === text);
+  if (!hit) {
+    throw new Error(
+      `メッセージ本文が見つかりません: ${text}\n候補: ${JSON.stringify(
+        bubbles.map((b) => (b.textContent ?? "").trim()),
+      )}`,
+    );
+  }
+  return hit;
+}
+
 // Issue #147: 話題プリセットを押したときに「LLM へ何を送ったか」を検証したいので
 // requestLlmChat だけ差し替える（providersFromSettings 等は本物を使う）。
 const { requestLlmChatMock } = vi.hoisted(() => ({
@@ -131,7 +150,7 @@ describe("ConversationScreen (issue #138)", () => {
     );
 
     expect(await screen.findByText("Hi! How are you?")).toBeTruthy();
-    expect(screen.getByText("I'm good, thanks!")).toBeTruthy();
+    expect(bubbleByText("I'm good, thanks!")).toBeTruthy();
     // 空状態の案内は出ない（復元できているので）
     expect(
       screen.queryByText("英語でメッセージを送って会話を始めましょう！"),
@@ -247,7 +266,7 @@ describe("ConversationScreen (issue #138)", () => {
     await user.click(screen.getByRole("button", { name: "キャンセル" }));
 
     expect(deleteConversation).not.toHaveBeenCalled();
-    expect(screen.getByText("Hi!")).toBeTruthy();
+    expect(bubbleByText("Hi!")).toBeTruthy();
   });
 });
 
@@ -308,10 +327,10 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
       await screen.findByText("— 話題「✈️ 旅行」で会話を開始 —"),
     ).toBeTruthy();
     expect(screen.queryByText(/I'm thinking about my next trip/)).toBeNull();
-    // 相手の返事は来る
-    expect(
-      await screen.findByText("Nice! What places have you been to?"),
-    ).toBeTruthy();
+    // 相手の返事は来る（issue #245 で本文は語単位に分割されるため textContent で見る）
+    await waitFor(() =>
+      expect(bubbleByText("Nice! What places have you been to?")).toBeTruthy(),
+    );
 
     // system プロンプトに選んだ話題（相手役・進め方）が載っている
     const call = requestLlmChatMock.mock.calls[0][0];
@@ -583,7 +602,7 @@ describe("ConversationScreen (issue #166 再送の置き換え)", () => {
     // 再送（今回は成功）
     await user.click(retry);
     await waitFor(() => expect(requestLlmChatMock).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByText("Nice!")).toBeTruthy());
+    await waitFor(() => expect(bubbleByText("Nice!")).toBeTruthy());
 
     // 自分の発言は1つだけ・エラーカードは消えている
     expect(screen.getAllByText("RETRY-REPRO-1")).toHaveLength(1);
@@ -1098,5 +1117,154 @@ describe("ConversationScreen (issue #234 ヒント)", () => {
     await user.click(hintButton);
 
     expect(await screen.findByText(/ヒントを作れませんでした/)).toBeTruthy();
+  });
+});
+
+describe("ConversationScreen (issue #245 会話中に語を引く)", () => {
+  const PARTNER_LINE =
+    "Nice! I play a lot of Apex too. What Legend do you usually pick, and what makes that playstyle fun for you?";
+
+  function renderWithPartnerLine(decks: unknown[] = []) {
+    const { storage } = makeStorage(
+      {
+        id: CONVERSATION_RECORD_ID,
+        messages: [
+          {
+            id: "m1",
+            role: "user",
+            content: "I play Apex.",
+            createdAt: "2026-11-03T12:00:00.000Z",
+          },
+          {
+            id: "m2",
+            role: "assistant",
+            content: PARTNER_LINE,
+            createdAt: "2026-11-03T12:00:01.000Z",
+          },
+        ],
+        draft: "",
+        updatedAt: "2026-11-03T12:00:02.000Z",
+      },
+      true,
+    );
+    const state = { ...makeState(), decks } as unknown as AppState;
+    render(
+      <ConversationScreen state={state} dispatch={vi.fn()} storage={storage} />,
+    );
+    return { storage };
+  }
+
+  it("相手メッセージの語がボタンになり、タップで意味を引いてデッキに追加できる", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content:
+        '{"term":"playstyle","reading":"pleɪ-staɪl","meaning":"立ち回り・プレイの型","example":"My playstyle is aggressive.","exampleJa":"私の立ち回りは攻撃的です。","partOfSpeech":"noun"}',
+    });
+    const { storage } = renderWithPartnerLine();
+    const user = userEvent.setup();
+
+    // 本文は語単位に分割されるが、連結すると元の文に戻る
+    await waitFor(() => expect(bubbleByText(PARTNER_LINE)).toBeTruthy());
+
+    await user.click(await screen.findByTestId("lookup-word-playstyle"));
+
+    // 何語を聞いたか（文脈つきで1語だけ）LLM に渡している
+    await waitFor(() => expect(requestLlmChatMock).toHaveBeenCalledTimes(1));
+    const prompt = requestLlmChatMock.mock.calls[0][0].messages[0]
+      .content as string;
+    expect(prompt).toContain("playstyle");
+    expect(prompt).toContain(PARTNER_LINE);
+
+    expect(await screen.findByText("立ち回り・プレイの型")).toBeTruthy();
+    expect(screen.getByText("/pleɪ-staɪl/")).toBeTruthy();
+    expect(screen.getByText("名詞")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "＋ デッキに追加" }));
+
+    await waitFor(() => expect(storage.saveUserDeck).toHaveBeenCalled());
+    const calls = (
+      storage.saveUserDeck as unknown as {
+        mock: { calls: unknown[][] };
+      }
+    ).mock.calls;
+    const saved = calls[0][0] as {
+      deckId: string;
+      deck: { lessons: { words: { term: string }[] }[] };
+    };
+    expect(saved.deckId).toBe("conversation-extract");
+    expect(saved.deck.lessons[0].words[0].term).toBe("playstyle");
+    expect(
+      await screen.findByRole("button", { name: "✓ デッキに追加しました" }),
+    ).toBeTruthy();
+  });
+
+  it("既存デッキにある語は LLM を呼ばずに意味を出す", async () => {
+    renderWithPartnerLine([
+      {
+        schemaVersion: "1.0",
+        deckId: "gaming-basics",
+        level: "intermediate",
+        title: "ゲーム基礎",
+        lessons: [
+          {
+            lessonId: "l1",
+            title: "基礎",
+            words: [
+              {
+                wordId: "legend-0",
+                term: "Legend",
+                reading: "ˈledʒənd",
+                meaning: "（ゲーム）操作キャラクター",
+                examples: [
+                  {
+                    en: "Which Legend do you main?",
+                    ja: "どのレジェンドを使ってる？",
+                  },
+                ],
+                partOfSpeech: "noun",
+              },
+            ],
+            quizzes: [],
+          },
+        ],
+      },
+    ]);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("lookup-word-legend"));
+
+    expect(await screen.findByText("（ゲーム）操作キャラクター")).toBeTruthy();
+    expect(screen.getByText(/既存デッキ「ゲーム基礎」にあります/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "✓ 追加済み" })).toBeDisabled();
+    expect(requestLlmChatMock).not.toHaveBeenCalled();
+  });
+
+  it("同じ語をもう一度押すと閉じる（開閉トグル）", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content:
+        '{"term":"Legend","meaning":"操作キャラ","example":"","partOfSpeech":"noun"}',
+    });
+    renderWithPartnerLine();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("lookup-word-legend"));
+    expect(await screen.findByTestId("word-popover")).toBeTruthy();
+
+    await user.click(screen.getByTestId("lookup-word-legend"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("word-popover")).toBeNull(),
+    );
+  });
+
+  it("語の意味が JSON で返らないときはエラーを出す（壊れた語義を保存しない）", async () => {
+    requestLlmChatMock.mockResolvedValue({ content: "Legend is a hero." });
+    renderWithPartnerLine();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("lookup-word-legend"));
+
+    expect(await screen.findByText(/意味を読み取れませんでした/)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "＋ デッキに追加" }),
+    ).toBeNull();
   });
 });
