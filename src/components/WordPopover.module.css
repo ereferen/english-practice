@@ -1,0 +1,148 @@
+/* Issue #245: 会話中の語をタップして意味を引くパネル */
+
+.popover {
+  margin-top: 0.4rem;
+  max-width: 34rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-gold-dim);
+  border-left: 3px solid var(--color-accent-gold);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel-glow);
+  font-family: var(--font-body);
+  text-align: left;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.term {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-accent-gold);
+  letter-spacing: 0.02em;
+}
+
+.reading {
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.pos {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--color-border-gold-dim);
+  border-radius: 999px;
+  color: var(--color-text-dim);
+}
+
+.iconButton {
+  margin-left: auto;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.closeButton {
+  margin-left: 0.25rem;
+}
+
+.source {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.loading {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.meaning {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.example {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  border-left: 2px solid var(--color-border-gold-dim);
+  padding-left: 0.55rem;
+}
+
+.exampleJa {
+  display: block;
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.hint {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
+.error {
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--color-danger);
+}
+
+.details {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
+.details pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* メッセージ本文中のタップ可能な語 */
+.wordButton {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.wordButton:hover,
+.wordButton:focus-visible {
+  background: color-mix(in srgb, var(--color-accent-gold) 22%, transparent);
+  outline: none;
+}
+
+/* 難しそうな語の控えめな下線（読み飛ばし防止） */
+.wordButton.hardWord {
+  border-bottom: 1px dotted var(--color-border-gold-dim);
+}
+
+.wordButton.hardWord:hover,
+.wordButton.hardWord:focus-visible,
+.wordButton.wordActive {
+  border-bottom-color: var(--color-accent-gold);
+  color: var(--color-accent-gold);
+}

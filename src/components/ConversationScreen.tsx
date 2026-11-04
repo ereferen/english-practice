@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Fragment, useEffect, useRef, useState, useCallback } from "react";
 import type { AppState, Action } from "../app/types";
 import {
   MAX_CONVERSATION_SESSIONS,
@@ -33,6 +33,7 @@ import {
   dedupeExtracted,
   extractContentWithLlm,
   mergeIntoConversationDeck,
+  normalizeTermKey,
 } from "../domain/conversationExtract";
 import { MIN_QUIZ_WORDS } from "../content/loader";
 import {
@@ -41,18 +42,47 @@ import {
   requestReplyHints,
 } from "../domain/conversationHints";
 import { partOfSpeechLabel } from "../domain/partOfSpeech";
+import {
+  type DeckWordHit,
+  type WordMeaning,
+  WordLookupError,
+  findDeckWord,
+  isHardWord,
+  lookupWordWithLlm,
+  tokenizeForLookup,
+} from "../domain/wordLookup";
 import { deckSchema } from "../content/schema";
 import type { Deck } from "../content/schema";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import TalkSprite from "./TalkSprite";
 import ConfirmDialog from "./ConfirmDialog";
+import WordPopover, { type WordAddState } from "./WordPopover";
 import styles from "./ConversationScreen.module.css";
+import popoverStyles from "./WordPopover.module.css";
 
 interface Props {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   storage: StorageProvider;
+}
+
+/**
+ * Issue #245: 語シークパネルの状態。msgId + word で「どの発言のどの語か」を持ち、
+ * 別の語を押したら前のパネルを置き換える。
+ */
+interface WordLookupState {
+  msgId: string;
+  word: string;
+  sentence: string;
+  status: "loading" | "ready" | "error";
+  meaning: WordMeaning | null;
+  error: string | null;
+  errorDetails: string | null;
+  /** 既存デッキで見つかった場合のデッキ名 */
+  fromDeck: string | null;
+  addState: WordAddState;
+  addError: string | null;
 }
 
 const TYPE_LABELS: Record<ExtractedContent["type"], string> = {
@@ -786,6 +816,251 @@ export default function ConversationScreen({
     dispatch,
   ]);
 
+  // --- Issue #245: 相手メッセージ中の語をタップして意味を引く ---
+
+  const [wordLookup, setWordLookup] = useState<WordLookupState | null>(null);
+  // 同じ語を何度もタップしたときに LLM を呼び直さないための控え（言葉→語義）
+  const lookupCacheRef = useRef(new Map<string, WordMeaning>());
+  const lookupControllerRef = useRef<AbortController | null>(null);
+
+  const closeWordLookup = useCallback(() => {
+    lookupControllerRef.current?.abort();
+    lookupControllerRef.current = null;
+    setWordLookup(null);
+  }, []);
+
+  /** 既存デッキの Word を、語義パネルが期待する形へ寄せる */
+  const meaningFromDeckWord = (hit: DeckWordHit): WordMeaning => {
+    const example = hit.word.examples[0];
+    return {
+      term: hit.word.term,
+      reading:
+        hit.word.reading && hit.word.reading !== "—"
+          ? hit.word.reading
+          : undefined,
+      meaning: hit.word.meaning,
+      example: example?.en ?? "",
+      exampleJa: example?.ja,
+      partOfSpeech: hit.word.partOfSpeech,
+    };
+  };
+
+  const handleLookupWord = useCallback(
+    (msg: ChatMessage, word: string) => {
+      // 同じ語をもう一度押したら閉じる（開閉トグル）
+      if (wordLookup?.msgId === msg.id && wordLookup.word === word) {
+        closeWordLookup();
+        return;
+      }
+      lookupControllerRef.current?.abort();
+      lookupControllerRef.current = null;
+
+      const base = {
+        msgId: msg.id,
+        word,
+        sentence: msg.content,
+        errorDetails: null,
+        addState: "idle" as WordAddState,
+        addError: null,
+      };
+
+      // 1) 既存デッキに同じ語があれば LLM を使わない（速い・オフラインでも動く）
+      const hit = findDeckWord(state.decks, word);
+      if (hit) {
+        setWordLookup({
+          ...base,
+          status: "ready",
+          meaning: meaningFromDeckWord(hit),
+          error: null,
+          fromDeck: hit.deckTitle,
+          addState: "exists",
+        });
+        return;
+      }
+
+      // 2) この画面で一度調べた語はキャッシュから
+      const cached = lookupCacheRef.current.get(word);
+      if (cached) {
+        setWordLookup({
+          ...base,
+          status: "ready",
+          meaning: cached,
+          error: null,
+          fromDeck: null,
+        });
+        return;
+      }
+
+      if (providers.length === 0) {
+        setWordLookup({
+          ...base,
+          status: "error",
+          meaning: null,
+          error:
+            "語の意味を調べるには LLM の設定が必要です（設定画面で接続テストを成功させてください）。既存デッキにある語はそのまま引けます。",
+          fromDeck: null,
+        });
+        return;
+      }
+
+      setWordLookup({
+        ...base,
+        status: "loading",
+        meaning: null,
+        error: null,
+        fromDeck: null,
+      });
+
+      const controller = new AbortController();
+      lookupControllerRef.current = controller;
+      void lookupWordWithLlm({
+        providers,
+        word,
+        sentence: msg.content,
+        signal: controller.signal,
+      })
+        .then((meaning) => {
+          lookupCacheRef.current.set(word, meaning);
+          setWordLookup((cur) =>
+            cur && cur.msgId === msg.id && cur.word === word
+              ? { ...cur, status: "ready", meaning, error: null }
+              : cur,
+          );
+        })
+        .catch((e: unknown) => {
+          if (e instanceof Error && e.name === "AbortError") return;
+          setWordLookup((cur) =>
+            cur && cur.msgId === msg.id && cur.word === word
+              ? {
+                  ...cur,
+                  status: "error",
+                  error:
+                    e instanceof WordLookupError
+                      ? e.message
+                      : friendlyLlmError(
+                          e instanceof Error ? e.message : String(e),
+                        ),
+                  errorDetails:
+                    e instanceof WordLookupError ? (e.details ?? null) : null,
+                }
+              : cur,
+          );
+        })
+        .finally(() => {
+          if (lookupControllerRef.current === controller) {
+            lookupControllerRef.current = null;
+          }
+        });
+    },
+    [wordLookup, state.decks, providers, closeWordLookup],
+  );
+
+  /** パネルで引いた語をそのまま「会話から抽出」デッキへ入れる */
+  const handleAddLookupWord = useCallback(async () => {
+    if (!wordLookup || wordLookup.status !== "ready" || !wordLookup.meaning) {
+      return;
+    }
+    const meaning = wordLookup.meaning;
+    const item: ExtractedContent = {
+      type: "vocabulary",
+      sourceMessageId: wordLookup.msgId,
+      sourceText: wordLookup.sentence.slice(0, 300),
+      term: meaning.term,
+      ...(meaning.reading ? { reading: meaning.reading } : {}),
+      meaning: meaning.meaning,
+      example: meaning.example,
+      ...(meaning.exampleJa ? { exampleJa: meaning.exampleJa } : {}),
+      ...(meaning.partOfSpeech ? { partOfSpeech: meaning.partOfSpeech } : {}),
+    };
+    try {
+      const now = new Date().toISOString();
+      const existing = existingConversationDeck;
+      const candidate = existing
+        ? mergeIntoConversationDeck(existing, [item], {
+            now,
+            level: deckLevel,
+          }).deck
+        : buildConversationDeck([item], { now, level: deckLevel });
+      // LLM 由来の語もデッキと同じ検証を通す
+      const parsed = deckSchema.safeParse(candidate);
+      if (!parsed.success) {
+        setWordLookup((cur) =>
+          cur ? { ...cur, addError: "デッキの保存データを検証できませんでした。" } : cur,
+        );
+        return;
+      }
+      const alreadyThere =
+        existing?.lessons[0]?.words.some(
+          (w) => normalizeTermKey(w.term) === normalizeTermKey(item.term),
+        ) ?? false;
+      const updatedDecks = existing
+        ? state.decks.map((d) =>
+            d.deckId === parsed.data.deckId ? parsed.data : d,
+          )
+        : [...state.decks, parsed.data];
+      await storage.saveUserDeck({
+        deckId: parsed.data.deckId,
+        deck: parsed.data,
+        sourceTurns: messages.length,
+        createdAt: now,
+        updatedAt: now,
+      });
+      dispatch({ type: "setDecks", decks: updatedDecks });
+      setWordLookup((cur) =>
+        cur
+          ? { ...cur, addState: alreadyThere ? "exists" : "saved", addError: null }
+          : cur,
+      );
+    } catch (e: unknown) {
+      setWordLookup((cur) =>
+        cur
+          ? {
+              ...cur,
+              addError: e instanceof Error ? e.message : String(e),
+            }
+          : cur,
+      );
+    }
+  }, [
+    wordLookup,
+    existingConversationDeck,
+    deckLevel,
+    state.decks,
+    storage,
+    dispatch,
+    messages.length,
+  ]);
+
+  /**
+   * Issue #245: 相手メッセージを語単位のボタンに分解する。
+   * 記号・空白はそのまま素のテキストで残すので、連結すると元の文に戻る。
+   * 引けない語（a / the / I など）はボタンにせずタブ移動を増やさない。
+   */
+  const renderLookupable = (msg: ChatMessage) =>
+    tokenizeForLookup(msg.content).map((token, i) => {
+      if (!token.word) {
+        return <Fragment key={i}>{token.text}</Fragment>;
+      }
+      const word = token.word;
+      const active =
+        wordLookup?.msgId === msg.id && wordLookup.word === word;
+      return (
+        <button
+          key={i}
+          type="button"
+          className={`${popoverStyles.wordButton} ${
+            isHardWord(token.text) ? popoverStyles.hardWord : ""
+          } ${active ? popoverStyles.wordActive : ""}`}
+          data-testid={`lookup-word-${word}`}
+          aria-label={`「${token.text}」の意味を調べる`}
+          aria-expanded={active}
+          onClick={() => handleLookupWord(msg, word)}
+        >
+          {token.text}
+        </button>
+      );
+    });
+
   const handleSpeak = (id: string, text: string) => {
     // Issue #47: gold rune-caption indicator while the utterance plays
     // Issue #83: give feedback when the env has no TTS voices
@@ -1017,7 +1292,13 @@ export default function ConversationScreen({
                   msg.kind === "note" ? styles.bubbleNote : ""
                 }`}
               >
-                {msg.content}
+                {/* Issue #245: 相手の言葉はタップで意味を引ける（自分の発言・
+                    エラー通知・話題注記は対象外） */}
+                {msg.role === "assistant" &&
+                msg.kind !== "error" &&
+                msg.kind !== "note"
+                  ? renderLookupable(msg)
+                  : msg.content}
                 {/* Issue #122: raw diagnostics tucked behind a disclosure */}
                 {msg.kind === "error" && msg.details && (
                   <details className={styles.errorDetails}>
@@ -1026,6 +1307,28 @@ export default function ConversationScreen({
                   </details>
                 )}
               </div>
+              {/* Issue #245: タップした語の意味（既存デッキ → LLM の順で解決） */}
+              {wordLookup?.msgId === msg.id && (
+                <WordPopover
+                  term={wordLookup.word}
+                  status={wordLookup.status}
+                  meaning={wordLookup.meaning}
+                  error={wordLookup.error}
+                  errorDetails={wordLookup.errorDetails}
+                  fromDeck={wordLookup.fromDeck}
+                  canSpeak={speechAvail === "ready"}
+                  addState={wordLookup.addState}
+                  addError={wordLookup.addError}
+                  onSpeak={() => {
+                    speak(
+                      wordLookup.meaning?.term || wordLookup.word,
+                      () => {},
+                    );
+                  }}
+                  onAdd={() => void handleAddLookupWord()}
+                  onClose={closeWordLookup}
+                />
+              )}
               {/* Issue #111: error cards are not conversation — no TTS. */}
               {msg.role === "assistant" && msg.kind !== "error" && (
                 <button
