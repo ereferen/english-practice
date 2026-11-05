@@ -5,6 +5,10 @@
    where needed. */
 .statValue {
   composes: stat-value from global;
+  /* Issue #254: 4枚並べても主役に見えるよう、数値を大きく太くする。 */
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 /* Issue #177: 補足表示（参考値・学習日数など） */
@@ -44,8 +48,8 @@
   border-radius: 3px;
   background: rgba(127, 127, 127, 0.18);
   border: 1px solid transparent;
-  /* Issue #239: マスの中に日を読める大きさで出す */
-  font-size: 0.7rem;
+  /* Issue #239 / #253: マスの中に日を読める大きさで出す */
+  font-size: 0.8rem;
   line-height: 1;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
@@ -54,7 +58,7 @@
 /* Issue #239: 学習の有無とは別の軸で「今日」を示す（学習済みでも枠は残す） */
 .calDayToday {
   border-color: var(--color-accent-gold, #e8c56b);
-  box-shadow: 0 0 0 1px var(--color-accent-gold, #e8c56b);
+  box-shadow: 0 0 0 2px var(--color-accent-gold, #e8c56b);
   color: var(--color-accent-gold, #e8c56b);
   font-weight: 700;
 }
@@ -74,9 +78,19 @@
   opacity: 0.9;
 }
 
+/* Issue #253: 「学習した日」かつ「今日」のマスは緑地に金文字で
+   コントラスト 1.22:1 だった。金は緑の上で沈むので数字を濃色にし、
+   今日であることは太字＋金のリング（形）で示す。 */
 .calDayOn.calDayToday {
+  background: var(--color-accent, #7ac786);
   border-color: var(--color-accent-gold, #e8c56b);
-  box-shadow: 0 0 0 1px var(--color-accent-gold, #e8c56b);
+  box-shadow: 0 0 0 2px var(--color-accent-gold, #e8c56b);
+  color: #14202f;
+}
+
+.calDayOn.calDayToday .calDayNum {
+  color: #14202f;
+  opacity: 1;
 }
 
 .sessionRow {

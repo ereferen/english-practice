@@ -54,6 +54,15 @@ export type ManualParseResult =
 const KATAKANA_RE = /^[\u30a1-\u30fa\u30fc\u3005\u30fb\s]+$/;
 
 /**
+ * Issue #251: ヘルプに出す記入例。以前はタブ区切りの文字列を <code> に
+ * 出していたが、HTML ではタブが空白に潰れるため、画面上の例をコピペすると
+ * スペース区切りになり必ず弾かれた。そのまま貼って通るカンマ区切りを
+ * 正本にし、ヘルプ表示とテストの両方でこの定数を使う。
+ */
+export const MANUAL_WORDS_EXAMPLE =
+  "commute, 通勤する, I commute by train., コミュート, 動詞";
+
+/**
  * 貼り付けテキストを行単位で解釈する。
  * 1行1語。[語]\t[意味]\t[例文(任意)]\t[読み(任意)]\t[品詞(任意)]、
  * またはカンマ区切りで [語],[意味],[例文(任意)…],[読み],[品詞]。
@@ -110,7 +119,7 @@ export function parseManualWords(text: string): ManualParseResult {
     if (!term || !meaning) {
       return {
         ok: false,
-        error: `${i + 1}行目: 語と意味をタブまたはカンマで区切ってください`,
+        error: `${i + 1}行目: 語と意味をカンマ（またはタブ）で区切ってください。例: ${MANUAL_WORDS_EXAMPLE}`,
       };
     }
 

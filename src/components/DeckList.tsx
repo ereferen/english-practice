@@ -4,6 +4,7 @@ import type { Deck } from "../content/schema";
 import { deckSchema } from "../content/schema";
 import {
   MANUAL_DECK_ID,
+  MANUAL_WORDS_EXAMPLE,
   buildManualDeck,
   isOwnDeck,
   mergeIntoManualDeck,
@@ -299,10 +300,8 @@ export default function DeckList({
             <p className={styles.modalHint}>
               1行に1語。
               <code>語, 意味, 例文(任意), 読み(任意), 品詞(任意)</code>{" "}
-              の順で、カンマ or タブ区切り（タブなら位置で厳密に判定）。例:{" "}
-              <code>
-                {"commute\t通勤する\tI commute by train.\tコミュート\t動詞"}
-              </code>
+              の順で、カンマ区切り（タブ区切りも可）。例:{" "}
+              <code>{MANUAL_WORDS_EXAMPLE}</code>
             </p>
             <textarea
               ref={textareaRef}
