@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { deckSchema } from "../content/schema";
 import {
   MANUAL_DECK_ID,
+  MANUAL_WORDS_EXAMPLE,
   buildManualDeck,
   editDeckWord,
   isOwnDeck,
@@ -41,6 +42,21 @@ describe("parseManualWords (issue #178)", () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.error).toContain("1行目");
+  });
+
+  // Issue #251: ヘルプに出している例をそのまま貼れば通ること。
+  // 以前はタブ区切りの例が HTML 上でスペースに潰れ、コピペすると必ず弾かれた。
+  it("ヘルプの記入例をそのまま貼ると通る", () => {
+    const r = parseManualWords(MANUAL_WORDS_EXAMPLE);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.words[0]).toEqual({
+      term: "commute",
+      meaning: "通勤する",
+      example: "I commute by train.",
+      reading: "コミュート",
+      partOfSpeech: "verb",
+    });
   });
 
   it("何も無ければエラー", () => {

@@ -388,8 +388,10 @@ p {
   height: 100%;
 }
 
+/* Issue #254: 数値カードは4枚。3列だと2段目に1枚だけ浮くので 2×2 に揃える
+   （コンテナは max-width で 894px 止まりなので4列にしても1枚211pxまで狭くなる）。 */
 .card-grid.stats-grid {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
 
 @media (min-width: 768px) {
@@ -415,16 +417,12 @@ p {
   }
 }
 
-/* Issue #211: スマホ幅（〜480px）では 3 列 97px に潰れて補足文が縦積みに
-   なっていた。先頭の主役カードを横長の 1 列にし、残り 2 枚を 2 列に置く。 */
+/* Issue #211 / #254: スマホ幅では 2×2 を保つ。4枚を2列に置くと
+   1枚だけ浮くことがないので、先頭カードの横長指定は外した。 */
 @media (max-width: 480px) {
   .card-grid.stats-grid {
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
-  }
-
-  .card-grid.stats-grid > :first-child {
-    grid-column: 1 / -1;
   }
 }
 
@@ -571,14 +569,21 @@ p {
   flex-wrap: wrap;
 }
 
+/* Issue #252: 意味は見出しの2段目に回す。flex の行内で flex:1 にすると
+   日本語は1文字ずつ折り返せて幅19pxまで潰れる（「親しみやすい」が縦積み）。
+   flex-basis 100% で必ず改行させ、その行を丸ごと使わせる。 */
 .wrong-word-meaning {
   color: var(--color-muted);
   font-size: 0.875rem;
-  flex: 1;
+  flex: 1 1 100%;
+  min-width: 0;
+  line-height: 1.45;
 }
 
+/* 発音ボタンは行末に固定して、カード間で位置を揃える */
 .wrong-word button {
   padding: 0.25rem 0.5rem;
+  margin-left: auto;
 }
 
 .result-actions {
