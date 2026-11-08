@@ -6,6 +6,7 @@ import { scoreRate, wrongWordIds } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { wordById } from "../content/loader";
 import { speak } from "../domain/speech";
+import { visibleExamples } from "../domain/examples";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import { uuid } from "../domain/uuid";
 import { localProgress } from "../storage/localProgress";
@@ -245,12 +246,12 @@ export default function ResultScreen({
                 {/* Issue #235: 答え合わせ画面と揃えて、例文と和訳も出す。
                     誤答語は「今日いちばん覚えたい語」なので、デッキへ
                     戻らないと読み・例文が分からない状態をやめる。 */}
-                {w.examples[0] && (
+                {visibleExamples(w)[0] && (
                   <div className={styles.wrongWordExample}>
-                    <div>{w.examples[0].en}</div>
-                    {w.examples[0].ja && (
+                    <div>{visibleExamples(w)[0].en}</div>
+                    {visibleExamples(w)[0].ja && (
                       <div className={styles.wrongWordExampleJa}>
-                        {w.examples[0].ja}
+                        {visibleExamples(w)[0].ja}
                       </div>
                     )}
                   </div>

@@ -10,6 +10,7 @@ import {
   generateQuizzesWithLlm,
 } from "../domain/quizGeneration";
 import { providersFromSettings } from "../domain/llm";
+import { buildWrongAnswerFeedback } from "../domain/quizFeedback";
 import { systemClock } from "../domain/srs";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 import AnswerDetail from "./AnswerDetail";
@@ -165,6 +166,16 @@ export default function QuizScreen({
         .flatMap((l) => l.words)
         .find((w) => w.wordId === current.wordId)
     : undefined;
+
+  // Issue #257: 固定の解説が「選んでいない語」を名指しすることがあった。
+  // 実際に選んだ選択肢を一文目に出し、誤解を招く解説は落とす。
+  const wrongFeedback =
+    showFeedback && !lastCorrect && current
+      ? buildWrongAnswerFeedback(
+          current,
+          answers[answers.length - 1]?.choiceId,
+        )
+      : undefined;
 
   const handleChooseById = (choiceId: string | undefined) => {
     if (!current || !choiceId || showFeedback) return;
@@ -499,7 +510,10 @@ export default function QuizScreen({
           <p className={lastCorrect ? "correct" : "wrong"} aria-live="polite">
             {lastCorrect ? "○ 正解" : "× 不正解"}
           </p>
-          {current.explanation && !lastCorrect && <p>{current.explanation}</p>}
+          {wrongFeedback?.selectedLine && (
+            <p data-testid="wrong-pick">{wrongFeedback.selectedLine}</p>
+          )}
+          {wrongFeedback?.explanation && <p>{wrongFeedback.explanation}</p>}
           {/* Issue #182: 解答後に出題語の例文（と意味・ノート）を1行で見せる */}
           {answerWord && <AnswerDetail word={answerWord} />}
           <button

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { buildReviewItems, type ReviewItem } from "../domain/review";
+import { buildWrongAnswerFeedback } from "../domain/quizFeedback";
 import { isCorrect, scoreRate, type AnswerRecord } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { uuid } from "../domain/uuid";
@@ -335,6 +336,11 @@ export default function ReviewSession({
   }
 
   const item = current?.item;
+  // Issue #257: 選んだ選択肢を踏まえた一文を出す（固定解説の誤指名を防ぐ）。
+  const wrongFeedback =
+    showFeedback && !lastCorrect && item
+      ? buildWrongAnswerFeedback(item, answers[answers.length - 1]?.choiceId)
+      : undefined;
   if (!item) {
     return (
       <div className="container">
@@ -420,7 +426,10 @@ export default function ReviewSession({
           <p className={lastCorrect ? "correct" : "wrong"} aria-live="polite">
             {lastCorrect ? "○ 正解" : "× 不正解"}
           </p>
-          {item.explanation && !lastCorrect && <p>{item.explanation}</p>}
+          {wrongFeedback?.selectedLine && (
+            <p data-testid="wrong-pick">{wrongFeedback.selectedLine}</p>
+          )}
+          {wrongFeedback?.explanation && <p>{wrongFeedback.explanation}</p>}
           {/* Issue #210: 正解時も語・読み・意味・例文を出す。explanation が
               無い語でも例文でフォールバックされる。 */}
           {answerWord && <AnswerDetail word={answerWord} />}

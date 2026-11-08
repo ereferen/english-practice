@@ -3,6 +3,7 @@ import type { AppState, Action } from "../app/types";
 import { generateQuizzesForLesson, pickLesson } from "../content/loader";
 import { buildSessionQuizItems } from "../domain/session";
 import { partOfSpeechLabel } from "../domain/partOfSpeech";
+import { visibleExamples } from "../domain/examples";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import type { LocalProgressStore } from "../storage/localProgress";
@@ -397,14 +398,16 @@ export default function FlashScreen({
                 {partOfSpeechLabel(word.partOfSpeech)}
               </div>
             )}
-            <div className={styles.examples}>
-              {word.examples.map((ex, i) => (
-                <div key={i} className={styles.example}>
-                  <div>{ex.en}</div>
-                  {ex.ja && <div className={styles.exampleJa}>{ex.ja}</div>}
-                </div>
-              ))}
-            </div>
+            {visibleExamples(word).length > 0 && (
+              <div className={styles.examples}>
+                {visibleExamples(word).map((ex, i) => (
+                  <div key={i} className={styles.example}>
+                    <div>{ex.en}</div>
+                    {ex.ja && <div className={styles.exampleJa}>{ex.ja}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
             {word.note && <p className={styles.note}>ノート: {word.note}</p>}
           </>
         )}
