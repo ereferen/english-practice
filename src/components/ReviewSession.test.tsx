@@ -79,6 +79,36 @@ function makeState(deck: Deck): AppState {
 }
 
 describe("ReviewSession (issue #114)", () => {
+  it("caps one session at the daily goal and shows what is left (#258)", async () => {
+    const deck = makeTestDeck();
+    const reviews: ReviewState[] = fixtureWords.slice(0, 6).map((w) => ({
+      deckId: "test-deck",
+      wordId: w.wordId,
+      level: 1 as const,
+      lastResult: "correct" as const,
+      lastSeenAt: "2026-09-01T00:00:00.000Z",
+      dueAt: "2026-09-20",
+      correctStreak: 1,
+      wrongTotal: 0,
+    }));
+    const storage = makeStorageMock(reviews);
+    storage.loadSettings = vi.fn(
+      async () => ({ dailyGoalWords: 3, srsParams: {} }) as never,
+    );
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+    // 期限6語でも、1セッションは目標の3語で締める。
+    expect(await screen.findByText("(1/3)")).toBeTruthy();
+    expect(screen.getByTestId("review-goal-note")).toHaveTextContent(
+      "今日は 3 語まで（期限 6 語）",
+    );
+  });
+
   it("starts a due-word review session directly from the home shortcut", async () => {
     const deck = makeTestDeck();
     render(
