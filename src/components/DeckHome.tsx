@@ -4,6 +4,7 @@ import type { StorageProvider, ReviewState } from "../storage/types";
 import type { Deck, Word } from "../content/schema";
 import { allWords } from "../content/loader";
 import { systemClock } from "../domain/srs";
+import { visibleExamples } from "../domain/examples";
 import { computeProgress } from "../domain/progress";
 import {
   editDeckWord,
@@ -151,7 +152,7 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
     setWordDraft({
       term: w.term,
       meaning: w.meaning,
-      example: w.examples[0]?.en ?? "",
+      example: visibleExamples(w)[0]?.en ?? "",
       // Issue #191: "—" はプレースホルダ（＝未設定）なので空欄で見せる。
       reading: w.reading && w.reading !== "—" ? w.reading : "",
       partOfSpeech: w.partOfSpeech,

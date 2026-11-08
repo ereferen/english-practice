@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Word } from "../content/schema";
 import { speak } from "../domain/speech";
+import { visibleExamples } from "../domain/examples";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
 import styles from "./QuizScreen.module.css";
 
@@ -54,12 +55,14 @@ export default function AnswerDetail({ word }: Props) {
           このブラウザは音声未対応です（TTSボイスがありません）
         </p>
       )}
-      {word.examples.slice(0, 1).map((ex, i) => (
-        <div key={i} className={styles.answerExample}>
-          <div>{ex.en}</div>
-          {ex.ja && <div className={styles.answerExampleJa}>{ex.ja}</div>}
-        </div>
-      ))}
+      {visibleExamples(word)
+        .slice(0, 1)
+        .map((ex, i) => (
+          <div key={i} className={styles.answerExample}>
+            <div>{ex.en}</div>
+            {ex.ja && <div className={styles.answerExampleJa}>{ex.ja}</div>}
+          </div>
+        ))}
       {word.note && <p className={styles.answerNote}>ノート: {word.note}</p>}
     </div>
   );
