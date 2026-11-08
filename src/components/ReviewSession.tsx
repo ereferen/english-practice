@@ -53,9 +53,13 @@ export default function ReviewSession({
     (async () => {
       const today = systemClock.today();
       const reviews = await storage.loadDueReviews(deckId ?? null, today);
+      const settings = await storage.loadSettings();
       if (cancelled) return;
+      const goal = settings.dailyGoalWords > 0 ? settings.dailyGoalWords : 10;
       setDueTotal(reviews.length);
-      setItems(buildReviewItems(state.decks, reviews));
+      // Issue #258: 期限切れが目標より多くても、1セッションは目標語数で締める。
+      // 残りは完了画面の「もう一周」から続けられる。
+      setItems(buildReviewItems(state.decks, reviews.slice(0, goal)));
     })().catch(() => {
       if (!cancelled) setItems([]);
     });
@@ -374,6 +378,13 @@ export default function ReviewSession({
           <span className={styles.progressCount}>
             ({index + 1}/{items.length})
           </span>
+          {/* Issue #258: 期限切れが目標より多いとき、どこまでが今日の分かを示す */}
+          {dueTotal > items.length && (
+            <span className={styles.sessionInfo} data-testid="review-goal-note">
+              {" "}
+              今日は {items.length} 語まで（期限 {dueTotal} 語）
+            </span>
+          )}
         </h2>
         <button className="ghost" onClick={() => dispatch(goBack)}>
           やめる
