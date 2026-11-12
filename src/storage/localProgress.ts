@@ -140,6 +140,8 @@ export function createLocalProgressStore(
         askedCount,
         correctCount,
         answeredAt: summary.answeredAt ?? nowIso(),
+        // Issue #267: ベスト比較をデッキ単位で行えるように帰属を残す。
+        ...(summary.deckId ? { deckId: summary.deckId } : {}),
       });
       save(snapshot);
       return snapshot;
