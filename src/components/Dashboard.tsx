@@ -18,6 +18,7 @@ import {
   isLowSample,
   lastNDates,
   mondayWeekdayIndex,
+  monthBreakDates,
   streakDays,
   studyDateSet,
 } from "../domain/progress";
@@ -177,6 +178,10 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const dayOfMonth = (date: string) => Number(date.slice(8, 10));
   const shortDate = (date: string) =>
     `${Number(date.slice(5, 7))}/${dayOfMonth(date)}`;
+  // Issue #266: 30日を並べただけだと 10/31 → 11/1 が「31 1」と繋がって見え、
+  // どこで月が変わったのか読めない。境目のマスに月を併記する。
+  const monthBreaks = new Set(monthBreakDates(calendarDays));
+  const rangeLabel = `${shortDate(calendarDays[0])}〜${shortDate(todayStr)}`;
   const weekStart =
     calendarDays[calendarDays.length - 1 - mondayWeekdayIndex(todayStr)];
   const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
@@ -363,8 +368,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       <div className="card">
         <p className={styles.reportEmpty}>
           <span>
-            直近30日の学習日: {studyDates.length} 日 ・ 連続学習日:{" "}
-            <strong>{streak}</strong> 日
+            直近30日（{rangeLabel}）の学習日: {studyDates.length} 日 ・
+            連続学習日: <strong>{streak}</strong> 日
           </span>
         </p>
         <div className={styles.calendar}>
@@ -380,27 +385,39 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
               aria-hidden="true"
             />
           ))}
-          {calendarDays.map((date) => (
-            <span
-              key={date}
-              className={[
-                styles.calDay,
-                studiedSet.has(date) ? styles.calDayOn : "",
-                date === todayStr ? styles.calDayToday : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              title={date}
-              aria-label={`${date}${studiedSet.has(date) ? " 学習あり" : ""}${
-                date === todayStr ? " 今日" : ""
-              }`}
-            >
-              <span className={styles.calDayNum}>{dayOfMonth(date)}</span>
-            </span>
-          ))}
+          {calendarDays.map((date) => {
+            const monthBreak = monthBreaks.has(date);
+            return (
+              <span
+                key={date}
+                className={[
+                  styles.calDay,
+                  studiedSet.has(date) ? styles.calDayOn : "",
+                  date === todayStr ? styles.calDayToday : "",
+                  monthBreak ? styles.calDayMonth : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                title={date}
+                data-month-break={monthBreak ? "true" : undefined}
+                aria-label={`${date}${studiedSet.has(date) ? " 学習あり" : ""}${
+                  date === todayStr ? " 今日" : ""
+                }${monthBreak ? " 月替わり" : ""}`}
+              >
+                <span
+                  className={
+                    monthBreak ? styles.calDayMonthNum : styles.calDayNum
+                  }
+                >
+                  {monthBreak ? shortDate(date) : dayOfMonth(date)}
+                </span>
+              </span>
+            );
+          })}
         </div>
         <div className={styles.statNote}>
-          数字＝日 ・ 塗りつぶし＝学習した日 ・ 枠＝今日 ・ 行＝週（月〜日）
+          数字＝日（月が変わるマスは 11/1 のように月を併記）・ 塗りつぶし＝学習した日
+          ・ 枠＝今日 ・ 行＝週（月〜日）
           {weekStart
             ? `、今週は ${shortDate(weekStart)}〜${shortDate(todayStr)}`
             : ""}

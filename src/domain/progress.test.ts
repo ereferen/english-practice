@@ -9,6 +9,7 @@ import {
   lastNDates,
   LOW_SAMPLE_ANSWER_THRESHOLD,
   mondayWeekdayIndex,
+  monthBreakDates,
   streakDays,
   studyDateSet,
 } from "./progress";
@@ -258,5 +259,31 @@ describe("mondayWeekdayIndex (issue #219)", () => {
     expect(mondayWeekdayIndex("2026-10-20")).toBe(1);
     expect(mondayWeekdayIndex("2026-10-24")).toBe(5);
     expect(mondayWeekdayIndex("2026-10-25")).toBe(6);
+  });
+});
+
+describe("monthBreakDates (issue #266)", () => {
+  it("月が変わる日と並びの先頭を返す", () => {
+    const days = lastNDates("2026-11-12", 30); // 10/14〜11/12
+    expect(monthBreakDates(days)).toEqual(["2026-10-14", "2026-11-01"]);
+  });
+
+  it("同じ月だけなら先頭の1件だけ", () => {
+    expect(monthBreakDates(["2026-11-01", "2026-11-02"])).toEqual([
+      "2026-11-01",
+    ]);
+  });
+
+  it("30日で月を2回またぐと3件返す", () => {
+    // 2026-03-01 の30日前は 2026-01-31 → 1/31, 2/1, 3/1
+    expect(monthBreakDates(lastNDates("2026-03-01", 30))).toEqual([
+      "2026-01-31",
+      "2026-02-01",
+      "2026-03-01",
+    ]);
+  });
+
+  it("空配列は空配列", () => {
+    expect(monthBreakDates([])).toEqual([]);
   });
 });
