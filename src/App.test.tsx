@@ -65,4 +65,45 @@ describe("App hash routing", () => {
       expect(screen.queryByText("進捗確認")).not.toBeTruthy(),
     );
   });
+
+  // Issue #265: ショートカット一覧（ダイアログ＋暗幕）を開いたまま移動すると
+  // 新しい画面の上に残り続けていた。ルート変更で閉じることを固定する。
+  it("closes the shortcut help dialog when the screen changes", async () => {
+    window.history.replaceState(null, "", "/english/");
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toBeTruthy(),
+    );
+
+    await userEvent.click(screen.getByTestId("shortcut-help-open"));
+    expect(
+      screen.getByRole("dialog", { name: "キーボードショートカット一覧" }),
+    ).toBeTruthy();
+
+    // ダイアログを閉じずにデッキ一覧へ移動する
+    await userEvent.click(screen.getByRole("button", { name: "デッキを選ぶ" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/decks"));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "キーボードショートカット一覧" }),
+      ).not.toBeTruthy(),
+    );
+  });
+
+  it("keeps the dialog open while staying on the same screen", async () => {
+    window.history.replaceState(null, "", "/english/");
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 })).toBeTruthy(),
+    );
+
+    await userEvent.click(screen.getByTestId("shortcut-help-open"));
+    // 画面遷移を伴わない再レンダーでは閉じない
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "キーボードショートカット一覧" }),
+      ).toBeTruthy(),
+    );
+  });
 });
