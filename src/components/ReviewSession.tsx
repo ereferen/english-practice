@@ -3,10 +3,11 @@ import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { buildReviewItems, type ReviewItem } from "../domain/review";
 import { buildWrongAnswerFeedback } from "../domain/quizFeedback";
-import { isCorrect, scoreRate, type AnswerRecord } from "../domain/session";
+import { isCorrect, scoreRate, wrongWordIds, type AnswerRecord } from "../domain/session";
 import { nextReviewState, systemClock } from "../domain/srs";
 import { uuid } from "../domain/uuid";
 import { allWords } from "../content/loader";
+import type { Word } from "../content/schema";
 import { useKeyboardShortcuts } from "../app/useKeyboardShortcuts";
 import AnswerDetail from "./AnswerDetail";
 import styles from "./QuizScreen.module.css";
@@ -209,6 +210,27 @@ export default function ReviewSession({
     };
   }, [finished, deckId]);
 
+  // Issue #263: 復習完了でも「どの語を落としたか」を出す。クイズ完了
+  // (ResultScreen) には誤答カードがあるのに復習だけ白紙で、いちばん見たい
+  // 弱点情報が消えていた。語はデッキ横断で引く（復習はデッキをまたぐ）。
+  const wrongWords = useMemo(() => {
+    const ids = wrongWordIds(answers);
+    if (ids.length === 0) return [] as { word: Word; deckTitle: string }[];
+    const found = new Map<string, { word: Word; deckTitle: string }>();
+    for (const deck of state.decks) {
+      for (const word of allWords(deck)) {
+        if (ids.includes(word.wordId) && !found.has(word.wordId)) {
+          found.set(word.wordId, { word, deckTitle: deck.title });
+        }
+      }
+    }
+    return ids
+      .map((id) => found.get(id))
+      .filter(
+        (entry): entry is { word: Word; deckTitle: string } => Boolean(entry),
+      );
+  }, [answers, state.decks]);
+
   const handleRestart = () => {
     pendingWritesRef.current = [];
     setItems(null);
@@ -306,6 +328,41 @@ export default function ReviewSession({
             <p data-testid="review-remaining-note" aria-live="polite">
               今日の復習はすべて完了しました。お疲れさまでした！
             </p>
+          )}
+          {/* Issue #263: 完了画面で「どの語を落としたか」まで見せる。 */}
+          {wrongWords.length > 0 && (
+            <section data-testid="review-wrong-words">
+              <h3>誤答した {wrongWords.length} 語</h3>
+              <ul className="wrong-words-grid">
+                {wrongWords.map(({ word, deckTitle }) => (
+                  <li key={word.wordId} className="wrong-word">
+                    <div className="wrong-word-head">
+                      <strong>{word.term}</strong>
+                      <span className={styles.wrongWordReading}>
+                        （{word.reading}）
+                      </span>
+                      {word.ipa && (
+                        <span className={styles.wrongWordIpa}>{word.ipa}</span>
+                      )}
+                      <span className="wrong-word-meaning">{word.meaning}</span>
+                    </div>
+                    {word.examples[0] && (
+                      <div className={styles.answerExample}>
+                        <div>{word.examples[0].en}</div>
+                        {word.examples[0].ja && (
+                          <div className={styles.answerExampleJa}>
+                            {word.examples[0].ja}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {state.decks.length > 1 && (
+                      <p className={styles.wrongWordSource}>出題元: {deckTitle}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           <div className="menu-grid">
             {remainingDue !== null && remainingDue > 0 && (

@@ -317,3 +317,47 @@ describe("ReviewSession completion (issue #204)", () => {
     });
   });
 });
+
+describe("ReviewSession completion wrong-word list (issue #263)", () => {
+  async function finishAbilityQuestion(
+    pick: (choices: HTMLElement[]) => HTMLElement,
+  ) {
+    const deck = makeTestDeck();
+    render(
+      <ReviewSession
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={makeStorageMock()}
+      />,
+    );
+    expect(await screen.findByText("(1/1)")).toBeTruthy();
+    const choices = screen.getAllByRole("button", { name: /選択肢/ });
+    await userEvent.click(pick(choices));
+    await screen.findByText(/[○×] (正解|不正解)/);
+    await userEvent.click(screen.getByRole("button", { name: "完了する" }));
+    expect(await screen.findByText("復習セッション完了")).toBeTruthy();
+  }
+
+  it("lists the word that was answered wrong, with reading and example", async () => {
+    // 「能力」以外を選べば ability を落としたことになる。
+    await finishAbilityQuestion(
+      (choices) => choices.find((c) => !c.textContent?.includes("能力"))!,
+    );
+
+    const section = await screen.findByTestId("review-wrong-words");
+    expect(section).toHaveTextContent("誤答した 1 語");
+    expect(section).toHaveTextContent("ability");
+    expect(section).toHaveTextContent("アビリティ");
+    expect(section).toHaveTextContent(
+      "She has the ability to speak four languages.",
+    );
+  });
+
+  it("hides the list when every answer was right", async () => {
+    await finishAbilityQuestion(
+      (choices) => choices.find((c) => c.textContent?.includes("能力"))!,
+    );
+
+    expect(screen.queryByTestId("review-wrong-words")).toBeNull();
+  });
+});
