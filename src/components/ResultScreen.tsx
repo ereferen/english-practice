@@ -35,6 +35,15 @@ function rimTier(rate: number): "gold" | "silver" | "parchment" {
   return "parchment";
 }
 
+/** Issue #267: 結果画面の記録バッジ。
+ *  none  = 出すものなし（初回0% / ベスト未更新 / 保存不可）
+ *  first = このデッキの初回スコア（記録更新ではない）
+ *  best  = 同じデッキのベストを実際に超えた */
+type BestState =
+  | { kind: "none" }
+  | { kind: "first" }
+  | { kind: "best"; prevBestPct: number };
+
 export default function ResultScreen({
   state,
   dispatch,
@@ -65,7 +74,11 @@ export default function ResultScreen({
 
   // Issue #96: compare against the previous best BEFORE this session is
   // recorded (the effect below writes it). No past sessions => no badge.
-  const [isRecord, setIsRecord] = useState<boolean | null>(null);
+  // Issue #267: 端末全体ではなく「同じデッキ」のベストと比べる。未学習デッキの
+  // 初回 10 問 1 問正解（2%）で NEW RECORD が出ていたのは、他デッキの全問不正解
+  // （0%）を「前回ベスト」として拾っていたため。初回は記録更新ではなく
+  // 「初回スコア」として区別する。
+  const [best, setBest] = useState<BestState | null>(null);
 
   useEffect(() => {
     if (!deck) return;
@@ -90,16 +103,24 @@ export default function ResultScreen({
       ).toISOString();
     try {
       const prev = progress.load();
-      const prevBest = prev.sessions.reduce(
-        (best, s) =>
-          s.askedCount > 0
-            ? Math.max(best, s.correctCount / s.askedCount)
-            : best,
-        -1,
-      );
-      setIsRecord(prevBest >= 0 && rate > prevBest);
+      // Issue #267: 同じデッキの過去セッションだけでベストを出す。deckId を持た
+      // ない旧記録は帰属不明なので比較に使わない（初回扱いになる）。
+      const deckRates = prev.sessions
+        .filter((s) => s.deckId === deckId && s.askedCount > 0)
+        .map((s) => s.correctCount / s.askedCount);
+      if (deckRates.length === 0) {
+        // 0% の初回は「記録」ではないので何も出さない（従来どおり無表示）。
+        setBest(rate > 0 ? { kind: "first" } : { kind: "none" });
+      } else {
+        const prevBest = Math.max(...deckRates);
+        setBest(
+          rate > prevBest
+            ? { kind: "best", prevBestPct: Math.round(prevBest * 100) }
+            : { kind: "none" },
+        );
+      }
     } catch {
-      setIsRecord(null);
+      setBest(null);
     }
     const sessionId = uuid();
     storage
@@ -116,6 +137,8 @@ export default function ResultScreen({
 
     // Persist to localStorage progress store (survives page reload)
     progress.recordSession({
+      // Issue #267: デッキ単位のベスト比較に使う帰属情報。
+      deckId,
       askedCount: answers.length,
       correctCount: answers.filter((a) => a.correct).length,
       answeredAt: endedAt,
@@ -197,10 +220,24 @@ export default function ResultScreen({
         <div className={`result-rate ${styles[`rim-${rimTier(rate)}`]}`}>
           {displayRate}%
         </div>
-        {isRecord && (
-          <div className={styles.newRecordBadge} aria-label="自己新記録">
-            NEW RECORD
+        {best?.kind === "best" && (
+          <div className={styles.newRecordBadge} aria-label="自己ベスト更新">
+            自己ベスト
           </div>
+        )}
+        {best?.kind === "first" && (
+          <div
+            className={`${styles.newRecordBadge} ${styles.firstScoreBadge}`}
+            aria-label="このデッキの初回スコア"
+          >
+            初回スコア
+          </div>
+        )}
+        {best?.kind === "best" && (
+          <p className={styles.bestCompare}>
+            これまでのベスト {best.prevBestPct}% を {displayRate - best.prevBestPct}
+            ポイント更新
+          </p>
         )}
         <p>
           正解 {answers.filter((a) => a.correct).length} / {answers.length} 問

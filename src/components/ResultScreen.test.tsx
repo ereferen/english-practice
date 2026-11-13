@@ -39,7 +39,11 @@ function makeStorageMock(): StorageProvider {
 }
 
 function makeProgress(
-  sessions: Array<{ askedCount: number; correctCount: number }>,
+  sessions: Array<{
+    askedCount: number;
+    correctCount: number;
+    deckId?: string;
+  }>,
 ): LocalProgressStore {
   return {
     load: vi.fn(() => ({
@@ -110,7 +114,11 @@ function makeState(): AppState {
 
 function renderResult(
   a: AnswerRecord[],
-  sessions: Array<{ askedCount: number; correctCount: number }>,
+  sessions: Array<{
+    askedCount: number;
+    correctCount: number;
+    deckId?: string;
+  }>,
 ) {
   const progress = makeProgress(sessions);
   render(
@@ -229,25 +237,69 @@ describe("ResultScreen (#96 celebration)", () => {
     });
   });
 
-  it("shows the NEW RECORD badge when the previous best is beaten", async () => {
-    renderResult(answers([true, true]), [{ askedCount: 2, correctCount: 1 }]);
-    expect(await screen.findByText("NEW RECORD")).toBeTruthy();
+  it("shows 自己ベスト when the same deck's best is beaten", async () => {
+    renderResult(answers([true, true]), [
+      { askedCount: 2, correctCount: 1, deckId: "test-deck" },
+    ]);
+    expect(await screen.findByText("自己ベスト")).toBeTruthy();
   });
 
-  it("does NOT show the badge with no previous sessions", async () => {
+  it("does NOT show 自己ベスト with no previous sessions", async () => {
     renderResult(answers([true, true]), []);
     await waitFor(() => expect(screen.getByText("100%")).toBeTruthy(), {
       timeout: 2000,
     });
-    expect(screen.queryByText("NEW RECORD")).toBeNull();
+    expect(screen.queryByText("自己ベスト")).toBeNull();
   });
 
-  it("does NOT show the badge when the record is merely matched", async () => {
-    renderResult(answers([true, true]), [{ askedCount: 2, correctCount: 2 }]);
+  it("does NOT show 自己ベスト when the record is merely matched", async () => {
+    renderResult(answers([true, true]), [
+      { askedCount: 2, correctCount: 2, deckId: "test-deck" },
+    ]);
     await waitFor(() => expect(screen.getByText("100%")).toBeTruthy(), {
       timeout: 2000,
     });
-    expect(screen.queryByText("NEW RECORD")).toBeNull();
+    expect(screen.queryByText("自己ベスト")).toBeNull();
+  });
+
+  // Issue #267: 未学習デッキの初回 2% でも NEW RECORD が出ていた。
+  // 原因は端末全体のベスト（他デッキの 0% セッション）と比べていたこと。
+  it("labels a first attempt on a deck as 初回スコア, not a record", async () => {
+    renderResult(answers([false, false, false, false, false, false, false, false, false, true]), [
+      { askedCount: 5, correctCount: 0, deckId: "other-deck" },
+    ]);
+    expect(await screen.findByText("初回スコア")).toBeTruthy();
+    expect(screen.queryByText("自己ベスト")).toBeNull();
+  });
+
+  it("ignores other decks' sessions when deciding 自己ベスト", async () => {
+    renderResult(answers([true, false]), [
+      { askedCount: 10, correctCount: 10, deckId: "other-deck" },
+    ]);
+    expect(await screen.findByText("初回スコア")).toBeTruthy();
+    expect(screen.queryByText("自己ベスト")).toBeNull();
+  });
+
+  it("shows the comparison against the previous deck best", async () => {
+    renderResult(answers([true, true, false]), [
+      { askedCount: 3, correctCount: 1, deckId: "test-deck" },
+    ]);
+    expect(await screen.findByText("自己ベスト")).toBeTruthy();
+    // 比較対象（前ベスト 33%）が数字で出る。差分はカウントアップ中に
+    // 変わるので、基準値の表示だけを確かめる。
+    expect(screen.getByText(/これまでのベスト 33%/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("67%")).toBeTruthy(), {
+      timeout: 2000,
+    });
+  });
+
+  it("shows nothing for a 0% first attempt on a deck", async () => {
+    renderResult(answers([false, false]), []);
+    await waitFor(() => expect(screen.getByText("0%")).toBeTruthy(), {
+      timeout: 2000,
+    });
+    expect(screen.queryByText("自己ベスト")).toBeNull();
+    expect(screen.queryByText("初回スコア")).toBeNull();
   });
 
   it("never double-starts the count when the record state settles", async () => {

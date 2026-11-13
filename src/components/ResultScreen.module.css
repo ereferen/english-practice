@@ -67,6 +67,23 @@
   }
 }
 
+/* Issue #267: 初回（記録更新ではない）バッジは金色を使わず控えめに。
+   記録更新と見間違えないよう、色と字間で差をつける。 */
+.firstScoreBadge {
+  color: var(--color-text-body);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-hairline);
+  letter-spacing: 0.1em;
+  animation: none;
+}
+
+/* Issue #267: 何と比べて更新したのかを数字で示す。 */
+.bestCompare {
+  margin: 0 0 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
 /* Issue #131: inline feedback when TTS has no voices — same wording and
    styling as FlashScreen #83 so the ▶ button never goes silently dead. */
 .ttsNotice {

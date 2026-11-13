@@ -11,6 +11,11 @@ export interface SessionSummary {
   askedCount: number;
   correctCount: number;
   answeredAt: string;
+  /**
+   * Issue #267: どのデッキのセッションか。自己ベストはデッキ単位で比べる。
+   * 旧データ（この項目が無い記録）は帰属不明なので比較対象から外す。
+   */
+  deckId?: string;
 }
 
 export interface LearnedWordEntry {
