@@ -86,6 +86,14 @@ export default function App() {
     hashReady.current = true;
   }, [state.screen]);
 
+  // Issue #265: ショートカット一覧を開いたまま画面遷移すると、ダイアログと
+  // 背景の暗幕が新しい画面の上に残り続ける（Esc を押すまで視界が塞がる）。
+  // ルートが変わったら閉じる。開いただけでは state.screen は変わらないので
+  // 開いた直後に閉じてしまうことはない。
+  useEffect(() => {
+    setShowHelp(false);
+  }, [state.screen]);
+
   // Issue #241: ブラウザの戻る／進む／URL 直編集に追随する。
   const popHandler = useRef<() => void>(() => {});
   popHandler.current = () => {
