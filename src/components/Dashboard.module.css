@@ -67,6 +67,21 @@
   opacity: 0.85;
 }
 
+/* Issue #266: 月が変わるマス。30日を並べただけでは 31 → 1 が連続して見え、
+   どこで月が変わったか読めなかった。境目のマスだけ「11/1」と月を併記し、
+   点線の枠で区切りを示す（今日の金リングとは別の線種なので併存できる）。 */
+.calDayMonth {
+  outline: 1px dashed rgba(150, 160, 175, 0.55);
+  outline-offset: -2px;
+}
+
+.calDayMonthNum {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  opacity: 1;
+}
+
 .calDayOn {
   background: var(--color-accent, #7ac786);
   border-color: var(--color-accent, #7ac786);

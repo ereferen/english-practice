@@ -122,6 +122,22 @@ export function lastNDates(today: string, n: number): string[] {
 }
 
 /**
+ * Issue #266: 月が変わる位置の日付を返す（並びの先頭も含む）。
+ * 30日ぶんの数字を並べただけだと 31 → 1 が連続して見え、
+ * どこで月が変わったのか読めない。その境目のマスに月を併記するために使う。
+ */
+export function monthBreakDates(dates: string[]): string[] {
+  const out: string[] = [];
+  let prevMonth = "";
+  for (const date of dates) {
+    const month = date.slice(0, 7);
+    if (month !== prevMonth) out.push(date);
+    prevMonth = month;
+  }
+  return out;
+}
+
+/**
  * Issue #219: 週の区切り（月曜始まり）でカレンダーを折り返すための曜日番号。
  * 月=0 … 日=6。日曜始まりにしたくなったらここだけ変える。
  */
