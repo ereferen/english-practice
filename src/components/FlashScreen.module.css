@@ -114,6 +114,25 @@
   letter-spacing: 0.05em;
 }
 
+/* Issue #264: 裏の先頭に置く見出し語（綴り）。表の 2rem より一段小さくして
+   「答えを見ている」側だと分かる大きさに留めつつ、意味より上に置いて
+   綴り→意味の順で読めるようにする。 */
+.backTerm {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-parchment);
+  opacity: 0.88;
+  margin-bottom: 0.25rem;
+}
+
+@media (min-width: 1024px) {
+  .backTerm {
+    font-size: 1.5rem;
+  }
+}
+
 .meaning {
   /* body-md emphasis without going display-size (avoid gold body) */
   font-size: 1.5rem;
