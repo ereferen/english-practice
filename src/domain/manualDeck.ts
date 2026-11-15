@@ -312,14 +312,17 @@ export function removeDeckWord(deck: Deck, wordId: string): DeckEditResult {
 /**
  * 既存の手動デッキへの追加マージ。term 重複（正規化一致）はスキップし、
  * wordId / meaning 衝突は連番で回避したまま返す。
+ *
+ * Issue #275: 重複で弾いた件数（skipped）も返す。呼び出し側が「追加した」
+ * のか「既にあったのでスキップした」のかを黙って捨てないために使う。
  */
 export function mergeIntoManualDeck(
   existing: Deck,
   words: ManualWordInput[],
   opts: { now: string; level?: Deck["level"] },
-): { deck: Deck; added: number } {
+): { deck: Deck; added: number; skipped: number } {
   const lesson = existing.lessons[0];
-  if (!lesson) return { deck: existing, added: 0 };
+  if (!lesson) return { deck: existing, added: 0, skipped: words.length };
 
   const seen = new Set(lesson.words.map((w) => normalizeTermKey(w.term)));
   const fresh: ManualWordInput[] = [];
@@ -329,7 +332,9 @@ export function mergeIntoManualDeck(
     seen.add(key);
     fresh.push(w);
   }
-  if (fresh.length === 0) return { deck: existing, added: 0 };
+  if (fresh.length === 0) {
+    return { deck: existing, added: 0, skipped: words.length };
+  }
 
   const meanings = new Set(
     lesson.words.map((w) => normalizeTermKey(w.meaning)),
@@ -359,5 +364,5 @@ export function mergeIntoManualDeck(
       ...existing.lessons.slice(1),
     ],
   };
-  return { deck, added: addedWords.length };
+  return { deck, added: addedWords.length, skipped: words.length - fresh.length };
 }

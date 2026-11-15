@@ -103,6 +103,17 @@
   font-size: 0.85rem;
 }
 
+/* Issue #275: 追加結果の1行（ダイアログを閉じた後も残す）。 */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  border-left: 3px solid var(--color-accent, #d8a13a);
+  font-size: 0.9rem;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

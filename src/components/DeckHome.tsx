@@ -177,6 +177,12 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
   const handleDeleteWord = async (target: Word) => {
     setPendingDeleteWord(null);
     setWordError(null);
+    // Issue #276: 最後の1語はボタンを disabled にしているが、防御的にもここで止める。
+    const current = deck.lessons[0]?.words ?? [];
+    if (current.length <= 1) {
+      setWordError("最後の1語は削除できません。デッキごと削除してください");
+      return;
+    }
     const result = removeDeckWord(deck, target.wordId);
     if (!result.ok) {
       setWordError(result.error);
@@ -280,6 +286,13 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
           </div>
 
           <h4 className={styles.wordHeading}>登録した単語（{words.length}）</h4>
+          {/* Issue #276: 最後の1語は「削除する」まで押してから断られていた。
+              押せるのに消せないボタンを出さず、理由と代わりの導線を先に示す。 */}
+          {words.length <= 1 && (
+            <p className={styles.deleteHint} data-testid="last-word-hint">
+              最後の1語は削除できません。空にしたいときは「このデッキを削除」を使ってください。
+            </p>
+          )}
           <ul className={styles.wordList} data-testid="deck-word-list">
             {words.map((w) =>
               editingWordId === w.wordId ? (
@@ -391,6 +404,12 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
                       className="ghost"
                       type="button"
                       aria-label={`${w.term} を削除`}
+                      disabled={words.length <= 1}
+                      title={
+                        words.length <= 1
+                          ? "最後の1語は削除できません（デッキごと削除してください）"
+                          : undefined
+                      }
                       onClick={() => setPendingDeleteWord(w)}
                     >
                       削除
