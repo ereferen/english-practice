@@ -379,6 +379,12 @@ export default function FlashScreen({
           </>
         ) : (
           <>
+            {/* Issue #264: 裏の先頭に見出し語（綴り）を出す。以前は表で消えた
+                まま「意味だけ」の裏になっていたため、手動追加の語（読み・例文が
+                空）は「意味1行の白いカード」で、綴りを確認できなかった。 */}
+            <div className={styles.backTerm} data-testid="card-term-back">
+              {word.term}
+            </div>
             {/* Issue #191: 読み未設定（"—" プレースホルダ）なら行ごと出さない。
                 Issue #220: カタカナは日本語の音に丸められるため IPA を併記する。 */}
             {word.ipa && (

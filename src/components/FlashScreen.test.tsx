@@ -789,3 +789,88 @@ describe("FlashScreen — 文法訂正カード (issue #192)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #264: カード裏の見出し語（綴り）
+// ---------------------------------------------------------------------------
+
+describe("FlashScreen — 裏の見出し語 (issue #264)", () => {
+  /** 手動追加の語: 読みは "—"、IPA・品詞・例文は実質空。 */
+  function makeManualDeck(): Deck {
+    const base = makeTestDeck();
+    return {
+      ...base,
+      deckId: "manual-deck",
+      lessons: [
+        {
+          lessonId: "lesson-1",
+          title: "追加した単語",
+          words: [
+            {
+              wordId: "grind",
+              term: "grind",
+              reading: "—",
+              meaning: "ゲームで地道に稼ぐ",
+              // manualDeck は例文未入力のとき見出し語そのものを1件入れる
+              examples: [{ en: "grind" }],
+            },
+          ],
+          quizzes: [],
+        },
+      ],
+    };
+  }
+
+  it("shows the headword first on the back of a normal word card", async () => {
+    const deck = makeTestDeck();
+    renderFlashScreen(makeState(deck));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    expect(screen.getByTestId("card-term-back").textContent).toBe(
+      deck.lessons[0].words[0].term,
+    );
+  });
+
+  it("keeps a manual word readable: headword + meaning, no empty rows", async () => {
+    renderFlashScreen(makeState(makeManualDeck()));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    expect(screen.getByTestId("card-term-back").textContent).toBe("grind");
+    expect(screen.getByText("ゲームで地道に稼ぐ")).toBeTruthy();
+    // 読みのプレースホルダ "—" は行ごと出さない（空白行を作らない）
+    expect(screen.queryByText("—")).toBeNull();
+    // 例文未入力の語は見出し語コピーを例文として描画しない → "grind" は1箇所だけ
+    expect(screen.getAllByText("grind")).toHaveLength(1);
+  });
+
+  it("does not add the headword line to grammar-correction cards", async () => {
+    const base = makeTestDeck();
+    const deck: Deck = {
+      ...base,
+      lessons: [
+        {
+          ...base.lessons[0],
+          words: [
+            {
+              wordId: "grammar-correction-0",
+              term: "I very like this game.",
+              reading: "—",
+              meaning: "very は動詞を直接修飾できない",
+              examples: [{ en: "I really like this game." }],
+              partOfSpeech: "other",
+              tags: ["conversation", "grammar-correction"],
+            },
+          ],
+        },
+      ],
+    };
+    renderFlashScreen(makeState(deck));
+    await userEvent.click(
+      screen.getByRole("button", { name: /カードをめくる/ }),
+    );
+    expect(screen.queryByTestId("card-term-back")).toBeNull();
+    expect(screen.getByTestId("grammar-corrected").textContent).toContain("✓");
+  });
+});
