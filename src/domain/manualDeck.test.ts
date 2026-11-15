@@ -173,7 +173,7 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
     const base = buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
       now: "2026-10-10T00:00:00.000Z",
     });
-    const { deck, added } = mergeIntoManualDeck(
+    const { deck, added, skipped } = mergeIntoManualDeck(
       base,
       [
         { term: "commute", meaning: "通勤する" }, // 重複 → スキップ
@@ -182,6 +182,8 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
       { now: "2026-10-11T00:00:00.000Z" },
     );
     expect(added).toBe(1);
+    // Issue #275: 黙って捨てず、弾いた件数を返す。
+    expect(skipped).toBe(1);
     expect(deck.lessons[0].words).toHaveLength(2);
     expect(deck.title).toBe("手動追加 (2026-10-11)");
     expect(deckSchema.safeParse(deck).success).toBe(true);

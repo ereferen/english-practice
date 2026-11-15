@@ -33,6 +33,25 @@ const LEVEL_LABEL: Record<Deck["level"], string> = {
   advanced: "上級",
 };
 
+/**
+ * Issue #275: 追加結果の1行。重複で弾いた語があるときは、意味を変えたい
+ * 場合はデッキ詳細の「編集」から直せることも同じ行で伝える。
+ */
+export function noticeFor(
+  submitted: number,
+  added: number,
+  skipped: number,
+  title: string,
+): string {
+  if (added === 0) {
+    return `✓ ${submitted} 語とも既に「${title}」にあります（重複は追加していません）。意味を変えるときはデッキ詳細の「編集」から。`;
+  }
+  if (skipped > 0) {
+    return `✓ ${added} 語を「${title}」に追加しました（${submitted} 語中 ${skipped} 語は既にあったのでスキップ）。`;
+  }
+  return `✓ ${added} 語を「${title}」に追加しました。`;
+}
+
 export default function DeckList({
   state,
   dispatch,
@@ -42,6 +61,9 @@ export default function DeckList({
   const [text, setText] = useState("");
   const [level, setLevel] = useState<Deck["level"]>("intermediate");
   const [error, setError] = useState<string | null>(null);
+  // Issue #275: 「追加したのか、重複で弾かれたのか」を黙って捨てない。
+  // 追加後にダイアログが閉じるだけだったので、一覧側に結果を1行残す。
+  const [notice, setNotice] = useState<string | null>(null);
   // Issue #181: 個別に非表示にしたデッキ（サンプル/自分のデッキ問わず）。
   // 「すべてのデータを削除」以外に消す手段が無かったのを、一覧から外すだけの
   // 軽い非表示で解決する（設定に保存。デッキ本体は消さない）。
@@ -141,6 +163,7 @@ export default function DeckList({
   const openAdd = () => {
     setText("");
     setError(null);
+    setNotice(null);
     setAdding(true);
   };
 
@@ -152,9 +175,12 @@ export default function DeckList({
     }
     const now = new Date().toISOString();
     const existing = state.decks.find((d) => d.deckId === MANUAL_DECK_ID);
-    const built = existing
-      ? mergeIntoManualDeck(existing, parsed.words, { now, level }).deck
-      : buildManualDeck(parsed.words, { now, level });
+    // Issue #275: 重複で落ちた語数も受け取り、「N語中M語はスキップ」と出す。
+    const merged = existing
+      ? mergeIntoManualDeck(existing, parsed.words, { now, level })
+      : null;
+    const built = merged ? merged.deck : buildManualDeck(parsed.words, { now, level });
+    const savedTitle = built.title;
 
     // ユーザー入力も素で保存しない（既存方針: deckSchema で検証）。
     const validated = deckSchema.safeParse(built);
@@ -183,6 +209,9 @@ export default function DeckList({
       dispatch({ type: "setDecks", decks: updatedDecks });
       // 追加したデッキが非表示のままだと「追加したのに出てこない」になる。
       if (hiddenIds.includes(deck.deckId)) setHidden(deck.deckId, false);
+      const added = merged ? merged.added : parsed.words.length;
+      const skipped = merged ? merged.skipped : 0;
+      setNotice(noticeFor(parsed.words.length, added, skipped, savedTitle));
       setAdding(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -247,6 +276,16 @@ export default function DeckList({
           </button>
         </div>
       </div>
+
+      {/* Issue #275: 追加結果（追加語数・重複スキップ数）を一覧に残す。 */}
+      {notice && (
+        <div className={`card ${styles.notice}`} role="status">
+          <span>{notice}</span>
+          <button className="ghost" type="button" onClick={() => setNotice(null)}>
+            閉じる
+          </button>
+        </div>
+      )}
 
       {ownDecks.length > 0 && (
         <>

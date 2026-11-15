@@ -166,3 +166,10 @@
   font-size: 0.85rem;
   margin: 0 0 0.5rem;
 }
+
+/* Issue #276: 最後の1語は削除不可。押す前に理由を見せる。 */
+.deleteHint {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-muted, #9a9a9a);
+  font-size: 0.85rem;
+}

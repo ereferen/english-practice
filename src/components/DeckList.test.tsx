@@ -5,7 +5,7 @@ import type { AppState } from "../app/types";
 import type { Deck } from "../content/schema";
 import { loadBundledDecks } from "../content/loader";
 import { CONVERSATION_DECK_ID } from "../domain/conversationExtract";
-import { MANUAL_DECK_ID } from "../domain/manualDeck";
+import { MANUAL_DECK_ID, buildManualDeck } from "../domain/manualDeck";
 import type { StorageProvider } from "../storage/types";
 import { DEFAULT_SETTINGS } from "../storage/types";
 import DeckList from "./DeckList";
@@ -137,6 +137,39 @@ describe("DeckList 単語を追加（issue #178）", () => {
         expect.objectContaining({ deckId: MANUAL_DECK_ID }),
       ]),
     });
+  });
+
+  it("追加後に「N語追加しました」を出し、重複はスキップしたと伝える", async () => {
+    // Issue #275: 黙って閉じるだけだったのを、結果を1行残すようにする。
+    const { decks } = await loadBundledDecks();
+    const existing = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-11-15T00:00:00.000Z",
+    });
+    const saveUserDeck = vi.fn().mockResolvedValue(undefined);
+    const storage = { saveUserDeck } as unknown as StorageProvider;
+
+    render(
+      <DeckList
+        state={makeState([decks[0].deck, existing])}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "単語を追加" }));
+    await user.type(
+      screen.getByRole("textbox"),
+      "resilient, 粘り強い\ncommute, 通勤する",
+    );
+    await user.click(screen.getByRole("button", { name: "追加する" }));
+
+    const notice = await screen.findByRole("status");
+    expect(notice.textContent).toContain("1 語を");
+    expect(notice.textContent).toContain("1 語は既にあったのでスキップ");
+    // 2語目は実際に増えている（黙って捨てていない）。
+    const saved = saveUserDeck.mock.calls[0][0];
+    expect(saved.deck.lessons[0].words).toHaveLength(2);
   });
 
   it("区切りの無い入力はエラーを出し、保存しない", async () => {

@@ -90,6 +90,26 @@ describe("DeckHome 自分のデッキを直す (issue #181)", () => {
     });
   });
 
+  it("最後の1語は削除ボタンが disabled で、理由と代わりの導線が出る", async () => {
+    // Issue #276: 押して確認した後に初めて断られる、を無くす。
+    const deck = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-10-11T00:00:00.000Z",
+    });
+    render(
+      <DeckHome
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={fakeStorage()}
+        deckId={deck.deckId}
+      />,
+    );
+
+    expect(screen.getByTestId("last-word-hint").textContent).toContain(
+      "最後の1語は削除できません",
+    );
+    expect(screen.getByRole("button", { name: "resilient を削除" })).toBeDisabled();
+  });
+
   it("語の削除は確認ダイアログを挟んで1語だけ消す", async () => {
     const deck = manualDeck();
     const storage = fakeStorage();
