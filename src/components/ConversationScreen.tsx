@@ -29,10 +29,10 @@ import {
   CONVERSATION_DECK_ID,
   ExtractionError,
   buildConversationDeck,
-  containsPhrase,
   dedupeExtracted,
   extractContentWithLlm,
   mergeIntoConversationDeck,
+  needsSourceWarning as domainNeedsSourceWarning,
   normalizeTermKey,
 } from "../domain/conversationExtract";
 import { MIN_QUIZ_WORDS } from "../content/loader";
@@ -135,16 +135,12 @@ function restoreNoticeText(topic: ConversationTopic | null): string {
 }
 
 /**
- * Issue #238: LLM が返した「文法訂正」の元の発言に、直そうとしている語が
- * 実際に含まれていない＝会話に無い文を作った可能性が高い項目。
- * 警告を出すだけでなく、既定のチェックを外す判断にも使う。
+ * Issue #238 / #273: 元の発言に語句の根拠が見つからない学習項目。
+ * 判定本体はドメイン側（conversationExtract.needsSourceWarning）に置き、
+ * 既定チェックの組み立てと警告表示の両方で同じものを使う。
  */
 function needsSourceWarning(item: ExtractedContent): boolean {
-  return (
-    item.type === "grammar-correction" &&
-    Boolean(item.sourceText) &&
-    !containsPhrase(item.sourceText as string, item.term)
-  );
+  return domainNeedsSourceWarning(item);
 }
 
 export default function ConversationScreen({
@@ -1546,7 +1542,7 @@ export default function ConversationScreen({
                           className={styles.extractSourceWarn}
                           role="status"
                         >
-                          ⚠ この文には「{item.term}」が含まれていません
+                          ⚠ この文には「{item.term}」もその活用形も見つかりません
                           （既定では追加しません）
                         </span>
                       )}
