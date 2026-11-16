@@ -364,9 +364,14 @@ export function extractedToWord(item: ExtractedContent, index: number): Word {
   // Issue #233: どの発言から拾った語なのかをカード裏にも残す。LLM が別の文を
   // 拾っていても、カード単体で「会話に無い語だ」と気づけるようにする。
   // grammar-correction は ✗ 行がすでに学習者の原文なので重複させない。
+  // Issue #273: 引用文に語の根拠が無いときは「出典」とだけ書くと嘘になるので、
+  // 根拠未確認であることがカード単体で分かるようにする。
   const source = item.sourceText.trim();
   if (item.type !== "grammar-correction" && source) {
-    const quote = `出典: 「${source.slice(0, MAX_TEXT_LEN)}」`;
+    const label = containsTermOrStem(source, item.term)
+      ? "出典"
+      : "出典（この文に語は見つかりません）";
+    const quote = `${label}: 「${source.slice(0, MAX_TEXT_LEN)}」`;
     word.note = word.note ? `${word.note}\n${quote}` : quote;
   }
   return word;
@@ -384,6 +389,45 @@ export function containsPhrase(source: string, term: string): boolean {
   const key = normalizeTermKey(term);
   if (!key) return true;
   return normalizeTermKey(source).includes(key);
+}
+
+/** 語幹一致に使う最小の語長（これ未満は完全一致のみ＝誤検知を避ける） */
+const STEM_MIN_TERM_LEN = 5;
+/** 語幹として見る先頭文字数（overpack → overp で overpacked を拾う） */
+const STEM_PREFIX_LEN = 5;
+
+/**
+ * Issue #273: 引用文に語句「またはその活用形」が含まれるか。
+ * 語彙は overpack → overpacked / overpacking のように語形が変わるため、
+ * 完全一致だけだと根拠がある項目まで「幻覚」と誤判定してしまう。
+ * そこで正規化一致 → 語幹（先頭 STEM_PREFIX_LEN 文字）一致の順で判定する。
+ * 短い語（4文字以下）は語幹一致させるといろいろ拾いすぎるので完全一致のみ。
+ */
+export function containsTermOrStem(source: string, term: string): boolean {
+  const key = normalizeTermKey(term);
+  if (!key) return true;
+  const src = normalizeTermKey(source);
+  if (!src) return false;
+  if (src.includes(key)) return true;
+  const srcWords = src.split(" ");
+  return key.split(" ").every((token) => {
+    if (!token) return true;
+    if (src.includes(token)) return true;
+    if (token.length < STEM_MIN_TERM_LEN) return false;
+    const stem = token.slice(0, STEM_PREFIX_LEN);
+    return srcWords.some((w) => w.startsWith(stem));
+  });
+}
+
+/**
+ * Issue #273（#238 の拡張）: 元の発言に語句の根拠が見つからない学習項目か。
+ * 以前は grammar-correction だけを対象にしていたが、語彙・表現も
+ * 会話に出てこない語が既定 ON でデッキに入っていたため全 type に広げた。
+ */
+export function needsSourceWarning(item: ExtractedContent): boolean {
+  const source = item.sourceText?.trim();
+  if (!source) return false;
+  return !containsTermOrStem(source, item.term);
 }
 
 /** 比較用の正規化キー（小文字化・句読点除去・空白圧縮） */

@@ -4,9 +4,11 @@ import {
   buildConversationDeck,
   buildExtractPrompt,
   containsPhrase,
+  containsTermOrStem,
   dedupeExtracted,
   extractedToWord,
   mergeIntoConversationDeck,
+  needsSourceWarning,
   normalizeTermKey,
   parseExtractionResult,
   termToWordId,
@@ -323,6 +325,87 @@ describe("containsPhrase (#233)", () => {
 
   it("空の term は判定不能として true", () => {
     expect(containsPhrase("anything", "   ")).toBe(true);
+  });
+});
+
+describe("containsTermOrStem / needsSourceWarning (#273)", () => {
+  it("完全一致は根拠あり", () => {
+    expect(containsTermOrStem("I grab the loot first.", "loot")).toBe(true);
+  });
+
+  it("活用形（overpacked / overpacking）も根拠ありと見なす", () => {
+    expect(containsTermOrStem("I always overpacked last year.", "overpack")).toBe(
+      true,
+    );
+    expect(
+      containsTermOrStem("Stop overpacking for a weekend trip.", "overpack"),
+    ).toBe(true);
+  });
+
+  it("会話に無い語は根拠なし（aki の overpack / loadout 事例）", () => {
+    expect(containsTermOrStem("Pick your loadout first.", "overpack")).toBe(
+      false,
+    );
+  });
+
+  it("4文字以下の短い語は語幹一致させない（誤検知の抑制）", () => {
+    // "grab" の語幹 "grab" が "grabbed" に当たるのは完全一致扱いで拾うが、
+    // "loot" のような語でも "loo" で別語（look）を拾わないこと。
+    expect(containsTermOrStem("Look at me.", "loot")).toBe(false);
+  });
+
+  it("空の source は根拠なし、空の term は判定不能として true", () => {
+    expect(containsTermOrStem("", "loot")).toBe(false);
+    expect(containsTermOrStem("anything", "  ")).toBe(true);
+  });
+
+  it("語彙・表現も既定OFFの対象になる（grammar-correction 限定を解除）", () => {
+    const vocab: ExtractedContent = {
+      type: "vocabulary",
+      sourceMessageId: "m3",
+      sourceText: "Pick your loadout first.",
+      term: "overpack",
+      meaning: "荷物を詰めすぎる",
+      example: "I always overpack when I travel.",
+    };
+    expect(needsSourceWarning(vocab)).toBe(true);
+    expect(needsSourceWarning({ ...vocab, term: "loadout" })).toBe(false);
+    // sourceText が無い項目は判定不能なので警告しない（従来どおり）
+    expect(needsSourceWarning({ ...vocab, sourceText: "" })).toBe(false);
+  });
+});
+
+describe("出典の表記 (#273)", () => {
+  it("根拠が無い語は出典に「見つかりません」を添える", () => {
+    const w = extractedToWord(
+      {
+        type: "vocabulary",
+        sourceMessageId: "m3",
+        sourceText: "Pick your loadout first.",
+        term: "overpack",
+        meaning: "荷物を詰めすぎる",
+        example: "I always overpack when I travel.",
+      },
+      0,
+    );
+    expect(w.note).toContain("出典");
+    expect(w.note).toContain("見つかりません");
+  });
+
+  it("根拠がある語は従来どおり「出典:」だけ", () => {
+    const w = extractedToWord(
+      {
+        type: "vocabulary",
+        sourceMessageId: "m3",
+        sourceText: "Pick your loadout first.",
+        term: "loadout",
+        meaning: "装備",
+        example: "Pick your loadout first.",
+      },
+      0,
+    );
+    expect(w.note).toContain("出典: 「Pick your loadout first.」");
+    expect(w.note).not.toContain("見つかりません");
   });
 });
 
