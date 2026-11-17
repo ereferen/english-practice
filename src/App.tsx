@@ -38,6 +38,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  // Issue #281: 設定の保存（初回ウィザードの「接続テストして保存」など）で画面名が
+  // 変わらないケースでも、警告リボンが保存済み設定を読み直せるようにする。
+  const [settingsRevision, setSettingsRevision] = useState(0);
   // Issue #170: 設定画面に入る直前の画面を覚えておく。「設定を開く」→「戻る」で
   // ホームに落ちてしまい、会話を再開するのに「英会話」をもう一度押す3タップが
   // 必要だった。直前にいた画面へ1タップで戻せるようにする。
@@ -308,6 +311,7 @@ export default function App() {
       <EndpointRibbon
         storage={storage}
         screenName={state.screen.name}
+        revision={settingsRevision}
         onOpenSettings={() =>
           dispatchTransitioned({ type: "go", screen: { name: "settings" } })
         }
@@ -329,6 +333,7 @@ export default function App() {
       <SetupWizard
         storage={storage}
         screenName={state.screen.name}
+        onSettingsSaved={() => setSettingsRevision((n) => n + 1)}
         onGoConversation={() =>
           dispatchTransitioned({ type: "go", screen: { name: "conversation" } })
         }

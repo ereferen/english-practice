@@ -126,6 +126,75 @@ describe("SetupWizard (issue #121)", () => {
     );
   });
 
+  // Issue #281: 保存できたことを親へ知らせ、ホームの警告リボンを更新させる。
+  it("接続テスト成功＋保存で onSettingsSaved を呼ぶ（#281）", async () => {
+    const { storage } = makeStorage();
+    runConnectionTest.mockResolvedValue({
+      ok: true,
+      latencyMs: 120,
+      diagnosis: null,
+    });
+    const onSettingsSaved = vi.fn();
+    render(
+      <SetupWizard
+        storage={storage}
+        screenName="home"
+        onGoConversation={vi.fn()}
+        onGoSettings={vi.fn()}
+        onSettingsSaved={onSettingsSaved}
+      />,
+    );
+    await userEvent.type(
+      await screen.findByTestId("setup-wizard-endpoint"),
+      "http://192.168.68.52:11434/v1",
+    );
+    await userEvent.click(screen.getByTestId("setup-wizard-test"));
+    await waitFor(() =>
+      expect(screen.getByTestId("setup-wizard-result").textContent).toContain(
+        "接続OK",
+      ),
+    );
+    expect(onSettingsSaved).toHaveBeenCalledTimes(1);
+
+    // ✕ で閉じても（画面名は変わらない）二重には呼ばない
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("setup-wizard")).toBeNull(),
+    );
+    expect(onSettingsSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it("接続テスト失敗時は onSettingsSaved を呼ばない（#281）", async () => {
+    const { storage } = makeStorage();
+    runConnectionTest.mockResolvedValue({
+      ok: false,
+      latencyMs: 120,
+      error: "connection refused",
+      diagnosis: null,
+    });
+    const onSettingsSaved = vi.fn();
+    render(
+      <SetupWizard
+        storage={storage}
+        screenName="home"
+        onGoConversation={vi.fn()}
+        onGoSettings={vi.fn()}
+        onSettingsSaved={onSettingsSaved}
+      />,
+    );
+    await userEvent.type(
+      await screen.findByTestId("setup-wizard-endpoint"),
+      "http://192.168.68.52:11434/v1",
+    );
+    await userEvent.click(screen.getByTestId("setup-wizard-test"));
+    await waitFor(() =>
+      expect(screen.getByTestId("setup-wizard-result").textContent).toContain(
+        "接続テスト失敗",
+      ),
+    );
+    expect(onSettingsSaved).not.toHaveBeenCalled();
+  });
+
   it("接続OK後に✕で閉じても完了状態（llmSetupDismissed）を上書きしない", async () => {
     const { storage, saveSettings } = makeStorage();
     runConnectionTest.mockResolvedValue({

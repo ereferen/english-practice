@@ -21,6 +21,12 @@ interface Props {
    * 画面が切り替わるたびに設定を読み直す（issue #121）。
    */
   screenName: string;
+  /**
+   * Issue #281: 画面が変わらない保存（初回ウィザードの「接続テストして保存」→
+   * ✕ で閉じる）でもリボンの判定を作り直すためのカウンタ。
+   * 値が変わるたびに保存済み設定を読み直す。
+   */
+  revision?: number;
   onOpenSettings: () => void;
 }
 
@@ -31,6 +37,7 @@ interface Props {
 export default function EndpointRibbon({
   storage,
   screenName,
+  revision = 0,
   onOpenSettings,
 }: Props) {
   const [warning, setWarning] = useState<EndpointWarning | null>(null);
@@ -49,7 +56,7 @@ export default function EndpointRibbon({
     return () => {
       mounted = false;
     };
-  }, [storage, screenName]);
+  }, [storage, screenName, revision]);
 
   if (!warning) return null;
   // 設定画面にいる間は導線としての意味が無いので出さない
