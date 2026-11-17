@@ -109,4 +109,40 @@ describe("EndpointRibbon (issue #121)", () => {
     );
     expect(await screen.findByTestId("endpoint-ribbon-action")).toBeTruthy();
   });
+
+  // Issue #281: 初回ウィザードは画面名を変えずに設定を保存するため、
+  // リボンが古い設定のまま「初期値のまま」を出し続けていた。
+  it("revision が変わったら保存済み設定を読み直す（#281）", async () => {
+    let settings: Settings = { ...DEFAULT_SETTINGS };
+    const storage = {
+      loadSettings: vi.fn(async () => settings),
+    } as unknown as StorageProvider;
+    const { rerender } = render(
+      <EndpointRibbon
+        storage={storage}
+        screenName="home"
+        revision={0}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+    expect(await screen.findByTestId("endpoint-ribbon-action")).toBeTruthy();
+
+    // ウィザードが「接続テストして保存」で書いた状態を再現する
+    settings = {
+      ...settings,
+      llmApiEndpoint: "http://192.168.68.52:11434/v1",
+      llmVerifiedEndpoint: "http://192.168.68.52:11434/v1",
+    };
+    rerender(
+      <EndpointRibbon
+        storage={storage}
+        screenName="home"
+        revision={1}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("endpoint-ribbon-action")).toBeNull(),
+    );
+  });
 });

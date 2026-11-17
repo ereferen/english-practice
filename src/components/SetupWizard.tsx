@@ -17,6 +17,11 @@ interface Props {
   screenName: string;
   onGoConversation: () => void;
   onGoSettings: () => void;
+  /**
+   * Issue #281: 保存に成功したことを親へ知らせる。ホームの警告リボンは画面が
+   * 変わるまで設定を読み直さないので、保存直後にバナーが古いまま残っていた。
+   */
+  onSettingsSaved?: () => void;
 }
 
 interface WizardResult {
@@ -37,6 +42,7 @@ export default function SetupWizard({
   screenName,
   onGoConversation,
   onGoSettings,
+  onSettingsSaved,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const [endpoint, setEndpoint] = useState("");
@@ -94,6 +100,8 @@ export default function SetupWizard({
   const persist = async (patch: Partial<Settings>) => {
     try {
       await storage.saveSettings(patch);
+      // Issue #281: 保存できたら親（ホームの警告リボン）へ知らせる。
+      onSettingsSaved?.();
     } catch {
       // 保存に失敗してもUIは進める（次回起動で再提案されるだけ）
     }
