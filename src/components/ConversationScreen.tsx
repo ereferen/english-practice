@@ -135,6 +135,15 @@ function restoreNoticeText(topic: ConversationTopic | null): string {
 }
 
 /**
+ * Issue #274: セッションとして残す価値があるのは「学習者が1往復以上話した」
+ * 会話だけ。話題チップを押した直後は system の注記行と相手の一発目しか無く、
+ * これを保存すると一覧に「0往復 / (無題)」が並んで直近3枠を食っていた。
+ */
+function hasUserTurn(messages: ChatMessage[]): boolean {
+  return messages.some((m) => m.role === "user");
+}
+
+/**
  * Issue #238 / #273: 元の発言に語句の根拠が見つからない学習項目。
  * 判定本体はドメイン側（conversationExtract.needsSourceWarning）に置き、
  * 既定チェックの組み立てと警告表示の両方で同じものを使う。
@@ -251,6 +260,14 @@ export default function ConversationScreen({
             setInput(legacy.draft);
           }
         }
+        // Issue #274: セッションは「1往復以上話した会話」しか残さないので、
+        // 話題を選んだだけで離れた場合の復元は設定側（最後に選んだ話題）で担保する。
+        if (mounted && !(latestRecord && latestRecord.messages.length > 0)) {
+          const settings = await storage.loadSettings();
+          if (!mounted) return;
+          const settingsTopic = topicFromId(settings.conversationTopicId);
+          if (settingsTopic) setTopic(settingsTopic);
+        }
       } catch {
         // 復元できなくても会話自体は続けられる（致命ではない）
       } finally {
@@ -270,7 +287,11 @@ export default function ConversationScreen({
     const timer = setTimeout(() => {
       // エラーカードは会話ではないので残さない（issue #111 と同じ扱い）
       const kept = messages.filter((m) => m.kind !== "error");
-      if (kept.length === 0 && input.trim() === "") {
+      // Issue #274: 学習者の発言が無いログはセッションとして残さない。話題チップを
+      // 押した直後（注記行＋相手の一発目だけ）を保存すると、一覧に「0往復 /
+      // (無題)」が並んで直近3枠を実のある会話から奪う。下書きだけは従来どおり
+      // 残す（打ちかけの文がタブ離脱で消えないように）。
+      if (!hasUserTurn(kept) && input.trim() === "") {
         void storage.deleteConversationSession(sessionIdRef.current);
         void storage.deleteConversation();
         return;
@@ -288,6 +309,13 @@ export default function ConversationScreen({
     }, 300);
     return () => clearTimeout(timer);
   }, [messages, input, topic, storage]);
+
+  // Issue #274: 選んだ話題は設定にも残す。0往復ではセッションを作らない仕様に
+  // したため、「話題だけ選んでタブを離れた」の復元はこちらで担保する。
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    void storage.saveSettings({ conversationTopicId: topic?.id ?? null });
+  }, [storage, topic]);
 
   // Issue #148: セッション一覧を取り直す（ピッカーを開いたとき・削除したとき）
   const refreshSessions = useCallback(async () => {
@@ -452,9 +480,15 @@ export default function ConversationScreen({
    * 1本入るだけで、LLM にも前の話題の履歴がそのまま渡り、過去のセッション
    * 一覧でも1本にまとまっていた。
    */
-  const archiveCurrentSession = () => {
+  const archiveCurrentSession = (): boolean => {
     const kept = messages.filter((m) => m.kind !== "error");
-    if (kept.length === 0) return;
+    // Issue #274: 学習者が1往復も話していない会話は退避しない（0往復の「(無題)」
+    // セッションで直近3枠を食わない）。代わりに空の器を消して枠を空ける。
+    if (!hasUserTurn(kept)) {
+      void storage.deleteConversationSession(sessionIdRef.current);
+      void refreshSessions();
+      return false;
+    }
     void storage.saveConversationSession({
       id: sessionIdRef.current,
       messages: kept,
@@ -464,6 +498,7 @@ export default function ConversationScreen({
       updatedAt: new Date().toISOString(),
     });
     void refreshSessions();
+    return true;
   };
 
   const startTopic = (t: ConversationTopic) => {
@@ -473,7 +508,9 @@ export default function ConversationScreen({
     const hasConversation = messages.some((m) => m.kind !== "note");
     const switching = hasConversation && topic?.id !== t.id;
     if (switching) {
-      archiveCurrentSession();
+      // Issue #274: 確認ダイアログまでは要らないが、消える前に一言は出す
+      // （保存できたのか、枠を食わずに捨てたのかを黙ってやらない）。
+      const archived = archiveCurrentSession();
       setMessages([]);
       setInput("");
       setStreamingContent("");
@@ -481,7 +518,11 @@ export default function ConversationScreen({
       setExtractError(null);
       setSavedMessage(null);
       setSavedDeck(null);
-      setRestoreNotice(null);
+      setRestoreNotice(
+        archived
+          ? `💾 前の会話は「🕘 過去のセッション」に保存しました。話題「${t.emoji} ${t.label}」に切り替えます。`
+          : `話題「${t.emoji} ${t.label}」に切り替えます。`,
+      );
       setSessionPickerOpen(false);
       sessionIdRef.current = newSessionId();
       sessionCreatedAtRef.current = new Date().toISOString();
