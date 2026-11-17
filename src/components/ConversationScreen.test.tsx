@@ -8,6 +8,7 @@ import {
   DEFAULT_SETTINGS,
   type ConversationRecord,
   type ConversationSessionRecord,
+  type Settings,
   type StorageProvider,
 } from "../storage/types";
 
@@ -49,6 +50,9 @@ function makeStorage(
   saved?: ConversationRecord,
   verified = false,
   sessionRecords: ConversationSessionRecord[] = [],
+  // Issue #274: 話題の永続は設定（conversationTopicId）に移ったので、
+  // アンマウント→再マウントをまたいで設定を持ち回れるようにする。
+  settingsOverrides: Partial<Settings> = {},
 ) {
   const saveConversation = vi.fn(async (_record: ConversationRecord) => {});
   const deleteConversation = vi.fn(async () => {});
@@ -66,14 +70,19 @@ function makeStorage(
     if (i >= 0) sessionStore.splice(i, 1);
   });
   // 接続テスト成功済みの設定にすると入力欄がアンロックされる（issue #130）
-  const settings = verified
-    ? {
-        ...DEFAULT_SETTINGS,
-        llmVerifiedEndpoint: DEFAULT_SETTINGS.llmApiEndpoint,
-      }
-    : DEFAULT_SETTINGS;
+  const settings: Settings = {
+    ...DEFAULT_SETTINGS,
+    ...(verified
+      ? { llmVerifiedEndpoint: DEFAULT_SETTINGS.llmApiEndpoint }
+      : {}),
+    ...settingsOverrides,
+  };
+  const saveSettings = vi.fn(async (patch: Partial<Settings>) => {
+    Object.assign(settings, patch);
+  });
   const storage = {
-    loadSettings: vi.fn(async () => settings),
+    loadSettings: vi.fn(async () => ({ ...settings })),
+    saveSettings,
     loadConversation: vi.fn(async () => saved),
     saveConversation,
     deleteConversation,
@@ -104,6 +113,8 @@ function makeStorage(
     deleteConversation,
     saveConversationSession,
     deleteConversationSession,
+    saveSettings,
+    settings,
     sessionStore,
   };
 }
@@ -406,7 +417,7 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
       ),
     ).toBe(false);
 
-    // 今の会話は前の話題のまま退避され、新セッションが別 ID で始まる
+    // 今の会話は前の話題のまま退避される
     const archived = sessionStore.find((r) =>
       r.messages.some((m) => m.content === "Hi!"),
     );
@@ -414,15 +425,20 @@ describe("ConversationScreen (issue #147 話題の入口)", () => {
     expect(
       archived?.messages.some((m) => m.content.includes("で会話を開始")),
     ).toBe(false);
-    await waitFor(() =>
-      expect(
-        sessionStore.some(
-          (r) =>
-            r.id !== archived?.id &&
-            r.messages.some((m) => m.content.includes("で会話を開始")),
-        ),
-      ).toBe(true),
-    );
+    // Issue #274: 新しい話題の側は0往復なのでセッションを作らない（枠を食わない）
+    expect(
+      sessionStore.some(
+        (r) =>
+          r.id !== archived?.id &&
+          r.messages.some((m) => m.content.includes("で会話を開始")),
+      ),
+    ).toBe(false);
+    // 黙って消えない: 保存したことと切り替え先を一言で出す
+    expect(
+      screen.getByText(
+        /前の会話は「🕘 過去のセッション」に保存しました。話題「💼 仕事の雑談」に切り替えます。/,
+      ),
+    ).toBeTruthy();
   });
 
   // Issue #173: #167 では「理由を出す」だけだったが、チップは有効に見えたまま
@@ -689,11 +705,13 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     expect(screen.getByText(/前回の会話を復元しました（話題:/)).toBeTruthy();
   });
 
-  it("話題を選ぶと topicId つきで退避する（次に開いても戻る）", async () => {
-    const { storage, saveConversationSession } = makeStorage(
+  // Issue #274: 話題を選んだだけ（0往復）でセッションを1枠使っていた。
+  // セッションは「1往復以上話した会話」だけ残し、話題そのものは設定に持たせる。
+  it("話題を選んだだけではセッションを作らない（0往復の枠を食わない #274）", async () => {
+    const { storage, saveConversationSession, saveSettings } = makeStorage(
       { ...savedWithTopic, topicId: null },
       // Issue #173: 未設定だとチップが disabled になる。このテストの主題は
-      // 話題の退避（#158）なので、設定済み＝チップが押せる状態で検証する。
+      // 話題の扱い（#158 / #274）なので、設定済み＝チップが押せる状態で検証する。
       true,
     );
     const user = userEvent.setup();
@@ -709,24 +727,29 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     const gamingChip = await screen.findByTestId("topic-switch-gaming");
     await user.click(gamingChip);
 
+    // 話題は設定側に残る（次に開いたときの復元はこちらで担保する）
     await waitFor(() =>
-      expect(saveConversationSession).toHaveBeenCalledWith(
-        expect.objectContaining({
-          topicId: "gaming",
-        }),
-      ),
+      expect(saveSettings).toHaveBeenCalledWith({ conversationTopicId: "gaming" }),
     );
+    // 学習者の発言が無いセッションは1件も保存されない（0往復の枠を食わない）
+    expect(
+      saveConversationSession.mock.calls.every(
+        ([record]) =>
+          record.messages.filter((m) => m.role === "user").length > 0,
+      ),
+    ).toBe(true);
+    expect(
+      saveConversationSession.mock.calls.every(
+        ([record]) =>
+          !record.messages.some((m) => m.content.includes("で会話を開始")),
+      ),
+    ).toBe(true);
   });
 
   it("タブを離れて戻っても選んだ話題が残る（アンマウント→再マウント）", async () => {
-    // 1回目のマウントで話題を選び、その保存内容を次回の復元データとして渡す
-    const savedRef: { current?: ConversationSessionRecord } = {};
+    // 1回目のマウントで話題を選び、設定（conversationTopicId）に残った内容を
+    // 2回目のマウントへ持ち回る（#274: 0往復のセッションは作らない）。
     const first = makeStorage({ ...savedWithTopic, topicId: null }, true);
-    first.saveConversationSession.mockImplementation(
-      async (record: ConversationSessionRecord) => {
-        savedRef.current = record;
-      },
-    );
     const user = userEvent.setup();
 
     const view = render(
@@ -741,13 +764,13 @@ describe("ConversationScreen (issue #158 話題の保持)", () => {
     await waitFor(() =>
       expect(gamingChip.getAttribute("aria-pressed")).toBe("true"),
     );
-    await waitFor(() => expect(savedRef.current?.topicId).toBe("gaming"));
+    await waitFor(() => expect(first.settings.conversationTopicId).toBe("gaming"));
     view.unmount();
 
-    // 2回目はタブに戻ってきた想定（保存済みのセッションを復元する）
-    const second = makeStorage(undefined, true, [
-      savedRef.current as ConversationSessionRecord,
-    ]);
+    // 2回目はタブに戻ってきた想定（同じ設定を持った端末で開き直す）
+    const second = makeStorage({ ...savedWithTopic, topicId: null }, true, [], {
+      conversationTopicId: "gaming",
+    });
     render(
       <ConversationScreen
         state={makeState()}

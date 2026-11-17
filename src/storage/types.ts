@@ -60,6 +60,12 @@ export interface Settings {
    * 使わない自分のデッキが一覧に居座っていた。DEFAULT_SETTINGS スプレッドで
    * 補完されるため IndexedDB マイグレーションは不要。
    */
+  /**
+   * issue #274: 最後に選んだ話題。会話セッション側の topicId は「学習者が
+   * 1往復以上話したセッション」にしか残らないため、話題を選んだだけで
+   * タブを離れた場合の復元はこちらで担保する。
+   */
+  conversationTopicId: string | null;
   hiddenDeckIds: string[];
 }
 
@@ -320,6 +326,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoApplyLevel: "none",
   llmVerifiedEndpoint: "",
   llmSetupDismissed: false,
+  conversationTopicId: null,
   hiddenDeckIds: [],
 };
 
