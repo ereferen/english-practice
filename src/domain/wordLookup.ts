@@ -149,6 +149,52 @@ function getSegmenter(): SegmenterLike | null {
 }
 
 /**
+ * 複合語の連結に使うハイフン類。Intl.Segmenter は "co-op" を
+ * `co` / `-` / `op` に割るので、これらで挟まれた語を1語へ戻す（#280）。
+ */
+const JOINING_HYPHEN_RE = /^[-‐‑–—]$/;
+
+/**
+ * 直前のトークンと、ハイフン + 次トークンが地続きなら1語に畳む。
+ * "co-op" → "co-op" / "mother-in-law" → "mother-in-law"。
+ * 空白で離れた "word — other" は畳まない（隣接判定は index で行う）。
+ */
+function mergeHyphenated(
+  parts: { text: string; index: number; isWordLike?: boolean }[],
+): LookupToken[] {
+  const tokens: LookupToken[] = [];
+  let end = 0; // 直前までに読み終えた text 上の位置
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+    const prev = tokens[tokens.length - 1];
+    const next = parts[i + 1];
+    const joinsPrev =
+      prev !== undefined &&
+      JOINING_HYPHEN_RE.test(part.text) &&
+      part.index === end &&
+      /[A-Za-z]$/.test(prev.text);
+    const joinsNext =
+      next !== undefined &&
+      next.isWordLike !== false &&
+      next.index === part.index + part.text.length &&
+      /^[A-Za-z]/.test(next.text);
+    if (joinsPrev && joinsNext) {
+      const merged = prev.text + part.text + next.text;
+      tokens[tokens.length - 1] = { text: merged, word: lookupWordKey(merged) };
+      end = next.index + next.text.length;
+      i += 1; // next は取り込んだので飛ばす
+      continue;
+    }
+    tokens.push({
+      text: part.text,
+      word: part.isWordLike === false ? null : lookupWordKey(part.text),
+    });
+    end = part.index + part.text.length;
+  }
+  return tokens;
+}
+
+/**
  * 文をトークン列へ。英語の単語分割は Intl.Segmenter が正しいが、
  * 未実装環境（古い Safari / jsdom）では英字の連なりを単語とみなす。
  * どちらでも tokens.map(t => t.text).join("") === 入力 になる。
@@ -157,14 +203,12 @@ export function tokenizeForLookup(text: string): LookupToken[] {
   const Segmenter = getSegmenter();
   if (Segmenter) {
     const segmenter = new Segmenter("en", { granularity: "word" });
-    const tokens: LookupToken[] = [];
-    for (const part of segmenter.segment(text)) {
-      tokens.push({
-        text: part.segment,
-        word: part.isWordLike === false ? null : lookupWordKey(part.segment),
-      });
-    }
-    return tokens;
+    const parts = [...segmenter.segment(text)].map((part) => ({
+      text: part.segment,
+      index: part.index,
+      isWordLike: part.isWordLike,
+    }));
+    return mergeHyphenated(parts);
   }
   const tokens: LookupToken[] = [];
   const re = /[A-Za-z][A-Za-z'’-]*/g;
