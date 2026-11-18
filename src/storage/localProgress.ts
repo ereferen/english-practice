@@ -20,6 +20,15 @@ export interface LocalProgressStore {
     results: QuizResult[],
   ): void;
   loadQuizResults(deckId: string, lessonId: string): QuizResult[] | null;
+  /**
+   * Issue #282: デッキ削除のときに、そのデッキの学習記録を localStorage からも消す。
+   * 手動追加デッキの deckId は固定（"manual-words"）なので、消さずに作り直すと
+   * 前のデッキの学習済み語がそのまま学習率に乗ってしまう。
+   * lessonIds を渡すと、その組み合わせの小テスト結果も一緒に消す。
+   */
+  forgetDeck(deckId: string, lessonIds?: readonly string[]): ProgressSnapshot;
+  /** Issue #282: 語を1語消したときに、その語の学習記録を消す（同じ語を入れ直しても復活しない）。 */
+  forgetWord(deckId: string, wordId: string): ProgressSnapshot;
 }
 
 function nowIso(): string {
@@ -145,6 +154,34 @@ export function createLocalProgressStore(
       });
       save(snapshot);
       return snapshot;
+    },
+    forgetDeck(deckId, lessonIds = []) {
+      const snapshot = load();
+      const next: ProgressSnapshot = {
+        ...snapshot,
+        learnedWords: snapshot.learnedWords.filter((w) => w.deckId !== deckId),
+        sessions: snapshot.sessions.filter((s) => s.deckId !== deckId),
+      };
+      save(next);
+      for (const lessonId of lessonIds) {
+        try {
+          storage.removeItem(quizResultsKey(deckId, lessonId));
+        } catch {
+          // 消せなくても致命傷ではない（次回の保存で上書きされる）。
+        }
+      }
+      return next;
+    },
+    forgetWord(deckId, wordId) {
+      const snapshot = load();
+      const next: ProgressSnapshot = {
+        ...snapshot,
+        learnedWords: snapshot.learnedWords.filter(
+          (w) => !(w.deckId === deckId && w.wordId === wordId),
+        ),
+      };
+      save(next);
+      return next;
     },
     saveQuizResults(deckId, lessonId, results) {
       try {

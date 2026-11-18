@@ -192,6 +192,95 @@ describe("createLocalProgressStore", () => {
   });
 });
 
+describe("forgetDeck / forgetWord (issue #282)", () => {
+  it("デッキ削除で学習済み語とセッションを消し、他のデッキは残す", () => {
+    const storage = makeMemoryStorage();
+    const store = createLocalProgressStore(storage);
+    store.markLearned({
+      deckId: "manual-words",
+      wordId: "clutch-0",
+      learnedAt: "2026-11-17T12:21:55.684Z",
+    });
+    store.markLearned({
+      deckId: "sample-deck",
+      wordId: "w1",
+      learnedAt: "2026-11-17T12:00:00.000Z",
+    });
+    store.recordSession({
+      askedCount: 2,
+      correctCount: 1,
+      answeredAt: "2026-11-17T12:22:00.000Z",
+      deckId: "manual-words",
+    });
+    store.recordSession({
+      askedCount: 4,
+      correctCount: 3,
+      answeredAt: "2026-11-17T12:23:00.000Z",
+      deckId: "sample-deck",
+    });
+
+    const next = store.forgetDeck("manual-words", ["manual"]);
+
+    expect(next.learnedWords.map((w) => w.deckId)).toEqual(["sample-deck"]);
+    expect(next.sessions).toHaveLength(1);
+    // 保存も効いている（リロードしても残骸が出ない）。
+    const reloaded = createLocalProgressStore(storage).load();
+    expect(reloaded.learnedWords).toHaveLength(1);
+    expect(reloaded.sessions).toHaveLength(1);
+  });
+
+  it("渡したレッスンの小テスト結果も消す（別レッスンは残す）", () => {
+    const storage = makeMemoryStorage();
+    const store = createLocalProgressStore(storage);
+    store.saveQuizResults("manual-words", "manual", [
+      { quizId: "q1", wordId: "clutch-0", correct: true },
+    ]);
+    store.saveQuizResults("manual-words", "other", [
+      { quizId: "q2", wordId: "smurf-1", correct: false },
+    ]);
+
+    store.forgetDeck("manual-words", ["manual"]);
+
+    expect(store.loadQuizResults("manual-words", "manual")).toBeNull();
+    expect(store.loadQuizResults("manual-words", "other")).toHaveLength(1);
+  });
+
+  it("語を1語だけ忘れる（同じ語を入れ直しても学習済みが復活しない）", () => {
+    const storage = makeMemoryStorage();
+    const store = createLocalProgressStore(storage);
+    store.markLearned({
+      deckId: "manual-words",
+      wordId: "clutch-0",
+      learnedAt: "2026-11-17T12:21:55.684Z",
+    });
+    store.markLearned({
+      deckId: "manual-words",
+      wordId: "smurf-1",
+      learnedAt: "2026-11-17T12:22:00.000Z",
+    });
+
+    store.forgetWord("manual-words", "clutch-0");
+
+    const reloaded = createLocalProgressStore(storage).load();
+    expect(reloaded.learnedWords.map((w) => w.wordId)).toEqual(["smurf-1"]);
+  });
+
+  it("存在しないデッキを忘れても他の記録を壊さない", () => {
+    const storage = makeMemoryStorage();
+    const store = createLocalProgressStore(storage);
+    store.markLearned({
+      deckId: "sample-deck",
+      wordId: "w1",
+      learnedAt: "2026-11-17T12:00:00.000Z",
+    });
+
+    store.forgetDeck("nope");
+    store.forgetWord("nope", "w1");
+
+    expect(store.load().learnedWords).toHaveLength(1);
+  });
+});
+
 describe("saveQuizResults / loadQuizResults", () => {
   it("saves and loads quiz results for a deck/lesson pair", () => {
     const storage = makeMemoryStorage();

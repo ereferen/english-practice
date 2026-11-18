@@ -44,6 +44,8 @@ function makeMockProgress(): LocalProgressStore {
     }),
     saveQuizResults: vi.fn(),
     loadQuizResults: vi.fn(() => null),
+    forgetDeck: vi.fn(() => ({ learnedWords: [], sessions: [], version: 1 })),
+    forgetWord: vi.fn(() => ({ learnedWords: [], sessions: [], version: 1 })),
   };
 }
 
