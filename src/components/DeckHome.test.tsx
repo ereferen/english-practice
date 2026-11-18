@@ -158,6 +158,59 @@ describe("DeckHome 自分のデッキを直す (issue #181)", () => {
     ).toBe("通勤する、往復する");
   });
 
+  // Issue #282: デッキを消したら localStorage の学習記録も消す。manual-words の
+  // deckId は固定なので、残すと同じ語を入れ直したときに学習率が途中から始まる。
+  it("デッキ削除で localStorage の学習記録も消える（同じ語を入れ直しても0%から）", async () => {
+    localStorage.setItem(
+      "app:progress:v1",
+      JSON.stringify({
+        learnedWords: [
+          {
+            deckId: "manual-words",
+            wordId: "commute-0",
+            learnedAt: "2026-11-17T12:21:55.684Z",
+          },
+          {
+            deckId: "sample",
+            wordId: "w1",
+            learnedAt: "2026-11-17T12:00:00.000Z",
+          },
+        ],
+        sessions: [
+          {
+            askedCount: 2,
+            correctCount: 1,
+            answeredAt: "2026-11-17T12:22:00.000Z",
+            deckId: "manual-words",
+          },
+        ],
+        version: 1,
+      }),
+    );
+    const deck = manualDeck();
+    const storage = fakeStorage();
+    render(
+      <DeckHome
+        state={makeState(deck)}
+        dispatch={vi.fn()}
+        storage={storage}
+        deckId={deck.deckId}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "このデッキを削除" }));
+    await user.click(screen.getByRole("button", { name: "デッキを削除" }));
+
+    await waitFor(() => expect(storage.deleteUserDeck).toHaveBeenCalledTimes(1));
+    const saved = JSON.parse(localStorage.getItem("app:progress:v1") ?? "{}");
+    expect(saved.learnedWords.map((w: { deckId: string }) => w.deckId)).toEqual([
+      "sample",
+    ]);
+    expect(saved.sessions).toEqual([]);
+    localStorage.clear();
+  });
+
   it("サンプルデッキ（bundled）には編集カードを出さない", async () => {
     const sample: Deck = { ...manualDeck(), deckId: "sample", source: "bundled" };
     render(

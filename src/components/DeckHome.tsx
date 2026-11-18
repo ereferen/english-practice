@@ -190,6 +190,9 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
     }
     try {
       await persistDeck(result.deck);
+      // Issue #282: 語を消したら学習記録も消す。wordId は「語-連番」なので、
+      // 同じ語を入れ直すと同じ wordId になり、消さないと学習済み扱いが復活する。
+      localProgress.forgetWord(deck.deckId, target.wordId);
     } catch (e) {
       setWordError(message(e));
     }
@@ -203,6 +206,14 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       setDeckError(message(e));
       return;
     }
+    // Issue #282: 確認ダイアログは「復習履歴もまとめて削除」と言っているので、
+    // localStorage 側の学習済み語・セッション・小テスト結果も消す。deckId が
+    // 固定（manual-words など）のデッキは、残すと同じ語を入れ直したときに
+    // 学習率が途中から始まる。
+    localProgress.forgetDeck(
+      deck.deckId,
+      (deck.lessons ?? []).map((l) => l.lessonId),
+    );
     dispatch({
       type: "setDecks",
       decks: state.decks.filter((d) => d.deckId !== deck.deckId),
