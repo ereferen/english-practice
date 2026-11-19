@@ -97,6 +97,15 @@ export default function WordPopover({
         </button>
       </div>
 
+      {/* Issue #290: LLM が返した見出し語がタップした語と違うとき（押し間違い・
+          別語形の解決など）、黙って別の語の説明を出さずタップ語を併記する。 */}
+      {meaning?.term &&
+        meaning.term.trim().toLowerCase() !== term.trim().toLowerCase() && (
+          <div className={styles.tappedNote} data-testid="word-popover-tapped">
+            タップした語: <strong>{term}</strong>
+          </div>
+        )}
+
       {fromDeck && (
         <p className={styles.source}>📚 既存デッキ「{fromDeck}」にあります</p>
       )}

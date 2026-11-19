@@ -416,7 +416,7 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           })}
         </div>
         <div className={styles.statNote}>
-          数字＝日（月が変わるマスは 11/1 のように月を併記）・ 塗りつぶし＝学習した日
+          数字＝日・ 11/1 のような表記と下線＝月の変わり目 ・ 塗りつぶし＝学習した日
           ・ 枠＝今日 ・ 行＝週（月〜日）
           {weekStart
             ? `、今週は ${shortDate(weekStart)}〜${shortDate(todayStr)}`

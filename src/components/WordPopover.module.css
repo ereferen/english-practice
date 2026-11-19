@@ -58,6 +58,13 @@
   color: var(--color-text-dim);
 }
 
+/* Issue #290: 見出し語とタップ語がずれたときの併記 */
+.tappedNote {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
 .loading {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;
@@ -118,7 +125,10 @@
 /* メッセージ本文中のタップ可能な語 */
 .wordButton {
   display: inline;
-  padding: 0;
+  /* Issue #290: 27px 角・語間ゼロで指では隣の語を踏んだ。インライン要素の
+     padding は行送りを動かさないので、上下 6px（当たり判定 39px）と左右
+     1.5px（語間 3px）だけ広げて、行の折り返しはほぼ変えずに狙える寸法にする。 */
+  padding: 6px 1.5px;
   margin: 0;
   border: 0;
   background: none;
