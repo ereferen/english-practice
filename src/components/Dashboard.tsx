@@ -6,7 +6,7 @@ import type {
   StorageProvider,
   SessionRecord,
 } from "../storage/types";
-import { allWords } from "../content/loader";
+import { countWordsByOwnership } from "../domain/wordCounts";
 import { isAbortedSession } from "../domain/session";
 import {
   LLM_REQUIRED_TOOLTIP,
@@ -150,10 +150,9 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
     };
   }, [storage]);
 
-  const totalWords = state.decks.reduce(
-    (acc, d) => acc + allWords(d).length,
-    0,
-  );
+  // Issue #291: サンプル同梱デッキ込みの合計だけだと「自分が入れた語」より大きい数字が出て、
+  // 語彙が増えた実感を持てない。ダッシュボードの主役を自分の語数にし、サンプルは内訳で示す。
+  const wordCounts = countWordsByOwnership(state.decks);
   const totalSessions = sessions.length;
   // issue #205: 「平均正答率」はセッションごとの正答率の単純平均だったため、
   // 問題数の多いセッションも少ないセッションも同じ重みになり、
@@ -331,11 +330,17 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
           <div>
             {/* Issue #219: どの数値が「いつからいつまで」か分からない、という指摘。
                 数字カードに期間を明記する。 */}
-            <div className="badge">登録語数（全期間）</div>
-            <div className={styles.statValue}>{totalWords} 語</div>
+            <div className="badge">自分の単語（全期間）</div>
+            <div className={styles.statValue}>{wordCounts.own} 語</div>
+            <div className={styles.statNote}>
+              {wordCounts.sample > 0
+                ? `サンプル ${wordCounts.sample} 語を除く（登録計 ${wordCounts.total} 語）`
+                : "サンプルは含みません"}
+            </div>
           </div>
           <div>
-            <div className="badge">セッション数（直近50件）</div>
+            {/* Issue #291: 「直近50件」が回数なのか上限なのか読めなかったので上限と明記する。 */}
+            <div className="badge">セッション数（直近50回まで）</div>
             <div className={styles.statValue}>{totalSessions} 回</div>
           </div>
           <div>
