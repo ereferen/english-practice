@@ -172,6 +172,47 @@ describe("DeckList 単語を追加（issue #178）", () => {
     expect(saved.deck.lessons[0].words).toHaveLength(2);
   });
 
+  it("「意味を上書き」を選ぶと重複語の意味が更新され、それが通知に出る", async () => {
+    // Issue #275（残作業）: 重複はスキップ固定だったのを選べるようにする。
+    const { decks } = await loadBundledDecks();
+    const existing = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-11-19T00:00:00.000Z",
+    });
+    const saveUserDeck = vi.fn().mockResolvedValue(undefined);
+    const storage = { saveUserDeck } as unknown as StorageProvider;
+
+    render(
+      <DeckList
+        state={makeState([decks[0].deck, existing])}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "単語を追加" }));
+    await user.selectOptions(
+      screen.getByLabelText("既にある語"),
+      "update",
+    );
+    await user.type(
+      screen.getByRole("textbox"),
+      "resilient, しなやかな、回復力のある\ncommute, 通勤する",
+    );
+    await user.click(screen.getByRole("button", { name: "追加する" }));
+
+    const notice = await screen.findByRole("status");
+    expect(notice.textContent).toContain("1 語を");
+    expect(notice.textContent).toContain("1 語の意味を更新");
+
+    const saved = saveUserDeck.mock.calls[0][0];
+    const words = saved.deck.lessons[0].words;
+    expect(words).toHaveLength(2);
+    expect(
+      words.find((w: { term: string }) => w.term === "resilient").meaning,
+    ).toBe("しなやかな、回復力のある");
+  });
+
   it("区切りの無い入力はエラーを出し、保存しない", async () => {
     const { decks } = await loadBundledDecks();
     const saveUserDeck = vi.fn();

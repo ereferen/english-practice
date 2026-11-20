@@ -196,13 +196,68 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
     const base = buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
       now: "2026-10-10T00:00:00.000Z",
     });
-    const { deck, added } = mergeIntoManualDeck(
+    const { deck, added, updated } = mergeIntoManualDeck(
       base,
       [{ term: "commute", meaning: "通勤する" }],
       { now: "2026-10-11T00:00:00.000Z" },
     );
     expect(added).toBe(0);
+    expect(updated).toBe(0);
     expect(deck.title).toBe(base.title);
+  });
+
+  it("duplicatePolicy=update なら重複語の意味だけ上書きする（#275 残作業）", () => {
+    const base = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-11-15T00:00:00.000Z",
+    });
+    const beforeId = base.lessons[0].words[0].wordId;
+    const { deck, added, skipped, updated } = mergeIntoManualDeck(
+      base,
+      [
+        { term: "resilient", meaning: "しなやかな、回復力のある" },
+        { term: "commute", meaning: "通勤する" },
+      ],
+      { now: "2026-11-21T00:00:00.000Z", duplicatePolicy: "update" },
+    );
+    expect(added).toBe(1);
+    expect(updated).toBe(1);
+    expect(skipped).toBe(0);
+    const words = deck.lessons[0].words;
+    expect(words).toHaveLength(2);
+    // wordId は変わらない（学習記録を引き継ぐ）。
+    const resilient = words.find((w) => w.term === "resilient");
+    expect(resilient?.wordId).toBe(beforeId);
+    expect(resilient?.meaning).toBe("しなやかな、回復力のある");
+    expect(deckSchema.safeParse(deck).success).toBe(true);
+  });
+
+  it("duplicatePolicy=update でも意味が同じなら updated に数えない", () => {
+    const base = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-11-15T00:00:00.000Z",
+    });
+    const { deck, added, skipped, updated } = mergeIntoManualDeck(
+      base,
+      [{ term: "resilient", meaning: "粘り強い" }],
+      { now: "2026-11-21T00:00:00.000Z", duplicatePolicy: "update" },
+    );
+    expect(added).toBe(0);
+    expect(updated).toBe(0);
+    expect(skipped).toBe(1);
+    expect(deck.title).toBe(base.title);
+    expect(deck.lessons[0].words[0].meaning).toBe("粘り強い");
+  });
+
+  it("既定（skip）は意味を変えない", () => {
+    const base = buildManualDeck([{ term: "resilient", meaning: "粘り強い" }], {
+      now: "2026-11-15T00:00:00.000Z",
+    });
+    const { deck, added, skipped, updated } = mergeIntoManualDeck(
+      base,
+      [{ term: "resilient", meaning: "しなやかな" }],
+      { now: "2026-11-21T00:00:00.000Z" },
+    );
+    expect([added, skipped, updated]).toEqual([0, 1, 0]);
+    expect(deck.lessons[0].words[0].meaning).toBe("粘り強い");
   });
 });
 
