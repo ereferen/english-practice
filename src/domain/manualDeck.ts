@@ -310,30 +310,61 @@ export function removeDeckWord(deck: Deck, wordId: string): DeckEditResult {
 }
 
 /**
- * 既存の手動デッキへの追加マージ。term 重複（正規化一致）はスキップし、
+ * Issue #275（残作業）: 既にある語をどう扱うか。
+ * - "skip":   意味が違っても既存を残す（従来動作）
+ * - "update": 入力の意味で既存カードの意味を上書きする（wordId は変えない）
+ */
+export type DuplicatePolicy = "skip" | "update";
+
+/**
+ * 既存の手動デッキへの追加マージ。term 重複（正規化一致）は既定でスキップし、
  * wordId / meaning 衝突は連番で回避したまま返す。
  *
  * Issue #275: 重複で弾いた件数（skipped）も返す。呼び出し側が「追加した」
  * のか「既にあったのでスキップした」のかを黙って捨てないために使う。
+ * duplicatePolicy: "update" のときは重複語の意味を上書きし、その件数を
+ * updated で返す（追加0件でも意味だけ更新できる）。
  */
 export function mergeIntoManualDeck(
   existing: Deck,
   words: ManualWordInput[],
-  opts: { now: string; level?: Deck["level"] },
-): { deck: Deck; added: number; skipped: number } {
+  opts: {
+    now: string;
+    level?: Deck["level"];
+    duplicatePolicy?: DuplicatePolicy;
+  },
+): { deck: Deck; added: number; skipped: number; updated: number } {
   const lesson = existing.lessons[0];
-  if (!lesson) return { deck: existing, added: 0, skipped: words.length };
+  if (!lesson) {
+    return { deck: existing, added: 0, skipped: words.length, updated: 0 };
+  }
 
-  const seen = new Set(lesson.words.map((w) => normalizeTermKey(w.term)));
+  const policy = opts.duplicatePolicy ?? "skip";
+  const existingByKey = new Map(
+    lesson.words.map((w) => [normalizeTermKey(w.term), w] as const),
+  );
+  const seen = new Set(existingByKey.keys());
   const fresh: ManualWordInput[] = [];
+  // wordId → 新しい意味（同じ語を2回書かれたら最後の入力が勝つ）
+  const meaningUpdates = new Map<string, string>();
   for (const w of words) {
     const key = normalizeTermKey(w.term);
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      if (key && policy === "update") {
+        const hit = existingByKey.get(key);
+        const nextMeaning = w.meaning.trim();
+        // 意味が変わらないなら「更新」とは言わない（通知の数字を濁さない）。
+        if (hit && nextMeaning && normalizeTermKey(nextMeaning) !== normalizeTermKey(hit.meaning)) {
+          meaningUpdates.set(hit.wordId, nextMeaning);
+        }
+      }
+      continue;
+    }
     seen.add(key);
     fresh.push(w);
   }
-  if (fresh.length === 0) {
-    return { deck: existing, added: 0, skipped: words.length };
+  if (fresh.length === 0 && meaningUpdates.size === 0) {
+    return { deck: existing, added: 0, skipped: words.length, updated: 0 };
   }
 
   const meanings = new Set(
@@ -352,6 +383,11 @@ export function mergeIntoManualDeck(
     addedWords.push(word);
   }
 
+  const updatedWords: Word[] = lesson.words.map((w) => {
+    const nextMeaning = meaningUpdates.get(w.wordId);
+    return nextMeaning ? { ...w, meaning: nextMeaning } : w;
+  });
+
   const deck: Deck = {
     ...existing,
     level: opts.level ?? existing.level,
@@ -360,9 +396,15 @@ export function mergeIntoManualDeck(
       `(${opts.now.slice(0, 10)})`,
     ),
     lessons: [
-      { ...lesson, words: [...lesson.words, ...addedWords] },
+      { ...lesson, words: [...updatedWords, ...addedWords] },
       ...existing.lessons.slice(1),
     ],
   };
-  return { deck, added: addedWords.length, skipped: words.length - fresh.length };
+  return {
+    deck,
+    added: addedWords.length,
+    // 追加でも意味更新でもなかった行（重複スキップ・空行など）。合計は words.length に一致。
+    skipped: words.length - addedWords.length - meaningUpdates.size,
+    updated: meaningUpdates.size,
+  };
 }
