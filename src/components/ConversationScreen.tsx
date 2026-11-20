@@ -1329,11 +1329,11 @@ export default function ConversationScreen({
                   msg.kind === "note" ? styles.bubbleNote : ""
                 }`}
               >
-                {/* Issue #245: 相手の言葉はタップで意味を引ける（自分の発言・
-                    エラー通知・話題注記は対象外） */}
-                {msg.role === "assistant" &&
-                msg.kind !== "error" &&
-                msg.kind !== "note"
+                {/* Issue #245: 相手の言葉はタップで意味を引ける。
+                    Issue #283: 自分の発言も同じように引ける（打ち間違いや語の
+                    使い方を自分で確かめたい、というペルソナ要望）。
+                    エラー通知・話題注記は会話ではないので対象外。 */}
+                {msg.kind !== "error" && msg.kind !== "note"
                   ? renderLookupable(msg)
                   : msg.content}
                 {/* Issue #122: raw diagnostics tucked behind a disclosure */}
@@ -1366,10 +1366,12 @@ export default function ConversationScreen({
                   onClose={closeWordLookup}
                 />
               )}
-              {/* Issue #111: error cards are not conversation — no TTS. */}
-              {msg.role === "assistant" && msg.kind !== "error" && (
+              {/* Issue #111: error cards are not conversation — no TTS.
+                  Issue #283: 自分の発言も読み返せるようにする（発音の自己チェック）。 */}
+              {msg.kind !== "error" && (
                 <button
                   className={`ghost ${styles.speakButton}`}
+                  data-testid="speak-button"
                   onClick={() => handleSpeak(msg.id, msg.content)}
                   title={
                     speechAvail === "ready"
@@ -1380,7 +1382,7 @@ export default function ConversationScreen({
                   {speechAvail === "ready" ? "🔊" : "🔇"} 読み上げ
                 </button>
               )}
-              {msg.role === "assistant" && speakingId === msg.id && (
+              {speakingId === msg.id && (
                 <span className={styles.speakingBadge} aria-live="polite">
                   ♪ 読み上げ中
                 </span>

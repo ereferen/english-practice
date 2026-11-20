@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ConversationScreen from "./ConversationScreen";
 import type { AppState } from "../app/types";
@@ -29,6 +29,13 @@ function bubbleByText(text: string): HTMLElement {
     );
   }
   return hit;
+}
+
+/** 同じ本文の吹き出しが何個あるか（語分割後も textContent で数える） */
+function countBubblesByText(text: string): number {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(".chat-bubble-wrap .card"),
+  ).filter((b) => (b.textContent ?? "").trim() === text).length;
 }
 
 // Issue #147: 話題プリセットを押したときに「LLM へ何を送ったか」を検証したいので
@@ -160,7 +167,7 @@ describe("ConversationScreen (issue #138)", () => {
       />,
     );
 
-    expect(await screen.findByText("Hi! How are you?")).toBeTruthy();
+    await waitFor(() => expect(bubbleByText("Hi! How are you?")).toBeTruthy());
     expect(bubbleByText("I'm good, thanks!")).toBeTruthy();
     // 空状態の案内は出ない（復元できているので）
     expect(
@@ -613,7 +620,7 @@ describe("ConversationScreen (issue #166 再送の置き換え)", () => {
 
     // 1回目は失敗 → エラーカードと再送ボタンが出る
     const retry = await screen.findByText("再送");
-    expect(screen.getAllByText("RETRY-REPRO-1")).toHaveLength(1);
+    expect(countBubblesByText("RETRY-REPRO-1")).toBe(1);
 
     // 再送（今回は成功）
     await user.click(retry);
@@ -621,7 +628,7 @@ describe("ConversationScreen (issue #166 再送の置き換え)", () => {
     await waitFor(() => expect(bubbleByText("Nice!")).toBeTruthy());
 
     // 自分の発言は1つだけ・エラーカードは消えている
-    expect(screen.getAllByText("RETRY-REPRO-1")).toHaveLength(1);
+    expect(countBubblesByText("RETRY-REPRO-1")).toBe(1);
     expect(screen.queryByText(/LLM応答がありません/)).toBeNull();
   });
 });
@@ -844,7 +851,7 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
       />,
     );
 
-    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    await waitFor(() => expect(bubbleByText("Hi, I'm back!")).toBeTruthy());
     // 古いセッションは（まだ）表示されない
     expect(screen.queryByText("What did you do last weekend?")).toBeNull();
     // 文言が「直近1セッション分」のままになっていない
@@ -867,7 +874,7 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
       />,
     );
 
-    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    await waitFor(() => expect(bubbleByText("Hi, I'm back!")).toBeTruthy());
     await user.click(screen.getByTestId("open-session-picker"));
 
     // 一覧に両方のセッションが出る（往復数つき）
@@ -878,9 +885,9 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
 
     await user.click(screen.getByTestId("session-item-sess-old"));
 
-    expect(
-      await screen.findByText("What did you do last weekend?"),
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(bubbleByText("What did you do last weekend?")).toBeTruthy(),
+    );
     // 切り替え後は一覧が閉じる
     expect(screen.queryByTestId("session-picker")).toBeNull();
   });
@@ -902,7 +909,7 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
       />,
     );
 
-    expect(await screen.findByText("Hi, I'm back!")).toBeTruthy();
+    await waitFor(() => expect(bubbleByText("Hi, I'm back!")).toBeTruthy());
     await user.click(screen.getByTestId("open-session-picker"));
 
     const oldTopic = screen.getByTestId("session-topic-sess-old");
@@ -938,7 +945,7 @@ describe("ConversationScreen (issue #148 複数セッション)", () => {
       />,
     );
 
-    expect(await screen.findByText("Legacy log here")).toBeTruthy();
+    await waitFor(() => expect(bubbleByText("Legacy log here")).toBeTruthy());
     expect(screen.getByText(/前回の会話を復元しました/)).toBeTruthy();
     // 復元後に新しいセッションとして退避され直す（旧→新の移行）
     await waitFor(() =>
@@ -1146,6 +1153,7 @@ describe("ConversationScreen (issue #234 ヒント)", () => {
 describe("ConversationScreen (issue #245 会話中に語を引く)", () => {
   const PARTNER_LINE =
     "Nice! I play a lot of Apex too. What Legend do you usually pick, and what makes that playstyle fun for you?";
+  const USER_LINE = "I play Apex.";
 
   function renderWithPartnerLine(decks: unknown[] = []) {
     const { storage } = makeStorage(
@@ -1289,5 +1297,46 @@ describe("ConversationScreen (issue #245 会話中に語を引く)", () => {
     expect(
       screen.queryByRole("button", { name: "＋ デッキに追加" }),
     ).toBeNull();
+  });
+
+  // Issue #283: 自分の吹き出しにはボタンが1個も無く、自分の言い方を耳で
+  // 確認できなかった。相手と同じく読み上げ・語引きの両方を出す。
+  it("自分の発言にも読み上げボタンが付く", async () => {
+    renderWithPartnerLine();
+
+    await waitFor(() => expect(bubbleByText(USER_LINE)).toBeTruthy());
+    const userBubble = bubbleByText(USER_LINE).closest(
+      ".chat-bubble-wrap",
+    ) as HTMLElement;
+    const own = within(userBubble).getByTestId("speak-button");
+    expect(own.textContent).toContain("読み上げ");
+
+    // 相手の吹き出しのボタンも残っている（自分の分だけ増える）
+    const assistantBubble = bubbleByText(PARTNER_LINE).closest(
+      ".chat-bubble-wrap",
+    ) as HTMLElement;
+    expect(within(assistantBubble).getByTestId("speak-button")).toBeTruthy();
+  });
+
+  it("自分の発言の語もタップで意味を引ける（文脈には自分の文を渡す）", async () => {
+    requestLlmChatMock.mockResolvedValue({
+      content:
+        '{"term":"Apex","reading":"ˈeɪpeks","meaning":"エーペックス（ゲーム名）","example":"I play Apex.","exampleJa":"エーペックスをやっています。","partOfSpeech":"noun"}',
+    });
+    renderWithPartnerLine();
+    const user = userEvent.setup();
+
+    await waitFor(() => expect(bubbleByText(USER_LINE)).toBeTruthy());
+    const userBubble = bubbleByText(USER_LINE).closest(
+      ".chat-bubble-wrap",
+    ) as HTMLElement;
+
+    await user.click(within(userBubble).getByTestId("lookup-word-apex"));
+
+    expect(await screen.findByText("エーペックス（ゲーム名）")).toBeTruthy();
+    const prompt = requestLlmChatMock.mock.calls[0][0].messages[0]
+      .content as string;
+    expect(prompt).toContain("apex");
+    expect(prompt).toContain(USER_LINE);
   });
 });
