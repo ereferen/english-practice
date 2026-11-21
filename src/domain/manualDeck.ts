@@ -20,6 +20,19 @@ import {
 export const MANUAL_DECK_ID = "manual-words";
 
 /**
+ * Issue #289: 会話抽出と同じく、追加のたびに日付でタイトルが変わると
+ * 「デッキが増えた」ように見えるため固定名にする。
+ */
+export const MANUAL_DECK_TITLE = "手動追加";
+
+const LEGACY_MANUAL_TITLE = /^手動追加\s*\(\d{4}-\d{2}-\d{2}\)$/;
+
+/** 旧「手動追加 (YYYY-MM-DD)」だけを固定名に戻す（本人の命名は尊重）。 */
+export function stableManualTitle(title: string): string {
+  return LEGACY_MANUAL_TITLE.test(title.trim()) ? MANUAL_DECK_TITLE : title;
+}
+
+/**
  * issue #151/#178/#181: 自分で作ったデッキ（会話抽出・手動追加）か。
  * サンプルデッキ（bundled）と区別して、一覧で上に出したり編集対象にしたりする。
  */
@@ -180,7 +193,6 @@ export function buildManualDeck(
   words: ManualWordInput[],
   opts: { now: string; level?: Deck["level"] },
 ): Deck {
-  const date = opts.now.slice(0, 10);
   const meanings = new Set<string>();
   const built: Word[] = words.map((w, i) => {
     const word = manualToWord(w, i);
@@ -191,7 +203,7 @@ export function buildManualDeck(
     schemaVersion: "1.0",
     deckId: MANUAL_DECK_ID,
     level: opts.level ?? "intermediate",
-    title: `手動追加 (${date})`,
+    title: MANUAL_DECK_TITLE,
     description: "自分で入力した単語デッキ",
     source: "manual",
     lessons: [
@@ -391,10 +403,8 @@ export function mergeIntoManualDeck(
   const deck: Deck = {
     ...existing,
     level: opts.level ?? existing.level,
-    title: existing.title.replace(
-      /\((\d{4}-\d{2}-\d{2})\)$/,
-      `(${opts.now.slice(0, 10)})`,
-    ),
+    // Issue #289: 追加のたびにタイトルの日付を書き換えない。
+    title: stableManualTitle(existing.title),
     lessons: [
       { ...lesson, words: [...updatedWords, ...addedWords] },
       ...existing.lessons.slice(1),

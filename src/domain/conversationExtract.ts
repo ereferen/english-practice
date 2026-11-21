@@ -464,6 +464,25 @@ export function dedupeExtracted(
 
 export const CONVERSATION_DECK_ID = "conversation-extract";
 
+/**
+ * Issue #289: 追加のたびにタイトルの日付が変わると「毎日新しいデッキが増える」
+ * ように見え、復習の置き場所が定まらない。抽出語は1つのデッキに寄せ、日付は
+ * タイトルに入れない（語ごとの追加日時は保存レコード側が持つ）。
+ */
+export const CONVERSATION_DECK_TITLE = "会話から抽出";
+
+const LEGACY_CONVERSATION_TITLE = /^会話から抽出\s*\(\d{4}-\d{2}-\d{2}\)$/;
+
+/**
+ * 旧バージョンが付けた「会話から抽出 (YYYY-MM-DD)」を固定名に戻す。
+ * 本人が #181 で付けた独自の名前はそのまま残す（勝手にリネームしない）。
+ */
+export function stableConversationTitle(title: string): string {
+  return LEGACY_CONVERSATION_TITLE.test(title.trim())
+    ? CONVERSATION_DECK_TITLE
+    : title;
+}
+
 /** validateDeckConsistency 相当（term/meaning/wordId の一意性）を満たすよう連番で避ける */
 function ensureUniqueMeaning(meaning: string, seen: Set<string>): string {
   const key = normalizeTermKey(meaning);
@@ -484,7 +503,6 @@ export function buildConversationDeck(
   items: ExtractedContent[],
   opts: { now: string; level?: Deck["level"] },
 ): Deck {
-  const date = opts.now.slice(0, 10);
   const meanings = new Set<string>();
   const words: Word[] = [];
   items.forEach((item, i) => {
@@ -496,7 +514,7 @@ export function buildConversationDeck(
     schemaVersion: "1.0",
     deckId: CONVERSATION_DECK_ID,
     level: opts.level ?? "intermediate",
-    title: `会話から抽出 (${date})`,
+    title: CONVERSATION_DECK_TITLE,
     description: "英会話ログからLLMが抽出した語彙・表現・文法訂正のデッキ",
     source: "conversation",
     lessons: [
@@ -544,10 +562,8 @@ export function mergeIntoConversationDeck(
     ...existing,
     // Issue #151: 追加時に選んだレベルを反映する（未指定なら既存を維持）
     level: opts.level ?? existing.level,
-    title: existing.title.replace(
-      /\((\d{4}-\d{2}-\d{2})\)$/,
-      `(${opts.now.slice(0, 10)})`,
-    ),
+    // Issue #289: 日付入りのタイトルを毎回書き換えない（固定名に寄せる）。
+    title: stableConversationTitle(existing.title),
     lessons: [
       { ...lesson, words: [...lesson.words, ...addedWords] },
       ...existing.lessons.slice(1),
