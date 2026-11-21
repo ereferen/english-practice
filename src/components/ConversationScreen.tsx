@@ -55,6 +55,7 @@ import { deckSchema } from "../content/schema";
 import type { Deck } from "../content/schema";
 import { speak } from "../domain/speech";
 import { useSpeechSupport } from "../domain/useSpeechSupport";
+import { useSpeechFeedback } from "../app/useSpeechFeedback";
 import TalkSprite from "./TalkSprite";
 import ConfirmDialog from "./ConfirmDialog";
 import WordPopover, { type WordAddState } from "./WordPopover";
@@ -173,10 +174,21 @@ export default function ConversationScreen({
   // Issue #166: 失敗時に入れた「自分の発言」と「エラーカード」の id。再送時に
   // これらをログから取り除いてから送り直す（二重化・エラーカード残留の防止）。
   const [failedSendIds, setFailedSendIds] = useState<string[]>([]);
-  // Issue #47: which message is currently being read aloud (Web Speech)
-  const [speakingId, setSpeakingId] = useState<string | null>(null);
-  // Issue #83: TTS availability (no-voices env gets explicit feedback)
+  // Issue #47 / #83 / #287: 読み上げの進行状態は hook に持たせる
   const speechAvail = useSpeechSupport();
+  const handleSpeechUnavailable = useCallback(() => {
+    setMessages((prev) => [
+      ...prev,
+      createAssistantMessage(
+        "⚠ このブラウザは音声未対応です（TTSボイスがありません）",
+        "error",
+      ),
+    ]);
+  }, []);
+  const { speakingId, speakById, autoSpeak } = useSpeechFeedback({
+    available: speechAvail === "ready",
+    onUnavailable: handleSpeechUnavailable,
+  });
   // Issue #19: conversation content extraction (LLM提案 → ユーザー承認でデッキ保存)
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<ExtractedContent[] | null>(null);
@@ -425,9 +437,7 @@ export default function ConversationScreen({
 
         // Auto-speak the response (issue #47: track it for the gold badge)
         // Issue #83: only show the badge if an utterance actually queued.
-        if (speak(result.content, () => setSpeakingId(null))) {
-          setSpeakingId(assistantMsg.id);
-        }
+        autoSpeak(assistantMsg.id, result.content);
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") return;
         const rawMsg = e instanceof Error ? e.message : String(e);
@@ -1098,23 +1108,6 @@ export default function ConversationScreen({
       );
     });
 
-  const handleSpeak = (id: string, text: string) => {
-    // Issue #47: gold rune-caption indicator while the utterance plays
-    // Issue #83: give feedback when the env has no TTS voices
-    if (speechAvail !== "ready") {
-      setMessages((prev) => [
-        ...prev,
-        createAssistantMessage(
-          "⚠ このブラウザは音声未対応です（TTSボイスがありません）",
-          "error",
-        ),
-      ]);
-      return;
-    }
-    setSpeakingId(id);
-    speak(text, () => setSpeakingId(null));
-  };
-
   return (
     <div className={`container ${styles.root}`}>
       {/* Header */}
@@ -1372,7 +1365,7 @@ export default function ConversationScreen({
                 <button
                   className={`ghost ${styles.speakButton}`}
                   data-testid="speak-button"
-                  onClick={() => handleSpeak(msg.id, msg.content)}
+                  onClick={() => speakById(msg.id, msg.content)}
                   title={
                     speechAvail === "ready"
                       ? "音声再生"
