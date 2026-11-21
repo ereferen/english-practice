@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { deckSchema } from "../content/schema";
 import {
   MANUAL_DECK_ID,
+  MANUAL_DECK_TITLE,
   MANUAL_WORDS_EXAMPLE,
   buildManualDeck,
   editDeckWord,
@@ -10,6 +11,7 @@ import {
   parseManualWords,
   removeDeckWord,
   renameDeck,
+  stableManualTitle,
 } from "./manualDeck";
 
 describe("parseManualWords (issue #178)", () => {
@@ -165,7 +167,7 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
     expect(deck.deckId).toBe(MANUAL_DECK_ID);
     expect(deck.source).toBe("manual");
     expect(deck.level).toBe("beginner");
-    expect(deck.title).toBe("手動追加 (2026-10-10)");
+    expect(deck.title).toBe(MANUAL_DECK_TITLE);
     expect(deckSchema.safeParse(deck).success).toBe(true);
   });
 
@@ -185,7 +187,7 @@ describe("buildManualDeck / mergeIntoManualDeck (issue #178)", () => {
     // Issue #275: 黙って捨てず、弾いた件数を返す。
     expect(skipped).toBe(1);
     expect(deck.lessons[0].words).toHaveLength(2);
-    expect(deck.title).toBe("手動追加 (2026-10-11)");
+    expect(deck.title).toBe(MANUAL_DECK_TITLE);
     expect(deckSchema.safeParse(deck).success).toBe(true);
     // wordId は一意
     const ids = deck.lessons[0].words.map((w) => w.wordId);
@@ -326,5 +328,37 @@ describe("自分のデッキを後から直す (issue #181)", () => {
     expect(last.ok).toBe(false);
     if (last.ok) return;
     expect(last.error).toContain("最後の1語");
+  });
+});
+
+describe("デッキ名を日付で作り直さない（issue #289）", () => {
+  it("buildManualDeck は日付をタイトルに入れない", () => {
+    const deck = buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
+      now: "2026-11-21T10:00:00.000Z",
+    });
+    expect(deck.title).toBe(MANUAL_DECK_TITLE);
+    expect(deck.title).not.toContain("2026-11-21");
+  });
+
+  it("stableManualTitle は旧日付名だけ固定名へ戻し、本人の命名は残す", () => {
+    expect(stableManualTitle("手動追加 (2026-10-10)")).toBe(MANUAL_DECK_TITLE);
+    expect(stableManualTitle("仕事で使う動詞句")).toBe("仕事で使う動詞句");
+  });
+
+  it("既存デッキへ追加してもタイトルが日付で書き換わらない", () => {
+    const legacy = {
+      ...buildManualDeck([{ term: "commute", meaning: "通勤する" }], {
+        now: "2026-10-10T00:00:00.000Z",
+      }),
+      title: "手動追加 (2026-10-10)",
+    };
+    const { deck, added } = mergeIntoManualDeck(
+      legacy,
+      [{ term: "keel", meaning: "竜骨" }],
+      { now: "2026-11-21T00:00:00.000Z" },
+    );
+    expect(added).toBe(1);
+    // 旧日付は固定名へ寄せる。追加日の日付にはしない。
+    expect(deck.title).toBe(MANUAL_DECK_TITLE);
   });
 });

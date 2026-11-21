@@ -3,6 +3,11 @@ import { reducer, initialState } from "./app/types";
 import type { Action, AppState, Screen } from "./app/types";
 import { hashToScreen, screenDeckId, screenToHash } from "./app/route";
 import { loadBundledDecks } from "./content/loader";
+import {
+  CONVERSATION_DECK_ID,
+  stableConversationTitle,
+} from "./domain/conversationExtract";
+import { MANUAL_DECK_ID, stableManualTitle } from "./domain/manualDeck";
 import { storage } from "./storage/dexieProvider";
 import { localProgress } from "./storage/localProgress";
 import Home from "./components/Home";
@@ -154,7 +159,20 @@ export default function App() {
         if (!mounted) return;
         dispatch({
           type: "setDecks",
-          decks: [...decks.map((d) => d.deck), ...userDecks.map((u) => u.deck)],
+          // Issue #289: 旧バージョンが付けた日付入りタイトルは表示時に固定名へ寄せる
+          // （保存済みのデータは次の追加時に書き換わる）。
+          decks: [
+            ...decks.map((d) => d.deck),
+            ...userDecks.map((u) => ({
+              ...u.deck,
+              title:
+                u.deck.deckId === CONVERSATION_DECK_ID
+                  ? stableConversationTitle(u.deck.title)
+                  : u.deck.deckId === MANUAL_DECK_ID
+                    ? stableManualTitle(u.deck.title)
+                    : u.deck.title,
+            })),
+          ],
         });
       } catch (e) {
         if (!mounted) return;

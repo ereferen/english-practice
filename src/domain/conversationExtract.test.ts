@@ -12,6 +12,8 @@ import {
   normalizeTermKey,
   parseExtractionResult,
   termToWordId,
+  stableConversationTitle,
+  CONVERSATION_DECK_TITLE,
   ExtractionError,
   type ExtractedContent,
 } from "./conversationExtract";
@@ -509,13 +511,64 @@ describe("buildConversationDeck / mergeIntoConversationDeck のレベル（#151�
     });
     expect(promoted.added).toBe(1);
     expect(promoted.deck.level).toBe("advanced");
-    // タイトルの日付は最新の抽出日に更新される
-    expect(promoted.deck.title).toContain("2026-09-30");
+    // Issue #289: 追加してもタイトルの日付は変わらない（1つのデッキに寄せる）
+    expect(promoted.deck.title).toBe(CONVERSATION_DECK_TITLE);
     expect(() => deckSchema.parse(promoted.deck)).not.toThrow();
 
     const kept = mergeIntoConversationDeck(base, extra, {
       now: "2026-09-30T10:00:00.000Z",
     });
     expect(kept.deck.level).toBe("intermediate");
+  });
+});
+
+describe("デッキ名を日付で作り直さない（issue #289）", () => {
+  const items: ExtractedContent[] = [
+    {
+      type: "vocabulary",
+      term: "loot",
+      meaning: "戦利品",
+      example: "a rare item dropped",
+      sourceMessageId: "m2",
+      sourceText: "yes a rare item dropped",
+    },
+  ];
+  const extra: ExtractedContent[] = [
+    {
+      type: "expression",
+      term: "gg",
+      meaning: "お疲れさま",
+      example: "gg everyone",
+      sourceMessageId: "m3",
+      sourceText: "gg everyone",
+    },
+  ];
+
+  it("buildConversationDeck は日付をタイトルに入れない", () => {
+    const deck = buildConversationDeck(items, {
+      now: "2026-11-21T10:00:00.000Z",
+    });
+    expect(deck.title).toBe(CONVERSATION_DECK_TITLE);
+    expect(deck.title).not.toContain("2026-11-21");
+  });
+
+  it("stableConversationTitle は旧日付名だけ固定名へ戻す", () => {
+    expect(stableConversationTitle("会話から抽出 (2026-11-19)")).toBe(
+      CONVERSATION_DECK_TITLE,
+    );
+    // #181 で付けた本人の名前は触らない
+    expect(stableConversationTitle("ゲーム用の語")).toBe("ゲーム用の語");
+  });
+
+  it("既存デッキへ追加してもタイトルが日付で書き換わらない", () => {
+    const legacy: Deck = {
+      ...buildConversationDeck(items, { now: "2026-11-19T10:00:00.000Z" }),
+      title: "会話から抽出 (2026-11-19)",
+    };
+    const merged = mergeIntoConversationDeck(legacy, extra, {
+      now: "2026-11-21T10:00:00.000Z",
+    });
+    expect(merged.added).toBe(1);
+    expect(merged.deck.title).toBe(CONVERSATION_DECK_TITLE);
   });
 });
