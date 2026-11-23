@@ -33,6 +33,40 @@
   padding: 0.4rem 0.75rem;
 }
 
+/* Issue #300: 390px 幅では「英会話」「過去のセッション」「クリア」「戻る」が
+   1文字単位で折り返し、ヘッダーが 94px に膨らんで会話領域を圧迫していた。
+   狭い画面ではラベルを縮めて折り返さない（nowrap + 縮小）ことで1行に収める。 */
+@media (max-width: 480px) {
+  .navHeader {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .headerActions {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  .headerActions button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+}
+
 :global(.card).configWarning {
   color: var(--color-danger);
   font-size: 0.875rem;
