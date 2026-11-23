@@ -6,6 +6,7 @@ import { allWords } from "../content/loader";
 import { systemClock } from "../domain/srs";
 import { visibleExamples } from "../domain/examples";
 import { computeProgress } from "../domain/progress";
+import { deckLevelLabel } from "../domain/deckLevel";
 import {
   editDeckWord,
   isOwnDeck,
@@ -236,7 +237,7 @@ export default function DeckHome({ state, dispatch, storage, deckId }: Props) {
       <div className="card">
         <p>{deck.description}</p>
         <div className={styles.metaRow}>
-          <span className="badge">{deck.level}</span>
+          <span className="badge">{deckLevelLabel(deck.level)}</span>
           <span className="badge-gold">学習率 {completion}%</span>
         </div>
         {/* Issue #189: 「学習率」の定義が画面のどこにも無く、カードをめくった

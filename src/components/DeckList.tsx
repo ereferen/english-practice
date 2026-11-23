@@ -15,6 +15,7 @@ import type { StorageProvider, ReviewState } from "../storage/types";
 import { storage as defaultStorage } from "../storage/dexieProvider";
 import { allWords } from "../content/loader";
 import { deckListStat, type DeckListStat } from "../domain/progress";
+import { DECK_LEVELS, deckLevelLabel } from "../domain/deckLevel";
 import { systemClock } from "../domain/srs";
 import { localProgress } from "../storage/localProgress";
 import { setShortcutsSuppressed } from "../app/useKeyboardShortcuts";
@@ -26,13 +27,6 @@ interface Props {
   /** 保存先（テストで差し替え可能にするため prop。既定はアプリ本体の storage）。 */
   storage?: StorageProvider;
 }
-
-const LEVELS: Deck["level"][] = ["beginner", "intermediate", "advanced"];
-const LEVEL_LABEL: Record<Deck["level"], string> = {
-  beginner: "初級",
-  intermediate: "中級",
-  advanced: "上級",
-};
 
 /**
  * Issue #275: 追加結果の1行。重複で弾いた語があるときは、意味を変えたい
@@ -253,7 +247,7 @@ export default function DeckList({
       >
         <span className={styles.deckTitle}>{deck.title}</span>
         <span className={styles.deckMeta}>
-          {deck.level} · {deck.lessons.length} レッスン
+          {deckLevelLabel(deck.level)} · {deck.lessons.length} レッスン
           {stat && (
             <>
               {" · "}
@@ -379,9 +373,9 @@ export default function DeckList({
                 value={level}
                 onChange={(e) => setLevel(e.target.value as Deck["level"])}
               >
-                {LEVELS.map((l) => (
+                {DECK_LEVELS.map((l) => (
                   <option key={l} value={l}>
-                    {LEVEL_LABEL[l]}
+                    {deckLevelLabel(l)}
                   </option>
                 ))}
               </select>
