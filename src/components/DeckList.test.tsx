@@ -87,7 +87,8 @@ describe("DeckList の並び（issue #151）", () => {
       .filter((b) => b.className.includes("menu-item"));
     expect(deckRows[0].textContent).toContain("会話から抽出 (2026-09-29)");
     expect(deckRows[1].textContent).toContain(sample.title);
-    expect(deckRows[0].textContent).toContain("beginner");
+    expect(deckRows[0].textContent).toContain("初級");
+    expect(deckRows[0].textContent).not.toContain("beginner");
 
     // まとまりの見出し（複数たまったときにここへ集まる）
     expect(screen.getByText("自分のデッキ")).toBeTruthy();
