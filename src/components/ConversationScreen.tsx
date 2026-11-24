@@ -217,6 +217,9 @@ export default function ConversationScreen({
   const [hintErrorDetails, setHintErrorDetails] = useState<string | null>(null);
   const hintControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Issue #301: 抽出パネルは会話領域の末尾に描画されるため、スマホでは
+  // 開いた瞬間に画面外（下）に隠れて「押しても何も起きない」ように見えた。
+  const extractPanelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
   // Issue #138: 復元が終わるまで保存を止める（空ログで上書きしないため）
@@ -360,6 +363,17 @@ export default function ConversationScreen({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
+
+  // Issue #301: 抽出パネル／エラーカードが出たら、その先頭が見える位置まで寄せる。
+  // 以前はパネル先頭が可視 0px（390×844 で top=674、領域の下端 657）で、
+  // 押した側からは「壊れてる」に見えていた。block:"start" で見出しを上端へ。
+  useEffect(() => {
+    if (!extracted && !extractError) return;
+    extractPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [extracted, extractError]);
 
   // Cancel on unmount
   useEffect(() => {
@@ -1494,7 +1508,11 @@ export default function ConversationScreen({
         )}
 
         {extractError && (
-          <div className={`card ${styles.configWarning}`}>
+          <div
+            ref={extractPanelRef}
+            className={`card ${styles.configWarning}`}
+            data-testid="conversation-extract-error"
+          >
             <span>⚠ {extractError}</span>
             {/* Issue #188: 生のスキーマパスは開発者向け。送信失敗カードと同じく
                 「詳しく（技術情報）」の折りたたみに隠す。 */}
@@ -1530,7 +1548,12 @@ export default function ConversationScreen({
         )}
 
         {extracted && !extracting && (
-          <div className={`card ${styles.extractPanel}`} aria-live="polite">
+          <div
+            ref={extractPanelRef}
+            className={`card ${styles.extractPanel}`}
+            aria-live="polite"
+            data-testid="conversation-extract-panel"
+          >
             <h3 className={styles.extractTitle}>
               {extracted.length} 件の学習項目を見つけました —
               追加する項目にチェックしてください

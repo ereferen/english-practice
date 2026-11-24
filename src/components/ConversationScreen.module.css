@@ -653,6 +653,30 @@
   flex-wrap: wrap;
 }
 
+/* Issue #301: 抽出パネルは 390px 幅で高さ約 893px あり、会話領域（539px）に
+   収まらない。「追加する」まで 765px スクロールが必要で、片手では届かなかった。
+   スマホでは操作行を会話領域の下端に貼り付け、チェックを進めながらでも
+   常に親指の位置にボタンがある状態にする。カードの padding(1rem) ぶんを
+   負のマージンで打ち消して左右いっぱいに広げる。 */
+@media (max-width: 40rem) {
+  .extractActions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 0 -1rem -1rem;
+    padding: 0.6rem 1rem;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border-gold-dim);
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .saveAllButton {
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+}
+
 /* Issue #234: 会話中のヒント。💡 ボタンと候補チップを入力欄の直上に置く。 */
 .hintBar {
   display: flex;

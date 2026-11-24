@@ -1340,3 +1340,103 @@ describe("ConversationScreen (issue #245 会話中に語を引く)", () => {
     expect(prompt).toContain(USER_LINE);
   });
 });
+
+describe("ConversationScreen (issue #301 抽出パネルの可視性)", () => {
+  const convo: ConversationRecord = {
+    id: CONVERSATION_RECORD_ID,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "They use a lot of slang in voice chat.",
+        createdAt: "2026-10-13T12:00:00.000Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "Yeah, gamers love slang.",
+        createdAt: "2026-10-13T12:00:01.000Z",
+      },
+      {
+        id: "m3",
+        role: "user",
+        content: "I didn't know that word.",
+        createdAt: "2026-10-13T12:00:02.000Z",
+      },
+    ],
+    draft: "",
+    topicId: null,
+    updatedAt: "2026-10-13T12:00:03.000Z",
+  };
+
+  const longExtractJson = (n: number) =>
+    JSON.stringify({
+      items: Array.from({ length: n }, (_, i) => ({
+        type: "vocabulary",
+        term: `word${i}`,
+        reading: `ワード${i}`,
+        meaning: `意味${i}`,
+        example: `Example ${i}.`,
+        partOfSpeech: "noun",
+      })),
+    });
+
+  it("抽出パネルが開いたらパネル自身を先頭までスクロールする", async () => {
+    // 5件・説明付きで縦に伸びるパネル（スマホ幅で領域に収まらないケース）
+    requestLlmChatMock.mockResolvedValue({ content: longExtractJson(5) });
+    const { storage } = makeStorage(convo, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /この会話から学ぶ/ }),
+    );
+
+    const panel = await screen.findByTestId("conversation-extract-panel");
+    const scrollMock = Element.prototype.scrollIntoView as unknown as {
+      mock: { contexts: unknown[]; calls: unknown[][] };
+    };
+    const startsAtPanel = scrollMock.mock.calls.some(
+      (args, i) =>
+        scrollMock.mock.contexts[i] === panel &&
+        (args[0] as { block?: string } | undefined)?.block === "start",
+    );
+    expect(startsAtPanel).toBe(true);
+  });
+
+  it("抽出エラーカードも見える位置へスクロールする", async () => {
+    requestLlmChatMock.mockRejectedValue(new Error("boom"));
+    const { storage } = makeStorage(convo, true);
+    const user = userEvent.setup();
+
+    render(
+      <ConversationScreen
+        state={makeState()}
+        dispatch={vi.fn()}
+        storage={storage}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /この会話から学ぶ/ }),
+    );
+
+    const card = await screen.findByTestId("conversation-extract-error");
+    const scrollMock = Element.prototype.scrollIntoView as unknown as {
+      mock: { contexts: unknown[]; calls: unknown[][] };
+    };
+    const startsAtCard = scrollMock.mock.calls.some(
+      (args, i) =>
+        scrollMock.mock.contexts[i] === card &&
+        (args[0] as { block?: string } | undefined)?.block === "start",
+    );
+    expect(startsAtCard).toBe(true);
+  });
+});
