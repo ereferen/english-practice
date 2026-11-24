@@ -5,7 +5,9 @@ import type {
   ProposalRecord,
   StorageProvider,
   SessionRecord,
+  ConversationSessionMeta,
 } from "../storage/types";
+import { CONVERSATION_TOPICS } from "../domain/conversation";
 import { countWordsByOwnership } from "../domain/wordCounts";
 import { isAbortedSession } from "../domain/session";
 import {
@@ -14,7 +16,6 @@ import {
   providersFromSettings,
 } from "../domain/llm";
 import {
-  countStudyDays,
   isLowSample,
   lastNDates,
   mondayWeekdayIndex,
@@ -104,6 +105,11 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const [weekStudyDays, setWeekStudyDays] = useState(0);
   // issue #177: 直近30日の学習日（カレンダー表示用）
   const [studyDates, setStudyDates] = useState<string[]>([]);
+  // Issue #299: 会話は conversationSessions という別テーブルに保存されるため、
+  // クイズ／復習だけを見ているダッシュボードでは 0 回 0 日になっていた。
+  const [conversationSessions, setConversationSessions] = useState<
+    ConversationSessionMeta[]
+  >([]);
 
   const reloadImprovements = async () => {
     setImprovements(await storage.listImprovementActions(20));
@@ -130,6 +136,8 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         storage.listAnswersSince(windowStart),
         storage.listAnswersSince(weekStart),
       ]);
+      // Issue #299: 会話セッション（別テーブル）も学習の記録として読む。
+      const conversations = await storage.listConversationSessions();
       if (!mounted) return;
       setSelfImproveEnabled(settings.selfImproveEnabled);
       setLlmReady(llmReadiness(settings).ready);
@@ -139,8 +147,18 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
         correct: answers30.filter((a) => a.correct).length,
       });
       setWeekAnswers(answers7.length);
-      setWeekStudyDays(countStudyDays(answers7));
+      // Issue #299: 「N 日学習」も回答日だけだと会話した日が 0 日になる。
+      // 直近7日の回答日と会話日の和集合で数える。
+      setWeekStudyDays(
+        new Set([
+          ...answers7.map((a) => a.askedAt.slice(0, 10)),
+          ...conversations
+            .map((c) => c.updatedAt.slice(0, 10))
+            .filter((d) => d >= weekStart),
+        ]).size,
+      );
       setStudyDates(Array.from(studyDateSet(answers30)));
+      setConversationSessions(conversations);
       setSessions(list);
       await reloadImprovements();
       await reloadPendingSrs();
@@ -167,7 +185,23 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const lowSample = recentAnswers !== null && isLowSample(recentAnswers);
   // issue #177: 直近30日の学習カレンダーと連続学習日
   const todayStr = daysAgoDate(new Date(), 0);
-  const studiedSet = new Set(studyDates);
+  // Issue #299: 会話をした日も「学習した日」。クイズ／復習の回答日（studyDates）と
+  // 会話セッションの更新日を合わせてカレンダー・連続学習日の母集団にする。
+  const convDates30 = conversationSessions
+    .map((c) => c.updatedAt.slice(0, 10))
+    .filter((d) => d >= windowStart);
+  const convDates7 = conversationSessions
+    .map((c) => c.updatedAt.slice(0, 10))
+    .filter((d) => d >= daysAgoDate(new Date(), 6));
+  const combinedStudyDates = Array.from(
+    new Set([...studyDates, ...convDates30]),
+  ).sort();
+  const convWeek = conversationSessions.filter(
+    (c) => c.updatedAt.slice(0, 10) >= daysAgoDate(new Date(), 6),
+  );
+  const convWeekTurns = convWeek.reduce((sum, c) => sum + c.turns, 0);
+  const convWeekDays = new Set(convDates7).size;
+  const studiedSet = new Set(combinedStudyDates);
   const calendarDays = lastNDates(todayStr, 30);
   // Issue #219: 30日を等間隔に並べるだけだと週の塊が見えないので、月曜始まりの
   // 7列に折り返す（先頭は曜日ぶん空ける）。行＝週で「今週はこの行」と読める。
@@ -184,7 +218,37 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
   const weekStart =
     calendarDays[calendarDays.length - 1 - mondayWeekdayIndex(todayStr)];
   const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
-  const streak = streakDays(studyDates, todayStr);
+  const streak = streakDays(combinedStudyDates, todayStr);
+
+  // Issue #299: 会話は別テーブルなので「最近のセッション」に一切出てこなかった。
+  // 会話した直後でも履歴が空に見えるため、クイズ／復習と会話を新しい順に混ぜる。
+  const recentEntries = [
+    ...sessions.map((s) => {
+      const deck = state.decks.find((d) => d.deckId === s.deckId);
+      const lesson = deck?.lessons.find((l) => l.lessonId === s.lessonId);
+      return {
+        id: `session-${s.id}`,
+        at: s.startedAt,
+        score: s.scoreRate !== null ? `${Math.round(s.scoreRate * 100)}%` : "-",
+        meta: `${deck?.title ?? s.deckId} · ${
+          lesson?.title ?? sessionKindLabel(s.kind)
+        }`,
+      };
+    }),
+    ...conversationSessions.map((c) => {
+      const topic = CONVERSATION_TOPICS.find((t) => t.id === c.topicId);
+      return {
+        id: `conversation-${c.id}`,
+        at: c.updatedAt,
+        score: `${c.turns} 往復`,
+        meta: topic
+          ? `会話（${topic.emoji} ${topic.label}）`
+          : "会話（フリー）",
+      };
+    }),
+  ]
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, 10);
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setAnalyzeError(null);
@@ -373,8 +437,17 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       <div className="card">
         <p className={styles.reportEmpty}>
           <span>
-            直近30日（{rangeLabel}）の学習日: {studyDates.length} 日 ・
+            直近30日（{rangeLabel}）の学習日: {combinedStudyDates.length} 日 ・
             連続学習日: <strong>{streak}</strong> 日
+          </span>
+        </p>
+        {/* Issue #299: 会話は学習の記録に入っていなかったので、会話の量を
+            数字で見せる場所が無かった。カレンダーの母集団に会話を含めたうえで、
+            直近7日の会話セッション数と往復数を並べる。 */}
+        <p className={styles.reportEmpty} data-testid="dashboard-conversation">
+          <span>
+            会話（直近7日）: {convWeek.length} セッション / {convWeekTurns} 往復
+            {convWeekDays > 0 ? `（${convWeekDays} 日）` : ""}
           </span>
         </p>
         <div className={styles.calendar}>
@@ -676,25 +749,16 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
       </div>
 
       <h3>最近のセッション</h3>
-      {sessions.length === 0 && (
+      {recentEntries.length === 0 && (
         <p className="card">まだ学習履歴がありません</p>
       )}
-      {sessions.slice(0, 10).map((s) => (
-        <div key={s.id} className="card">
+      {recentEntries.map((e) => (
+        <div key={e.id} className="card">
           <div className={styles.sessionRow}>
-            <span>{s.startedAt.slice(0, 10)}</span>
-            <span>
-              {s.scoreRate !== null ? `${Math.round(s.scoreRate * 100)}%` : "-"}
-            </span>
+            <span>{e.at.slice(0, 10)}</span>
+            <span>{e.score}</span>
           </div>
-          <div className={styles.sessionMeta}>
-            {state.decks.find((d) => d.deckId === s.deckId)?.title ?? s.deckId}{" "}
-            ·{" "}
-            {state.decks
-              .find((d) => d.deckId === s.deckId)
-              ?.lessons.find((l) => l.lessonId === s.lessonId)?.title ??
-              sessionKindLabel(s.kind)}
-          </div>
+          <div className={styles.sessionMeta}>{e.meta}</div>
         </div>
       ))}
     </div>
