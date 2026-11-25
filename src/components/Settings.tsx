@@ -48,6 +48,10 @@ export default function Settings({
   const [exported, setExported] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [testing, setTesting] = useState<"primary" | "fallback" | null>(null);
+  /* Issue #309: number input を直接保存値に繋ぐと、入力を消した瞬間に
+     Number("") = 0 が保存され、続けて打った数字が「015」になる。
+     入力中は文字列の下書きを持ち、確定（blur / Enter）で丸めて保存する。 */
+  const [goalDraft, setGoalDraft] = useState("10");
 
   useEffect(() => {
     let mounted = true;
@@ -67,6 +71,27 @@ export default function Settings({
     await storage.saveSettings(patch);
     setMessage("保存しました");
     setTimeout(() => setMessage(null), 2000);
+  };
+
+  // 保存値が変わったら下書きも合わせる（読み込み直後・インポート後）。
+  useEffect(() => {
+    setGoalDraft(String(settings.dailyGoalWords));
+  }, [settings.dailyGoalWords]);
+
+  /**
+   * Issue #309: 空欄・0・小数・範囲外は保存しない。1〜100 に丸めて確定する。
+   * 「015」のように先頭 0 が付いた入力も、確定時に "15" へ正規化する。
+   */
+  const commitGoal = () => {
+    const trimmed = goalDraft.trim();
+    const parsed = Number(trimmed);
+    if (trimmed === "" || !Number.isInteger(parsed) || parsed < 1) {
+      setGoalDraft(String(settings.dailyGoalWords));
+      return;
+    }
+    const clamped = Math.min(100, parsed);
+    setGoalDraft(String(clamped));
+    if (clamped !== settings.dailyGoalWords) void save({ dailyGoalWords: clamped });
   };
 
   const handleExport = async () => {
@@ -258,8 +283,16 @@ export default function Settings({
               type="number"
               min={1}
               max={100}
-              value={settings.dailyGoalWords}
-              onChange={(e) => save({ dailyGoalWords: Number(e.target.value) })}
+              value={goalDraft}
+              onChange={(e) => {
+                // 数字以外（number input が許す "e" "-" "."）は捨てる。
+                const v = e.target.value;
+                if (v === "" || /^[0-9]+$/.test(v)) setGoalDraft(v);
+              }}
+              onBlur={commitGoal}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
               className={`${styles.field} ${styles.goalNumber}`}
             />
           </label>
