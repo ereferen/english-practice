@@ -719,22 +719,52 @@
 
 .hintChips {
   display: flex;
-  flex-wrap: wrap;
+  /* Issue #307: 横並びだと複数の候補が1つの長い文に見えた。1行1候補に積む。 */
+  flex-direction: column;
   gap: 0.35rem;
   flex: 1 1 100%;
 }
 
 .hintChip {
   font-size: 0.85rem;
+  line-height: 1.5;
   text-align: left;
   border-radius: var(--radius);
-  padding: 0.3rem 0.6rem;
+  padding: 0.4rem 0.7rem;
+  /* Issue #307: ghost（枠も背景も無し）だと会話本文と同じ見た目で、
+     押すと入力欄に入るボタンだと分からなかった。カード状の面と枠を与える。
+     ホバーできないスマホでも押せることが分かるよう、静的に手がかりを出す。 */
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: var(--color-surface-inset);
+  border: 1px solid var(--color-border-hairline);
+  color: var(--color-text-body);
+}
+
+/* 入力欄に入る、を記号で示す（文字だと候補の文と混ざる）。
+   グローバルの `button::before`（金の帯）とぶつかるので要素で置く。 */
+.hintChipArrow {
+  flex: none;
+  color: var(--color-accent-gold);
+}
+
+.hintChip:hover:not(:disabled),
+.hintChip:focus-visible {
+  border-color: var(--color-border-gold);
+  background: color-mix(
+    in srgb,
+    var(--color-accent-gold) 12%,
+    var(--color-surface-inset)
+  );
+  color: var(--color-text-parchment);
 }
 
 .hintClose {
   font-size: 0.8rem;
   padding: 0.3rem 0.5rem;
   color: var(--color-muted);
+  align-self: flex-end;
 }
 
 .saveAllButton {

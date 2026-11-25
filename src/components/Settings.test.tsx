@@ -122,3 +122,63 @@ describe("describeImportError (issue #183)", () => {
     );
   });
 });
+
+// Issue #309: 「1日の目標語数」が入力中に 0 を経由して「015」になり、
+// 0 のまま保存すると目標達成率が常に 0% になっていた。
+describe("Settings 目標語数 (issue #309)", () => {
+  function renderGoal() {
+    const storage = {
+      loadSettings: vi.fn(async () => ({ ...DEFAULT_SETTINGS, dailyGoalWords: 10 })),
+      saveSettings: vi.fn(async () => {}),
+    } as unknown as StorageProvider;
+    render(<Settings state={initialState} dispatch={vi.fn()} storage={storage} />);
+    return { storage };
+  }
+
+  it("打ち直しても先頭0が残らず、確定時に数値で保存する", async () => {
+    const user = userEvent.setup();
+    const { storage } = renderGoal();
+    const input = (await screen.findByLabelText("1日の目標語数")) as HTMLInputElement;
+
+    await user.clear(input);
+    expect(input.value).toBe("");
+    expect(storage.saveSettings).not.toHaveBeenCalled();
+
+    await user.type(input, "15");
+    expect(input.value).toBe("15");
+
+    await user.tab();
+    expect(input.value).toBe("15");
+    expect(storage.saveSettings).toHaveBeenCalledWith({ dailyGoalWords: 15 });
+  });
+
+  it("空欄のまま確定したら直前の値に戻し、保存しない", async () => {
+    const user = userEvent.setup();
+    const { storage } = renderGoal();
+    const input = (await screen.findByLabelText("1日の目標語数")) as HTMLInputElement;
+
+    await user.clear(input);
+    await user.tab();
+
+    expect(input.value).toBe("10");
+    expect(storage.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it("0 は通さず、上限100に丸める", async () => {
+    const user = userEvent.setup();
+    const { storage } = renderGoal();
+    const input = (await screen.findByLabelText("1日の目標語数")) as HTMLInputElement;
+
+    await user.clear(input);
+    await user.type(input, "0");
+    await user.tab();
+    expect(input.value).toBe("10");
+    expect(storage.saveSettings).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, "500");
+    await user.tab();
+    expect(input.value).toBe("100");
+    expect(storage.saveSettings).toHaveBeenCalledWith({ dailyGoalWords: 100 });
+  });
+});

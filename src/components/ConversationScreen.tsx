@@ -1735,9 +1735,13 @@ export default function ConversationScreen({
               <button
                 key={`${i}-${h}`}
                 type="button"
-                className={`ghost ${styles.hintChip}`}
+                className={styles.hintChip}
                 onClick={() => useHint(h)}
+                title="クリックで入力欄に入力"
               >
+                <span className={styles.hintChipArrow} aria-hidden="true">
+                  ↵
+                </span>
                 {h}
               </button>
             ))}
@@ -1747,7 +1751,7 @@ export default function ConversationScreen({
               aria-label="ヒントを閉じる"
               onClick={() => setHints([])}
             >
-              ✕
+              ✕ 閉じる
             </button>
           </div>
         )}

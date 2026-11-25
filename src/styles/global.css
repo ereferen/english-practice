@@ -546,7 +546,11 @@ p {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: 1fr;
+  /* Issue #310: 3列固定だと 1200px 幅でもコンテナは 960px 止まりで
+     1枚 314px まで狭くなり、和訳の2行目が「す。」だけになった。
+     列数は幅に任せ、1枚 340px を下回らないようにする
+     （960px → 2列、1440px で 1200px コンテナ → 3列）。 */
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 0.5rem;
 }
 
@@ -596,15 +600,6 @@ p {
     font-size: 4rem;
   }
 
-  .wrong-words-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (min-width: 1200px) {
-  .wrong-words-grid {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
 }
 
 /* Issue #3: flashcard display area scales up on desktop */
