@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import type { AppState, Action } from "../app/types";
 import type { StorageProvider } from "../storage/types";
 import { systemClock } from "../domain/srs";
-import { computeProgress, dailyGoalRate } from "../domain/progress";
+import {
+  computeProgress,
+  dailyGoalRate,
+  streakDays,
+} from "../domain/progress";
 import { allWords } from "../content/loader";
 import styles from "./Home.module.css";
 
@@ -31,8 +35,19 @@ export default function Home({ state, dispatch, storage }: Props) {
       const today = systemClock.today();
       const reviews = await storage.loadDueReviews(null, today);
       const count = await storage.countAnswersSince(`${today}T00:00:00.000Z`);
-      const sessions = await storage.listSessions(200);
-      const dates = sessions.map((s) => s.startedAt.slice(0, 10));
+      // Issue #308: 「連続学習日」をセッションの startedAt だけで数えていたため、
+      // 会話だけした日・クイズを途中で抜けた日（回答だけ残った日）が 0 日になり、
+      // ダッシュボードの同じラベルと食い違っていた。回答日と会話日も母集団にする。
+      const [sessions, answers, conversations] = await Promise.all([
+        storage.listSessions(200),
+        storage.listAnswersSince("1970-01-01T00:00:00.000Z"),
+        storage.listConversationSessions(),
+      ]);
+      const dates = [
+        ...sessions.map((s) => s.startedAt.slice(0, 10)),
+        ...answers.map((a) => a.askedAt.slice(0, 10)),
+        ...conversations.map((c) => c.updatedAt.slice(0, 10)),
+      ];
       let proposals = 0;
       if (settings.selfImproveEnabled) {
         proposals = (await storage.listProposals("pending")).length;
@@ -55,20 +70,9 @@ export default function Home({ state, dispatch, storage }: Props) {
       );
       setTodayAnswered(count);
       setGoal(settings.dailyGoalWords);
-      let streakCount = 0;
-      let cursor = today;
-      const unique = Array.from(new Set(dates.sort().reverse()));
-      for (const d of unique) {
-        if (d === cursor) {
-          streakCount += 1;
-          const prev = new Date(`${cursor}T00:00:00`);
-          prev.setDate(prev.getDate() - 1);
-          cursor = prev.toISOString().slice(0, 10);
-        } else {
-          break;
-        }
-      }
-      setStreak(streakCount);
+      // Issue #308: ダッシュボードと同じ計算（streakDays）を使い、同じラベルで
+      // 違う数字が出ないようにする。
+      setStreak(streakDays(dates, today));
     })();
     return () => {
       mounted = false;

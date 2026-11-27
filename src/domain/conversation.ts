@@ -10,6 +10,9 @@ export interface ChatMessage {
   /** Issue #122: raw diagnostics for error cards, shown behind 詳しく.
    *  Issue #159: note のときは LLM に渡す英語の指示文（本文は日本語の注記）。 */
   details?: string;
+  /** Issue #313: LLM に送れなかった自分の発言。バブル自体は残すが、往復数には
+   *  数えない（送信failed の印を出し、再読み込み後もその状態を保つ）。 */
+  failed?: boolean;
 }
 
 export interface ConversationConfig {

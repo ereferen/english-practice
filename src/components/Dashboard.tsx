@@ -403,20 +403,27 @@ export default function Dashboard({ state, dispatch, storage }: Props) {
             </div>
           </div>
           <div>
-            {/* Issue #291: 「直近50件」が回数なのか上限なのか読めなかったので上限と明記する。 */}
-            <div className="badge">セッション数（直近50回まで）</div>
+            {/* Issue #291: 「直近50件」が回数なのか上限なのか読めなかったので上限と明記する。
+                Issue #314: 同じ画面の「会話 1 セッション」と食い違って見えたので、
+                この数字はクイズ／復習だけだとラベルで分かるようにする。 */}
+            <div className="badge">クイズ/復習セッション数（直近50回まで）</div>
             <div className={styles.statValue}>{totalSessions} 回</div>
+            <div className={styles.statNote}>会話は下の「会話（直近7日）」に別集計</div>
           </div>
           <div>
+            {/* Issue #315: 回答0件のときに大きな「0%」が出ると「全問不正解」に
+                見えるので、0件は数値を出さず「—」にする。 */}
             <div className="badge">正答率（直近30日）</div>
-            <div className={styles.statValue}>{overallAccuracy}%</div>
+            <div className={styles.statValue} data-testid="dashboard-accuracy">
+              {periodStats.total > 0 ? `${overallAccuracy}%` : "—"}
+            </div>
             <div className={styles.statNote}>
               {periodStats.total > 0
                 ? `${periodStats.total} 問中 ${periodStats.correct} 問正解`
                 : "まだ回答がありません"}
             </div>
-            {lowSample && (
-              <div className={styles.statNote}>参考値（サンプル少なめ）</div>
+            {lowSample && periodStats.total > 0 && (
+              <div className={styles.statNote}>参考値（データ不足）</div>
             )}
           </div>
           <div>

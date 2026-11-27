@@ -138,6 +138,38 @@ describe("Dexie conversation sessions (issue #148)", () => {
     expect(await storage.loadConversationSession("missing")).toBeUndefined();
   });
 
+  it("does not count failed sends as turns (issue #313)", async () => {
+    await db.conversationSessions.clear();
+    await storage.saveConversationSession({
+      ...makeSession("f1", "2026-09-27T10:00:00.000Z"),
+      messages: [
+        {
+          id: "f1-m1",
+          role: "user" as const,
+          content: "hello from f1",
+          createdAt: "2026-09-27T10:00:00.000Z",
+        },
+        {
+          id: "f1-m2",
+          role: "assistant" as const,
+          content: "Hi there!",
+          createdAt: "2026-09-27T10:00:00.000Z",
+        },
+        {
+          id: "f1-m3",
+          role: "user" as const,
+          content: "this one never reached the LLM",
+          createdAt: "2026-09-27T10:01:00.000Z",
+          failed: true,
+        },
+      ],
+    });
+
+    const list = await storage.listConversationSessions();
+    expect(list[0].turns).toBe(1);
+    expect(list[0].preview).toBe("hello from f1");
+  });
+
   it("prunes the oldest session once the cap is exceeded", async () => {
     await db.conversationSessions.clear();
     await storage.saveConversationSession(

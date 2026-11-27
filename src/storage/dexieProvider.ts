@@ -191,8 +191,10 @@ export class DexieStorageProvider implements StorageProvider {
       id: r.id,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
-      turns: r.messages.filter((m) => m.role === "user").length,
-      preview: r.messages.find((m) => m.role === "user")?.content ?? "",
+      turns:
+        r.messages.filter((m) => m.role === "user" && !m.failed).length,
+      preview:
+        r.messages.find((m) => m.role === "user" && !m.failed)?.content ?? "",
       // Issue #248: 話題ごとにセッションが分かれるので、一覧に話題を出す。
       topicId: r.topicId ?? null,
     }));
