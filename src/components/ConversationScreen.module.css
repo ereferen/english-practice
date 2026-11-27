@@ -83,6 +83,15 @@
   gap: 0.75rem;
 }
 
+/* Issue #312: 「? ショートカット」を入力欄の上へ逃がしたぶん、最後の
+   吹き出しがボタンに隠れないよう下端に余白を足す（App.module.css の
+   ボタン位置と対）。 */
+@media (max-width: 64rem) {
+  .messagesArea {
+    padding-bottom: 3.5rem;
+  }
+}
+
 .emptyState {
   text-align: center;
   color: var(--color-muted);
@@ -409,6 +418,15 @@
   white-space: nowrap;
   color: var(--color-muted);
   font-size: 0.875rem;
+}
+
+/* Issue #313: 送信できなかった自分の発言に付ける印（再読み込み後も残る）。 */
+.failedBadge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  opacity: 0.95;
 }
 
 .retrySettingsButton {

@@ -101,3 +101,25 @@ describe("Dashboard (issue #299 会話を学習の記録に数える)", () => {
     ).toContain("0 セッション / 0 往復");
   });
 });
+
+// Issue #315: 回答0件で「0%」が出ると全問不正解に見える。
+// Issue #314: 「セッション数」が何を数えているか分からなかった。
+describe("Dashboard (数字カードの表示)", () => {
+  it("回答0件の正答率は 0% ではなく — で、参考値の注記も出さない", async () => {
+    renderDashboard(makeStorage([]));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("dashboard-accuracy")).toBeTruthy(),
+    );
+    expect(screen.getByTestId("dashboard-accuracy").textContent).toBe("—");
+    expect(screen.queryByText(/参考値/)).toBeNull();
+  });
+
+  it("セッション数のラベルがクイズ/復習だけだと分かる", async () => {
+    renderDashboard(makeStorage([]));
+
+    await waitFor(() =>
+      expect(screen.getByText(/クイズ\/復習セッション数/)).toBeTruthy(),
+    );
+  });
+});

@@ -475,6 +475,13 @@ export default function ConversationScreen({
         };
         // Issue #166: 再送で置き換える対象（自分の発言 + エラーカード）を覚える。
         setFailedSendIds(note ? [errorMsg.id] : [nextMsg.id, errorMsg.id]);
+        // Issue #313: 届かなかった発言はログに残るので、送信失敗の印を付けて
+        // 往復数・抽出の対象から外す（再読み込み後も印が残る）。
+        if (!note) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === nextMsg.id ? { ...m, failed: true } : m)),
+          );
+        }
         setMessages((prev) => [...prev, errorMsg]);
       } finally {
         setLoading(false);
@@ -594,7 +601,10 @@ export default function ConversationScreen({
   };
 
   // Issue #150: 「何が消えるか」を往復数で示す（user の発話数 = 往復数）
-  const userTurns = messages.filter((m) => m.role === "user").length;
+  // Issue #313: 送信に失敗した発言は往復に数えない。
+  const userTurns = messages.filter(
+    (m) => m.role === "user" && !m.failed,
+  ).length;
 
   // Issue #150: 削除確認はブラウザ標準 confirm ではなくアプリ内モーダルで行う。
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -1351,7 +1361,15 @@ export default function ConversationScreen({
                   </details>
                 )}
               </div>
-              {/* Issue #245: タップした語の意味（既存デッキ → LLM の順で解決） */}
+              {/* Issue #313: 再読み込み後も「これは届いていない発言」と分かる印を残す。 */}
+              {msg.failed && (
+                <span
+                  className={styles.failedBadge}
+                  data-testid="conversation-failed-badge"
+                >
+                  ⚠ 送信失敗（往復数には入りません）
+                </span>
+              )}
               {wordLookup?.msgId === msg.id && (
                 <WordPopover
                   term={wordLookup.word}
