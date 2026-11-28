@@ -49,8 +49,18 @@ const llmQuestionSchema = z
 
 const llmOutputSchema = z.object({ questions: z.array(llmQuestionSchema) });
 
+/**
+ * Issue #288: zod 3.x の GHSA-mrhx-c7xc-m3w5（巨大な制約付きコレクションを
+ * 検証するとメモリを枯渇させ得る）への入力側の防御。LLM 応答の JSON が
+ * 異常に大きい場合は、JSON.parse も safeParse もする前に打ち切る。
+ * 通常の応答は数 KB なので、256 KiB を超えるものは壊れた出力とみなす。
+ * この上限は zod 4.x へ移行した後も「壊れた応答でタブが固まらない」ために残す。
+ */
+export const MAX_LLM_JSON_CHARS = 256 * 1024;
+
 /** 発話全体の前後に説明文が付くモデル向けに、JSONオブジェクト部分を抽出する。 */
 export function extractJsonObject(text: string): string | undefined {
+  if (text.length > MAX_LLM_JSON_CHARS) return undefined;
   const trimmed = text.trim();
   try {
     JSON.parse(trimmed);
