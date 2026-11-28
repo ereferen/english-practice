@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   canGenerateToday,
   extractJsonObject,
+  MAX_LLM_JSON_CHARS,
   generateQuizzesWithLlm,
   toQuizzes,
 } from "./quizGeneration";
@@ -68,6 +69,17 @@ describe("extractJsonObject", () => {
   });
   it("JSONが無ければundefined", () => {
     expect(extractJsonObject("no json here")).toBeUndefined();
+  });
+  it("上限を超える巨大な応答は解析前に打ち切る（issue #288）", () => {
+    const huge = `{"items":[${"1,".repeat(MAX_LLM_JSON_CHARS)}1]}`;
+    expect(huge.length).toBeGreaterThan(MAX_LLM_JSON_CHARS);
+    expect(extractJsonObject(huge)).toBeUndefined();
+  });
+  it("上限ちょうどの応答は通常どおり解析する", () => {
+    const body = '{"a":1}';
+    const padded = " ".repeat(MAX_LLM_JSON_CHARS - body.length) + body;
+    expect(padded.length).toBe(MAX_LLM_JSON_CHARS);
+    expect(extractJsonObject(padded)).toBe(body);
   });
 });
 
